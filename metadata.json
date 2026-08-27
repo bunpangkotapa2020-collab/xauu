@@ -1,0 +1,6 @@
+{
+  "name": "XAUUSD AI Scalping Bot",
+  "description": "ប្រព័ន្ធ Bot ជួញដូរមាស XAUUSD ដោយស្វ័យប្រវត្តិ 100% ភាសាខ្មែរ (Final Simple Version) — User មើលតិច Bot ធ្វើការច្រើន ជាមួយប្រព័ន្ធការពារទុន និង 4 ប៊ូតុងបញ្ជាធំៗ។",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

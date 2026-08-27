@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+  </defs>
+
+  <rect width="192" height="192" rx="42" fill="url(#bgGrad)" stroke="#334155" stroke-width="3" />
+  
+  <path d="M96 32 L148 56 L148 106 C148 138 96 166 96 166 C96 166 44 138 44 106 L44 56 Z" 
+        fill="url(#goldGrad)" />
+  <path d="M96 44 L138 62 L138 104 C138 128 96 150 96 150 C96 150 54 128 54 104 L54 62 Z" 
+        fill="#090d16" />
+
+  <text x="96" y="96" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+        font-size="28" 
+        font-weight="900" 
+        letter-spacing="2"
+        fill="url(#goldGrad)" 
+        text-anchor="middle">XAU</text>
+
+  <rect x="68" y="106" width="56" height="14" rx="7" fill="#f59e0b" />
+  <text x="96" y="117" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+        font-size="8" 
+        font-weight="800" 
+        letter-spacing="1"
+        fill="#020617" 
+        text-anchor="middle">AI BOT</text>
+</svg>
