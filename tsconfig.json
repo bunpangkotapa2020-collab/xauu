@@ -22,5 +22,24 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src/**/*",
+    "server.ts",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "pre_live_audit.ts",
+    "runtime_test.ts",
+    "sltp_point_verification_test.ts",
+    "test_direct_price_distance.ts",
+    "test_runner.ts",
+    "test_*.ts",
+    "*test.ts",
+    "*.test.ts",
+    "*.spec.ts",
+    "simulate_final_audit.ts",
+    "dara_stress_test.ts",
+    "e2e_verification.ts"
+  ]
 }
