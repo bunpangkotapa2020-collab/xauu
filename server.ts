@@ -453,7 +453,7 @@ try {
                 slDistance: Number(rc.slDistance !== undefined && !isNaN(Number(rc.slDistance)) ? rc.slDistance : (rc.stopLossPips !== undefined && !isNaN(Number(rc.stopLossPips)) ? rc.stopLossPips : initialSettings.slDistance)),
                 tpDistance: Number(rc.tpDistance !== undefined && !isNaN(Number(rc.tpDistance)) ? rc.tpDistance : (rc.takeProfitPips !== undefined && !isNaN(Number(rc.takeProfitPips)) ? rc.takeProfitPips : initialSettings.tpDistance)),
                 dailyLossLimit: Number(rc.maxDailyLossAmount !== undefined && !isNaN(Number(rc.maxDailyLossAmount)) ? rc.maxDailyLossAmount : (rc.maxDailyLoss || initialSettings.dailyLossLimit)),
-                maxOpenTrades: 5,
+                maxOpenTrades: Number(rc.maxOpenTrades !== undefined && !isNaN(Number(rc.maxOpenTrades)) ? rc.maxOpenTrades : 5),
                 maxConsecutiveSL: Number(rc.maxConsecutiveLosses !== undefined && !isNaN(Number(rc.maxConsecutiveLosses)) ? rc.maxConsecutiveLosses : initialSettings.maxConsecutiveSL),
                 cooldownMinutes: Number(rc.cooldownMinutes !== undefined && !isNaN(Number(rc.cooldownMinutes)) ? rc.cooldownMinutes : initialSettings.cooldownMinutes),
                 maxSpreadPoints: Number(rc.maxSpreadPoints !== undefined && !isNaN(Number(rc.maxSpreadPoints)) ? rc.maxSpreadPoints : initialSettings.maxSpreadPoints),
@@ -1489,7 +1489,7 @@ function loadOrCreateBotConfig() {
             stages: { ...DEFAULT_BOT_CONFIG.account.stages, ...(data.account.stages || {}) }
           },
           tradingHours: { ...DEFAULT_BOT_CONFIG.tradingHours, ...data.tradingHours },
-          riskConfig: { ...DEFAULT_BOT_CONFIG.riskConfig, ...data.riskConfig, maxOpenTrades: 5, entriesPerSignal: 5 },
+          riskConfig: { ...DEFAULT_BOT_CONFIG.riskConfig, ...data.riskConfig },
           userPreferences: { ...DEFAULT_BOT_CONFIG.userPreferences, ...data.userPreferences },
         };
         
@@ -1515,7 +1515,7 @@ function syncConfigToDaRaEngine(state: any, forceSync: boolean = false) {
       slDistance: Number(rc.slDistance ?? rc.stopLossPips ?? 10),
       tpDistance: Number(rc.tpDistance ?? rc.takeProfitPips ?? 8),
       dailyLossLimit: Number(rc.maxDailyLossAmount !== undefined && !isNaN(Number(rc.maxDailyLossAmount)) ? rc.maxDailyLossAmount : (rc.maxDailyLoss || 2000)),
-      maxOpenTrades: 5,
+      maxOpenTrades: Number(rc.maxOpenTrades !== undefined && !isNaN(Number(rc.maxOpenTrades)) ? rc.maxOpenTrades : 5),
       maxConsecutiveSL: Number(rc.maxConsecutiveLosses !== undefined && !isNaN(Number(rc.maxConsecutiveLosses)) ? rc.maxConsecutiveLosses : 6),
       cooldownMinutes: Number(rc.cooldownMinutes !== undefined && !isNaN(Number(rc.cooldownMinutes)) ? rc.cooldownMinutes : 20),
       maxSpreadPoints: Number(rc.maxSpreadPoints !== undefined && !isNaN(Number(rc.maxSpreadPoints)) ? rc.maxSpreadPoints : 27),
@@ -4362,8 +4362,12 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.minutesAfterNewsBlock !== undefined && !isNaN(Number(riskConfig.minutesAfterNewsBlock))) {
         botState.riskConfig.minutesAfterNewsBlock = Number(riskConfig.minutesAfterNewsBlock);
       }
-      botState.riskConfig.maxOpenTrades = 5;
-      botState.riskConfig.entriesPerSignal = 2;
+      if (riskConfig.maxOpenTrades !== undefined && !isNaN(Number(riskConfig.maxOpenTrades))) {
+        botState.riskConfig.maxOpenTrades = Number(riskConfig.maxOpenTrades);
+      }
+      if (riskConfig.entriesPerSignal !== undefined && !isNaN(Number(riskConfig.entriesPerSignal))) {
+        botState.riskConfig.entriesPerSignal = Number(riskConfig.entriesPerSignal);
+      }
       if (riskConfig.maxConsecutiveLosses !== undefined && !isNaN(Number(riskConfig.maxConsecutiveLosses))) botState.riskConfig.maxConsecutiveLosses = Number(riskConfig.maxConsecutiveLosses);
       if (riskConfig.cooldownMinutes !== undefined && !isNaN(Number(riskConfig.cooldownMinutes))) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
       if (riskConfig.maxDailyLossPercent !== undefined && !isNaN(Number(riskConfig.maxDailyLossPercent))) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
