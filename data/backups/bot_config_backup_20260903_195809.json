@@ -1,0 +1,69 @@
+{
+  "desiredBotState": "STOPPED",
+  "status": "stopped",
+  "selectedAsset": "XAUUSD",
+  "currentTradingDate": "2026-09-03T17:00:00.000Z",
+  "dailyLossLimitHit": false,
+  "account": {
+    "accountType": "cent",
+    "server": "Exness-MT5Real25",
+    "loginId": "184126523",
+    "isConnected": true,
+    "serverConnected": true,
+    "isRealAccount": true,
+    "marketDataReceiving": true,
+    "tradingPermission": true,
+    "eaConnected": true,
+    "symbolAvailable": true,
+    "pingMs": 15,
+    "connectionMethod": "rest_bridge",
+    "vpsOnline": true,
+    "balance": 9985.07,
+    "equity": 9985.07,
+    "freeMargin": 9985.07,
+    "marginLevel": 999,
+    "currency": "USC",
+    "stages": {
+      "appLoggedIn": true,
+      "mt5AccountConfigured": true,
+      "exnessServerConnected": true,
+      "marketDataFeedLive": true,
+      "tradingPermissionGranted": true,
+      "eaLoadedAndReady": true
+    },
+    "metaApiAccountId": "8fdbc882-5233-42f9-8a6a-6af1adc1a012",
+    "metaApiToken": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1MGFmYzg1ZmQ0MzZhNjJlNDc4ODU1MTU0Y2ZhMzUyOCIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVzdC1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcnBjLWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6d3M6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJtZXRhc3RhdHMtYXBpIiwibWV0aG9kcyI6WyJtZXRhc3RhdHMtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6InJpc2stbWFuYWdlbWVudC1hcGkiLCJtZXRob2RzIjpbInJpc2stbWFuYWdlbWVudC1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoiY29weWZhY3RvcnktYXBpIiwibWV0aG9kcyI6WyJjb3B5ZmFjdG9yeS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoibXQtbWFuYWdlci1hcGkiLCJtZXRob2RzIjpbIm10LW1hbmFnZXItYXBpOnJlc3Q6ZGVhbGluZzoqOioiLCJtdC1tYW5hZ2VyLWFwaTpyZXN0OnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJiaWxsaW5nLWFwaSIsIm1ldGhvZHMiOlsiYmlsbGluZy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfV0sImlnbm9yZVJhdGVMaW1pdHMiOmZhbHNlLCJ0b2tlbklkIjoiMjAyMTAyMTMiLCJpbXBlcnNvbmF0ZWQiOmZhbHNlLCJyZWFsVXNlcklkIjoiNTBhZmM4NWZkNDM2YTYyZTQ3ODg1NTE1NGNmYTM1MjgiLCJpYXQiOjE3ODgxNTA1NTIsImV4cCI6MTc5NTkyNjU1Mn0.kjSDumX6JVl78y9mo6LnWE2aXKxQnTqMmZI6FShrNCJ82qxpLhREhUGpCAUrWjXvGCco5B09hyN7gppEoWb-e6Z0TVEXK5dXQ5Jq_bDTRabScX3aK0_v0QlataPOxRtJrHWbj1RGABZLw9TzbkHoe0Ni77HfAzknLcEVbVkOfu93uf8FJgZb5Dm4wB6ZCRsiRFkGLN-n11SthtS22IA3ThW6H4st8P_hVrK4VHSugdibNkw7bonSFmTrSumhRX_cf0yUAZEB_8GPi_PP6uVDW3_jarYoN_HJxj8ZgKZ103qkxXzB_gG7vQxEX5BJtCvYmcoRHOwtMyX2PXWI1li54g1fhiyG7iyuqHouSeMoLmiTxM7X44vBaO55HPOMH_9hsQlSm92L_M9YKDhsMi67m9KTHFJzeFOS_fBoO0M8K5MkLfbkMhMSTm6Aft-DUpoYPnb18YVp_o0ya1iZgcZ_AWphiWsJDDSVJGhwtLlKVgp6BG_nEP2myzub5JxdEy-oGV8gZYUwkFh0PJc0ZI1FAS5Yq8HNjy8V1-EgpgAHY8sEDh89Z6BnRNR7-2jwWwkfYVb2K8AKj9Co9PYjMHjjTEez7j8BJD0PjozwJZ_o1eaNmanfd9hv9daAgjxKfiXMEwSJx-l3dbNwSmVmNjDF_0n9RKvLJe20G3CQrxg7gUg",
+    "metaApiUrl": "https://mt-client-api-v1.backup-new-york.agiliumtrade.ai"
+  },
+  "tradingHours": {
+    "enabled": true,
+    "startHour": "17:00",
+    "stopHour": "03:30",
+    "mode": "daily"
+  },
+  "riskConfig": {
+    "lotSizeMode": "fixed",
+    "lotSize": 0.1,
+    "riskPercent": 1,
+    "maxDailyLoss": 2000,
+    "maxDrawdownPercent": 5,
+    "maxSpreadPoints": 25,
+    "stopLossPips": 10,
+    "takeProfitPips": 8,
+    "trailingStopEnabled": true,
+    "maxOpenTrades": 4,
+    "entriesPerSignal": 1,
+    "maxConsecutiveLosses": 6,
+    "cooldownMinutes": 20,
+    "maxDailyLossPercent": 40,
+    "maxDailyLossAmount": 2000,
+    "noMartingale": true,
+    "noGrid": true
+  },
+  "userPreferences": {
+    "autoStartOnConnect": false,
+    "soundEnabled": true,
+    "theme": "dark"
+  },
+  "lastSavedAt": "2026-09-03T19:56:27.483Z"
+}

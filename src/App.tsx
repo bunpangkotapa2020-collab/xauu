@@ -10,24 +10,45 @@ const SESSION_STORAGE_KEY = 'xau_bot_session_v3';
 
 const INITIAL_FALLBACK_STATE: BotState = {
   status: 'stopped',
-  isDemo: true,
+  selectedAsset: 'XAUUSD',
   goldPrice: 2748.50,
   spreadPoints: 12,
   account: {
-    accountType: 'standard',
+    accountType: 'cent',
     server: 'Exness-Real21',
     loginId: '8492019',
     isConnected: true,
+    serverConnected: true,
+    isRealAccount: true,
+    marketDataReceiving: true,
+    tradingPermission: true,
+    eaConnected: true,
+    symbolAvailable: true,
+    pingMs: 22,
+    connectionMethod: 'rest_bridge',
     vpsOnline: true,
-    balance: 1500.00,
-    equity: 1500.00,
-    currency: 'USD',
+    balance: 150000,
+    equity: 150000,
+    freeMargin: 150000,
+    marginLevel: 999,
+    currency: 'USC',
+    stages: {
+      appLoggedIn: true,
+      mt5AccountConfigured: true,
+      exnessServerConnected: true,
+      marketDataFeedLive: true,
+      tradingPermissionGranted: true,
+      eaLoadedAndReady: true,
+    },
   },
   todayProfitLoss: 38.50,
   todayTradeCount: 4,
   todayWinCount: 3,
   todayLossCount: 1,
   currentTrade: null,
+  openTrades: [],
+  consecutiveLosses: 0,
+  cooldownUntil: null,
   manualTrades: [],
   tradingHours: {
     enabled: true,
@@ -37,11 +58,17 @@ const INITIAL_FALLBACK_STATE: BotState = {
   riskConfig: {
     maxDailyLoss: 50.00,
     maxDrawdownPercent: 5.0,
-    maxSpreadPoints: 25,
+    maxSpreadPoints: 27,
     lotSize: 0.02,
     stopLossPips: 25,
     takeProfitPips: 35,
     trailingStopEnabled: true,
+    maxOpenTrades: 5,
+    entriesPerSignal: 5,
+    maxConsecutiveLosses: 3,
+    cooldownMinutes: 15,
+    maxDailyLossPercent: 5,
+    maxDailyLossAmount: 50,
     noMartingale: true,
     noGrid: true,
   },
@@ -55,7 +82,7 @@ const INITIAL_FALLBACK_STATE: BotState = {
 export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<string>('Admin (Owner)');
-  const [userRole, setUserRole] = useState<'admin' | 'demo'>('admin');
+  const [userRole, setUserRole] = useState<'admin'>('admin');
   const [botState, setBotState] = useState<BotState>(INITIAL_FALLBACK_STATE);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -65,12 +92,15 @@ export function App() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   // Fetch bot state
-  const fetchState = useCallback(async () => {
+  const fetchState = useCallback(async (throwError?: boolean) => {
     try {
       const state = await botApi.getBotState();
       setBotState(state);
     } catch (err) {
       console.warn('Could not poll bot state, using local fallback state:', err);
+      if (throwError === true) {
+        throw err;
+      }
     }
   }, []);
 
@@ -93,9 +123,9 @@ export function App() {
         if (session.valid && session.user) {
           setIsLoggedIn(true);
           setUserRole(session.user.role || 'admin');
-          setCurrentUser(session.user.role === 'admin' ? 'Admin (Owner)' : 'Demo Sandbox');
+          setCurrentUser(session.user.role === 'admin' ? 'Admin (Owner)' : 'Admin (Owner)');
         } else {
-          // If no active token found, check local demo flag or stay on login
+          // If no active token found, stay on login
           setIsLoggedIn(false);
         }
       } catch {
@@ -122,41 +152,41 @@ export function App() {
     }
   };
 
-  // Poll state every 1.5 seconds if logged in
+  // Poll state every 1.0 second if logged in for real-time responsiveness
   useEffect(() => {
     if (!isLoggedIn) return;
-    const interval = setInterval(fetchState, 1500);
-    return () => clearInterval(interval);
+    
+    // Initial fetch to get latest state immediately
+    fetchState();
+    
+    const interval = setInterval(fetchState, 1000);
+    
+    // Force immediate sync when app comes to foreground (especially important for iPhone/Mobile Safari)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchState();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchState, isLoggedIn]);
 
   // Auth Handlers with backend session verification
-  const handleLoginSuccess = async (isDemo: boolean, username: string, password?: string) => {
+  const handleLoginSuccess = async (username: string, password?: string) => {
     setIsLoading(true);
     try {
-      const res = await botApi.login(username, password || 'Admin_XAUUSD_2026!', isDemo);
-      const role = res.user?.role || (isDemo ? 'demo' : 'admin');
-      setCurrentUser(role === 'admin' ? 'Admin (Owner)' : 'Demo Sandbox');
-      setUserRole(role as 'admin' | 'demo');
+      const res = await botApi.login(username, password);
+      const role = res.user?.role || 'admin';
+      setCurrentUser(`Admin (${res.user?.username || 'Owner'})`);
+      setUserRole('admin');
       setIsLoggedIn(true);
       await fetchState();
     } catch (err: any) {
       throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickDemo = async () => {
-    setIsLoading(true);
-    try {
-      const res = await botApi.login(undefined, undefined, true);
-      setCurrentUser('Demo Sandbox');
-      setUserRole('demo');
-      setIsLoggedIn(true);
-      await fetchState();
-    } catch (err) {
-      console.error('Quick demo error:', err);
-      setIsLoggedIn(true);
     } finally {
       setIsLoading(false);
     }
@@ -176,21 +206,9 @@ export function App() {
       } else {
         await fetchState();
       }
+      return res;
     } catch (err: any) {
-      alert(err.message || 'ប្រតិបត្តិការបរាជ័យ');
-    }
-  };
-
-  const handleSimulateTest = async (testType: any) => {
-    try {
-      const res = await botApi.simulateTest(testType);
-      if (res?.state) {
-        setBotState(res.state);
-      } else {
-        await fetchState();
-      }
-    } catch (err: any) {
-      alert(err.message || 'Simulation test failed');
+      return { success: false, error: err.message || 'ប្រតិបត្តិការបរាជ័យ' };
     }
   };
 
@@ -198,7 +216,7 @@ export function App() {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
         <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-        <span className="text-xs font-mono">កំពុងតភ្ជាប់ទៅ XAUUSD AI Scalping Engine...</span>
+        <span className="text-xs font-mono">កំពុងតភ្ជាប់ទៅ Trading Engine...</span>
       </div>
     );
   }
@@ -208,7 +226,6 @@ export function App() {
       <>
         <LoginView
           onLoginSuccess={handleLoginSuccess}
-          onQuickDemo={handleQuickDemo}
           onOpenInstallModal={() => setIsInstallModalOpen(true)}
         />
         <InstallAppModal
@@ -227,8 +244,8 @@ export function App() {
       <MainDashboard
         botState={botState}
         onAction={handleAction}
-        onSimulateTest={handleSimulateTest}
         onLogout={handleLogout}
+        onRefresh={fetchState}
         currentUser={currentUser}
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
         isStandalone={isStandalone}

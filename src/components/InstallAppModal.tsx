@@ -182,7 +182,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
                   ជ្រើសរើស <strong className="text-amber-300">«Save and share»</strong> ឬ <strong className="text-amber-300">«Apps»</strong>
                 </li>
                 <li>
-                  ចុច <strong className="text-emerald-400">«Install XAUUSD AI Scalping Bot»</strong> ឬ <strong className="text-emerald-400">«Create shortcut»</strong> (គូសធីក Open as window)
+                  ចុច <strong className="text-emerald-400">«Install XAU AI SCALPER PRO»</strong> ឬ <strong className="text-emerald-400">«Create shortcut»</strong> (គូសធីក Open as window)
                 </li>
               </ol>
             </div>

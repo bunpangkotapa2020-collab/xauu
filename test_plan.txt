@@ -1,0 +1,4 @@
+1. Disable Email sending in SelfHealingEngine
+2. Add checkMarketAvailable(symbol) to fetch specification from MetaApi / MT5
+3. Pre-flight check in executeAIAnalysis()
+4. Wait for user approval

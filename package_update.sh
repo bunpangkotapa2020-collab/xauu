@@ -1,0 +1,2 @@
+#!/bin/bash
+tar -czvf dara_m1_update.tar.gz src/types.ts src/engines/dara_m1/types.ts src/engines/dara_m1/DaRaM1Engine.ts src/engines/dara_m1/DaRaProfitTrailing.ts src/engines/dara_m1/DaRaOrderExecution.ts src/engines/dara_m1/DaRaM1StateMachine.ts src/components/RiskSettingsPanel.tsx src/components/BotSettingsModal.tsx src/components/ActionControlsPanel.tsx server.ts data/bot_config.json ecosystem.config.cjs deploy_vps_dara.sh

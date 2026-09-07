@@ -1,0 +1,198 @@
+async function executeAIAnalysis() {
+  calculateVolatilityAndSpeed();
+  lastAnalysisTimestamp = Date.now();
+
+  if (botState.status !== 'running') {
+    resetEASetup('BOT_NOT_RUNNING');
+    return;
+  }
+
+  if (!botState.account.isConnected || !botState.account.serverConnected) {
+    botState.statusMessageKhmer = '🔴 [NEW EA SMC] មិនទាន់ភ្ជាប់ MT5 Server — កំពុងរង់ចាំការតភ្ជាប់';
+    return;
+  }
+
+
+  if (!botState.isDailyPnLSynced) {
+      botState.statusMessageKhmer = '⚠️ DAILY P/L UNKNOWN / RISK CHECK PAUSED — រង់ចាំទាញយកប្រវត្តិ P/L...';
+      return;
+  }
+  
+  if (botState.dailyLossLimitHit) {
+      // Message is already set in the 3s loop
+      return;
+  }
+
+  if (eaState.consecutiveLosses >= eaState.maxConsecutiveLosses) {
+    botState.statusMessageKhmer = `🛑 [NEW EA SMC] ផ្អាកប្រព័ន្ធ: ខាតជាប់គ្នា ${eaState.consecutiveLosses} ដង (Consecutive Loss Protection)`;
+    return;
+  }
+
+
+  if (botState.marketSpeed === 'EXTREME') {
+      botState.statusMessageKhmer = `⚠️ [NEW EA SMC] HIGH VOLATILITY (${botState.volatilityValue}) — NO NEW ENTRY`;
+      return;
+  }
+
+  botState.selectedAsset = 'XAUUSD';
+  const maxOpen = botState.riskConfig?.maxOpenTrades || 4;
+  const currentOpenCount = (botState.openTrades || []).length;
+  const nextEntryNumber = currentOpenCount + 1;
+
+  if (!botState.currentCycle) botState.currentCycle = 1;
+
+  await checkActualMarketStatus();
+  botState.isMarketOpen = isMarketOpen; // save to state so UI can show it if needed
+  
+  if (!isMarketOpen) {
+    botState.statusMessageKhmer = `⏸️ [MARKET CLOSED] ${marketStatusReason} — រំលងការវិភាគ (Skip Analysis)`;
+    return;
+  }
+
+
+  const isInside = checkInsideTradingHours();
+  botState.isInsideTradingHours = isInside;
+  if (!isInside) {
+    botState.statusMessageKhmer = `⏸️ [NEW EA SMC] ក្រៅម៉ោងជួញដូរ — ផ្អាកបើក Trade ថ្មី`;
+    return;
+  }
+
+  if (botState.dailyLossLimitHit) {
+    botState.statusMessageKhmer = `🛑 [NEW EA SMC] ដល់កម្រិតខាតប្រចាំថ្ងៃ (Daily Loss Limit Hit) — ផ្អាក Trade ថ្មី`;
+    return;
+  }
+
+  if (currentOpenCount >= maxOpen) {
+    botState.statusMessageKhmer = `🟢 [NEW EA SMC] គ្រប់គ្រង Trade សកម្ម (${currentOpenCount}/${maxOpen} Trades)`;
+    return;
+  }
+
+  const maxSpread = botState.riskConfig?.maxSpreadPoints || 25;
+  if (botState.spreadPoints > maxSpread) {
+    botState.statusMessageKhmer = `⚠️ [NEW EA SMC] Spread ខ្ពស់ (${botState.spreadPoints} > ${maxSpread})`;
+    return;
+  }
+
+  let activeVolume = 0.01;
+  const bal = botState.account?.balance || 0;
+  const riskPct = botState.riskConfig?.riskPercent || 1;
+  const slPips = botState.riskConfig?.stopLossPips || 25;
+  
+  if (botState.riskConfig?.lotSizeMode === 'risk_percent') {
+    const maxLoss = (bal * riskPct) / 100;
+    activeVolume = Math.max(0.01, Math.min(10.0, Number((maxLoss / (slPips * 10)).toFixed(2))));
+  } else {
+    const p = Number(botState.riskConfig?.lotSize);
+    activeVolume = (!isNaN(p) && p > 0) ? Number(p.toFixed(2)) : 0.01;
+  }
+  const volume = activeVolume;
+
+  const currentAsk = botState.askPrice || botState.goldPrice || 0;
+  const currentBid = botState.bidPrice || botState.goldPrice || 0;
+
+  if (currentAsk <= 0 || currentBid <= 0) return;
+
+  const accountId = botState.account.metaApiAccountId;
+  const token = botState.account.metaApiToken;
+  const baseUrl = botState.account.metaApiUrl;
+  const symbolToTrade = botState.activeGoldSymbol || (botState.account.accountType === 'cent' ? 'XAUUSDc' : 'XAUUSDm');
+
+  if (!accountId || !token || !baseUrl) return;
+
+  // === H4 - MARKET BIAS ===
+  if (USE_ICT_EA) {
+      botState.statusMessageKhmer = `⏳ [ICT EA] Analyzing Real Market...`;
+      
+      const h4Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '4h', 30);
+      const m15Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '15m', 150);
+      const m1Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '1m', 100);
+      
+      if (h4Candles.length > 0 && m15Candles.length > 0 && m1Candles.length > 0) {
+          await ictMarketAdapter.processMarketData(
+              currentAsk, currentBid, 
+              h4Candles, m15Candles, m1Candles, 
+              Date.now()
+          );
+
+          if (ictEaEngine.state.currentSetup) {
+             const s = ictEaEngine.state.currentSetup;
+             botState.statusMessageKhmer = `🔍 [ICT EA SAFE-MODE] ${s.side} READY | SL: ${s.sl.toFixed(2)} | TP: ${s.tp.toFixed(2)}`;
+             botState.signals = { gold: s.side };
+          } else {
+             botState.statusMessageKhmer = `🔍 [ICT EA SAFE-MODE] NO SETUP`;
+             botState.signals = { gold: 'WAIT' };
+          }
+      } else {
+          botState.statusMessageKhmer = `🔴 [ICT EA SAFE-MODE] MT5 Data Feed Error`;
+      }
+      return;
+  }
+
+  const h4Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '4h', 30);
+  const h4Analysis = analyzeH4Bias(h4Candles);
+  eaState.h4Bias = h4Analysis.bias;
+  
+  if (eaState.h4Bias === 'NEUTRAL') {
+      botState.statusMessageKhmer = `🔍 [NEW EA SMC] H4_BIAS = NEUTRAL (${h4Analysis.log}) — NO TRADE`;
+      return;
+  }
+
+  // === M15 - SETUP ENGINE ===
+  if (eaState.m15Setup === 'WAITING' || eaState.m15Setup === 'CONSUMED') {
+      const m15Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '15m', 150);
+      const m15Data = analyzeM15(m15Candles, eaState.h4Bias);
+      
+      console.log(`[NEW EA SMC] H4_BIAS = ${eaState.h4Bias} (${h4Analysis.log})`);
+      
+      // Strict sequence requirement
+      if (!m15Data.pdArray) { console.log(`[NEW EA SMC] FINAL = NO TRADE | REASON = PD_ARRAY_NOT_FOUND`); return; }
+      if (!m15Data.liquiditySweep) { console.log(`[NEW EA SMC] FINAL = NO TRADE | REASON = LIQUIDITY_SWEEP_NOT_CONFIRMED`); return; }
+      if (!m15Data.cisd) { console.log(`[NEW EA SMC] FINAL = NO TRADE | REASON = CISD_NOT_CONFIRMED`); return; }
+      if (!m15Data.breaker) { console.log(`[NEW EA SMC] FINAL = NO TRADE | REASON = BREAKER_NOT_CONFIRMED`); return; }
+      if (m15Data.idm) { console.log(`[NEW EA SMC] IDM = CONFIRMED (Confluence added)`); } else { console.log(`[NEW EA SMC] IDM = NOT_CONFIRMED (Optional)`); }
+      
+      console.log(`[NEW EA SMC] M15_PD_ARRAY = CONFIRMED`);
+      console.log(`[NEW EA SMC] LIQUIDITY_SWEEP = CONFIRMED`);
+      console.log(`[NEW EA SMC] CISD = CONFIRMED`);
+      console.log(`[NEW EA SMC] BREAKER = CONFIRMED`);
+      console.log(`[NEW EA SMC] IDM = CONFIRMED`);
+      
+      eaState.setupSide = eaState.h4Bias === 'BULLISH' ? 'BUY' : 'SELL';
+      eaState.m15Setup = 'READY_FOR_M1';
+  }
+
+  // === M1 - DISPLACEMENT & OB DETECTION ===
+  if (eaState.m15Setup === 'READY_FOR_M1') {
+      const m1Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '1m', 20);
+      const m1Res = analyzeM1(m1Candles, eaState.setupSide as 'BUY' | 'SELL');
+      
+      if (!m1Res.confirmed || !m1Res.obZone) {
+          botState.statusMessageKhmer = `🔍 [NEW EA SMC] H4=${eaState.h4Bias}, M15=CONFIRMED — Waiting for M1 FVG & OB`;
+          return;
+      }
+      
+      eaState.m1ObZone = m1Res.obZone;
+      eaState.setupTimestamp = Date.now();
+      eaState.m15Setup = 'WAITING_FOR_MITIGATION';
+      console.log(`[NEW EA SMC] M1_DISPLACEMENT = CONFIRMED`);
+      console.log(`[NEW EA SMC] M1_FVG = CONFIRMED`);
+      console.log(`[NEW EA SMC] M1_OB = CONFIRMED (Zone: ${m1Res.obZone.low.toFixed(2)} - ${m1Res.obZone.high.toFixed(2)})`);
+  }
+  
+  // === M1 - RETRACEMENT MITIGATION & ENTRY ===
+  if (eaState.m15Setup === 'WAITING_FOR_MITIGATION' && eaState.m1ObZone) {
+      // Expiration check (30 mins)
+      if (Date.now() - eaState.setupTimestamp > 30 * 60000) {
+          resetEASetup('STALE_SETUP_EXPIRED_NO_MITIGATION');
+          return;
+      }
+      
+      let mitigated = false;
+      if (eaState.setupSide === 'BUY' && currentAsk <= eaState.m1ObZone.high) mitigated = true;
+      if (eaState.setupSide === 'SELL' && currentBid >= eaState.m1ObZone.low) mitigated = true;
+      
+      if (!mitigated) {
+          botState.statusMessageKhmer = `🔍 [NEW EA SMC] M1 OB Zone Confirmed — Waiting for Retracement Mitigation`;
+          return;
+      }
+      

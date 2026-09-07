@@ -1,0 +1,70 @@
+
+  const maxSpread = botState.riskConfig?.maxSpreadPoints || 25;
+  if (botState.spreadPoints > maxSpread) {
+    botState.statusMessageKhmer = `⚠️ [NEW EA SMC] Spread ខ្ពស់ (${botState.spreadPoints} > ${maxSpread})`;
+    return;
+  }
+
+  let activeVolume = 0.01;
+  const bal = botState.account?.balance || 0;
+  const riskPct = botState.riskConfig?.riskPercent || 1;
+  const slPips = botState.riskConfig?.stopLossPips || 25;
+  
+  if (botState.riskConfig?.lotSizeMode === 'risk_percent') {
+    const maxLoss = (bal * riskPct) / 100;
+    activeVolume = Math.max(0.01, Math.min(10.0, Number((maxLoss / (slPips * 10)).toFixed(2))));
+  } else {
+    const p = Number(botState.riskConfig?.lotSize);
+    activeVolume = (!isNaN(p) && p > 0) ? Number(p.toFixed(2)) : 0.01;
+  }
+  const volume = activeVolume;
+
+  const currentAsk = botState.askPrice || botState.goldPrice || 0;
+  const currentBid = botState.bidPrice || botState.goldPrice || 0;
+
+  if (currentAsk <= 0 || currentBid <= 0) return;
+
+  const accountId = botState.account.metaApiAccountId;
+  const token = botState.account.metaApiToken;
+  const baseUrl = botState.account.metaApiUrl;
+  const symbolToTrade = botState.activeGoldSymbol || (botState.account.accountType === 'cent' ? 'XAUUSDc' : 'XAUUSDm');
+
+  if (!accountId || !token || !baseUrl) return;
+
+  // === H4 - MARKET BIAS ===
+  if (USE_ICT_EA) {
+      botState.statusMessageKhmer = `⏳ [ICT EA] Analyzing Real Market...`;
+      
+      const h4Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '4h', 30);
+      const m15Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '15m', 150);
+      const m1Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '1m', 100);
+      
+      if (h4Candles.length > 0 && m15Candles.length > 0 && m1Candles.length > 0) {
+          await ictMarketAdapter.processMarketData(
+              currentAsk, currentBid, 
+              h4Candles, m15Candles, m1Candles, 
+              Date.now()
+          );
+
+          if (ictEaEngine.state.currentSetup) {
+             const s = ictEaEngine.state.currentSetup;
+             botState.statusMessageKhmer = `🔍 [ICT EA SAFE-MODE] ${s.side} READY | SL: ${s.sl.toFixed(2)} | TP: ${s.tp.toFixed(2)}`;
+             botState.signals = { gold: s.side };
+          } else {
+             botState.statusMessageKhmer = `🔍 [ICT EA SAFE-MODE] NO SETUP`;
+             botState.signals = { gold: 'WAIT' };
+          }
+      } else {
+          botState.statusMessageKhmer = `🔴 [ICT EA SAFE-MODE] MT5 Data Feed Error`;
+      }
+      return;
+  }
+
+  const h4Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '4h', 30);
+  const h4Analysis = analyzeH4Bias(h4Candles);
+  eaState.h4Bias = h4Analysis.bias;
+  
+  if (eaState.h4Bias === 'NEUTRAL') {
+      botState.statusMessageKhmer = `🔍 [NEW EA SMC] H4_BIAS = NEUTRAL (${h4Analysis.log}) — NO TRADE`;
+      return;
+  }
