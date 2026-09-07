@@ -84,8 +84,9 @@ export class DaRaM1Engine {
   // ==========================================
 
   public updateUserSettings(newSettings: Partial<DaRaUserSettings>): void {
+    const oldMax = this.userSettings?.maxOpenTrades;
     this.userSettings = { ...this.userSettings, ...newSettings };
-    console.log(`[DaRa M1 EA v1.0] ⚙️ User Settings updated:`, this.userSettings);
+    console.log(`[DaRa M1 EA v1.0] ⚙️ User Settings updated. [DARA CONFIG TRACE] oldMaxOpenTrades=${oldMax} newMaxOpenTrades=${this.userSettings.maxOpenTrades}`, this.userSettings);
   }
 
   public getUserSettings(): DaRaUserSettings {

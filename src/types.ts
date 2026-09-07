@@ -45,7 +45,6 @@ export interface RiskConfig {
   slDistance?: number; // Price Distance
   tpDistance?: number; // Price Distance
   entryDistance?: number; // Pullback entry distance Pos #1 (raw price)
-  additionalEntryDistance?: number; // Pullback entry distance Pos #2 (raw price)
   dailyLossCurrency?: string; // Account currency (USC for Cent account)
   trailingStopEnabled: boolean;
   trailingDistance?: number;

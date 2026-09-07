@@ -433,7 +433,6 @@ let initialSettings: DaRaUserSettings = {
     cooldownMinutes: 20,
     maxSpreadPoints: 27,
     entryDistance: 2.0,
-    additionalEntryDistance: 4.0,
     newsFilterEnabled: true,
     newsMinsBefore: 30,
     newsMinsAfter: 30,
@@ -458,7 +457,6 @@ try {
                 cooldownMinutes: Number(rc.cooldownMinutes !== undefined && !isNaN(Number(rc.cooldownMinutes)) ? rc.cooldownMinutes : initialSettings.cooldownMinutes),
                 maxSpreadPoints: Number(rc.maxSpreadPoints !== undefined && !isNaN(Number(rc.maxSpreadPoints)) ? rc.maxSpreadPoints : initialSettings.maxSpreadPoints),
                 entryDistance: Number(rc.entryDistance !== undefined && !isNaN(Number(rc.entryDistance)) ? rc.entryDistance : 2.0),
-                additionalEntryDistance: Number(rc.additionalEntryDistance !== undefined && !isNaN(Number(rc.additionalEntryDistance)) ? rc.additionalEntryDistance : 4.0),
                 newsFilterEnabled: rc.newsFilterEnabled !== undefined ? Boolean(rc.newsFilterEnabled) : initialSettings.newsFilterEnabled,
                 newsMinsBefore: Number(rc.minutesBeforeNewsBlock !== undefined && !isNaN(Number(rc.minutesBeforeNewsBlock)) ? rc.minutesBeforeNewsBlock : initialSettings.newsMinsBefore),
                 newsMinsAfter: Number(rc.minutesAfterNewsBlock !== undefined && !isNaN(Number(rc.minutesAfterNewsBlock)) ? rc.minutesAfterNewsBlock : initialSettings.newsMinsAfter),
@@ -1347,7 +1345,6 @@ interface BotServerState {
     slPriceDistance?: number;
     tpPriceDistance?: number;
     entryDistance?: number;
-    additionalEntryDistance?: number;
     trailingDistance?: number;
     trailingRule?: string;
     dailyLossCurrency?: string;
@@ -1445,7 +1442,6 @@ const DEFAULT_BOT_CONFIG = {
     maxDrawdownPercent: 5.0,
     maxSpreadPoints: 27,
     entryDistance: 2.0,
-    additionalEntryDistance: 4.0,
     stopLossPips: 10,
     takeProfitPips: 8,
     slDistance: 10,
@@ -1520,7 +1516,6 @@ function syncConfigToDaRaEngine(state: any, forceSync: boolean = false) {
       cooldownMinutes: Number(rc.cooldownMinutes !== undefined && !isNaN(Number(rc.cooldownMinutes)) ? rc.cooldownMinutes : 20),
       maxSpreadPoints: Number(rc.maxSpreadPoints !== undefined && !isNaN(Number(rc.maxSpreadPoints)) ? rc.maxSpreadPoints : 27),
       entryDistance: Number(rc.entryDistance !== undefined && !isNaN(Number(rc.entryDistance)) ? rc.entryDistance : 2.0),
-      additionalEntryDistance: Number(rc.additionalEntryDistance !== undefined && !isNaN(Number(rc.additionalEntryDistance)) ? rc.additionalEntryDistance : 4.0),
       newsFilterEnabled: rc.newsFilterEnabled !== undefined ? Boolean(rc.newsFilterEnabled) : true,
       newsMinsBefore: Number(rc.minutesBeforeNewsBlock !== undefined && !isNaN(Number(rc.minutesBeforeNewsBlock)) ? rc.minutesBeforeNewsBlock : 30),
       newsMinsAfter: Number(rc.minutesAfterNewsBlock !== undefined && !isNaN(Number(rc.minutesAfterNewsBlock)) ? rc.minutesAfterNewsBlock : 30),
@@ -1531,6 +1526,7 @@ function syncConfigToDaRaEngine(state: any, forceSync: boolean = false) {
     
     // Only call updateUserSettings if settings actually changed or if forceSync is explicitly requested
     const currentJson = JSON.stringify(cleanSettings);
+    console.log(`[DARA CONFIG TRACE] source=syncConfigToDaRaEngine passing cleanSettings.maxOpenTrades=${cleanSettings.maxOpenTrades}`);
     if (forceSync || currentJson !== lastSyncedSettingsJson) {
       global.daraEngine.updateUserSettings(cleanSettings);
       lastSyncedSettingsJson = currentJson;
@@ -4318,9 +4314,6 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.maxSpreadPoints !== undefined) botState.riskConfig.maxSpreadPoints = Number(riskConfig.maxSpreadPoints);
       if (riskConfig.entryDistance !== undefined && !isNaN(Number(riskConfig.entryDistance))) {
         botState.riskConfig.entryDistance = Number(riskConfig.entryDistance);
-      }
-      if (riskConfig.additionalEntryDistance !== undefined && !isNaN(Number(riskConfig.additionalEntryDistance))) {
-        botState.riskConfig.additionalEntryDistance = Number(riskConfig.additionalEntryDistance);
       }
       if (riskConfig.slDistance !== undefined && !isNaN(Number(riskConfig.slDistance))) {
         botState.riskConfig.slDistance = Number(riskConfig.slDistance);

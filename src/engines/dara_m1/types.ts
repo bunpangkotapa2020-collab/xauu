@@ -101,7 +101,6 @@ export interface DaRaUserSettings {
   newsMinsAfter: number;       // Mins after high impact news
   trailingEnabled: boolean;
   entryDistance?: number;              // Pullback Entry Distance Pos #1 (e.g. 2.0 raw price)
-  additionalEntryDistance?: number;    // Pullback Entry Distance Pos #2 (e.g. 4.0 raw price)
   trailingDistance?: number;   // Auto fixed 1.5 Price Distance (dynamic)
   trailingRule?: string;       // Rule description: Auto at Original TP (1.5 Price Distance)
   trailingTriggerPips?: number;// [DEPRECATED / LEGACY]: DaRa Auto Trailing starts at Original TP automatically
