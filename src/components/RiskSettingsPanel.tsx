@@ -44,7 +44,6 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
     String(botState?.riskConfig?.riskPercent ?? '1.0')
   );
   const [entryDistance, setEntryDistance] = useState<string>(String((botState?.riskConfig as any)?.entryDistance ?? 2.0));
-  const [additionalEntryDistance, setAdditionalEntryDistance] = useState<string>(String((botState?.riskConfig as any)?.additionalEntryDistance ?? 4.0));
   const [entriesPerSignal, setEntriesPerSignal] = useState<string>(
     "5"
   );
@@ -73,9 +72,6 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
       if ((botState.riskConfig as any).entryDistance !== undefined) {
         setEntryDistance(String((botState.riskConfig as any).entryDistance));
       }
-      if ((botState.riskConfig as any).additionalEntryDistance !== undefined) {
-        setAdditionalEntryDistance(String((botState.riskConfig as any).additionalEntryDistance));
-      }
       if (botState.riskConfig.entriesPerSignal !== undefined) {
         setEntriesPerSignal(String(botState.riskConfig.entriesPerSignal));
       }
@@ -91,7 +87,6 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
     botState?.riskConfig?.lotSizeMode,
     botState?.riskConfig?.riskPercent,
     (botState?.riskConfig as any)?.entryDistance,
-    (botState?.riskConfig as any)?.additionalEntryDistance,
     botState?.riskConfig?.entriesPerSignal,
     botState?.riskConfig?.maxOpenTrades,
     botState?.riskConfig?.trailingStopEnabled,
