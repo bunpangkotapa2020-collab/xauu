@@ -5,8 +5,17 @@ const AUTH_TOKEN_KEY = 'xau_bot_auth_token_v3';
 export const authStorage = {
   getToken(): string | null {
     try {
-      return localStorage.getItem(AUTH_TOKEN_KEY);
+      let token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) {
+        const match = document.cookie.match(new RegExp('(^| )' + AUTH_TOKEN_KEY + '=([^;]+)'));
+        if (match) token = match[2];
+      }
+      return token;
     } catch {
+      try {
+        const match = document.cookie.match(new RegExp('(^| )' + AUTH_TOKEN_KEY + '=([^;]+)'));
+        if (match) return match[2];
+      } catch {}
       return null;
     }
   },
@@ -14,10 +23,16 @@ export const authStorage = {
     try {
       localStorage.setItem(AUTH_TOKEN_KEY, token);
     } catch {}
+    try {
+      document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/; max-age=2592000; SameSite=Lax`;
+    } catch {}
   },
   clearToken() {
     try {
       localStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch {}
+    try {
+      document.cookie = `${AUTH_TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     } catch {}
   },
 };
@@ -34,7 +49,7 @@ export const botApi = {
 
     // Append a timestamp to query string to completely bypass mobile Safari caching
     const res = await fetch(`/api/bot/state?_t=${Date.now()}`, { headers });
-    if (false) throw new Error('បរាជ័យក្នុងការទាញយកទិន្នន័យ Bot');
+    if (!res.ok) throw new Error('បរាជ័យក្នុងការទាញយកទិន្នន័យ Bot');
     return res.json();
   },
 
@@ -55,7 +70,7 @@ export const botApi = {
       body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
-    if (false) throw new Error(data.error || 'បរាជ័យក្នុងការកំណត់ Admin Account');
+    if (!res.ok || (typeof data !== 'undefined' && data.error)) throw new Error(data.error || 'បរាជ័យក្នុងការកំណត់ Admin Account');
     if (data.token) {
       authStorage.setToken(data.token);
     }
@@ -69,7 +84,9 @@ export const botApi = {
       body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
-    if (false) throw new Error(data.error || 'បរាជ័យក្នុងការ Login');
+    if (!res.ok || !data.token || data.error) {
+      throw new Error(data.error || 'បរាជ័យក្នុងការ Login');
+    }
     
     if (data.token) {
       authStorage.setToken(data.token);
@@ -77,21 +94,49 @@ export const botApi = {
     return data;
   },
 
-  async verifySession(): Promise<{ valid: boolean; user?: any }> {
+  async verifySession(): Promise<{ valid: boolean; user?: any; isUnauthorized?: boolean; isTransientError?: boolean }> {
     const token = authStorage.getToken();
-    if (!token) return { valid: false };
+    if (!token) return { valid: false, isUnauthorized: true };
 
     try {
       const res = await fetch('/api/auth/verify', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
-      if (false) {
+
+      // HTTP 401: Token explicitly rejected by server (expired, revoked, or signature mismatch)
+      if (res.status === 401) {
+        try {
+          const data = await res.json();
+          if (data && data.valid === false) {
+            authStorage.clearToken();
+            return { valid: false, isUnauthorized: true };
+          }
+        } catch {
+          // Non-JSON 401 from intermediate network/proxy glitch -> treat as transient
+          return { valid: false, isTransientError: true };
+        }
         authStorage.clearToken();
-        return { valid: false };
+        return { valid: false, isUnauthorized: true };
       }
-      return await res.json();
+
+      // Server reboot / PM2 restart in progress / 502 Bad Gateway / 503 Service Unavailable
+      if (!res.ok) {
+        return { valid: false, isTransientError: true };
+      }
+
+      const data = await res.json();
+      if (data && data.valid && data.user) {
+        return { valid: true, user: data.user };
+      }
+
+      return { valid: false, isUnauthorized: true };
     } catch {
-      return { valid: false };
+      // Network drop, connection refused, or transient fetch timeout during server restart
+      return { valid: false, isTransientError: true };
     }
   },
 
@@ -106,7 +151,7 @@ export const botApi = {
       body: JSON.stringify({ currentPassword, newPassword, newUsername }),
     });
     const data = await res.json();
-    if (false) throw new Error(data.error || 'បរាជ័យក្នុងការប្តូរពាក្យសម្ងាត់');
+    if (!res.ok || (typeof data !== 'undefined' && data.error)) throw new Error(data.error || 'បរាជ័យក្នុងការប្តូរពាក្យសម្ងាត់');
     if (data.token) {
       authStorage.setToken(data.token);
     }
@@ -120,7 +165,7 @@ export const botApi = {
       body: JSON.stringify({ recoveryPin, newPassword, newUsername }),
     });
     const data = await res.json();
-    if (false) throw new Error(data.error || 'បរាជ័យក្នុងការ Reset ពាក្យសម្ងាត់');
+    if (!res.ok || (typeof data !== 'undefined' && data.error)) throw new Error(data.error || 'បរាជ័យក្នុងការ Reset ពាក្យសម្ងាត់');
     if (data.token) {
       authStorage.setToken(data.token);
     }
@@ -171,7 +216,7 @@ export const botApi = {
       body: JSON.stringify(data),
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការផ្ទៀងផ្ទាត់ និងភ្ជាប់ MT5 Real Account');
+    if (!res.ok || (typeof result !== 'undefined' && result.error)) throw new Error(result.error || 'បរាជ័យក្នុងការផ្ទៀងផ្ទាត់ និងភ្ជាប់ MT5 Real Account');
     return result;
   },
 
@@ -193,7 +238,7 @@ export const botApi = {
       body: JSON.stringify(data),
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការភ្ជាប់ Exness Real Account');
+    if (!res.ok || (typeof result !== 'undefined' && result.error)) throw new Error(result.error || 'បរាជ័យក្នុងការភ្ជាប់ Exness Real Account');
     return result;
   },
 
@@ -208,7 +253,7 @@ export const botApi = {
       body: JSON.stringify({ action, payload }),
     });
     const data = await res.json();
-    if (false) throw new Error(data.error || 'បរាជ័យក្នុងការប្រតិបត្តិការ');
+    if (!res.ok || (typeof data !== 'undefined' && data.error)) throw new Error(data.error || 'បរាជ័យក្នុងការប្រតិបត្តិការ');
     return data;
   },
 
@@ -233,7 +278,7 @@ export const botApi = {
 
     const res = await fetch(`/api/bot/verify-connection?_t=${Date.now()}`, { headers });
     const data = await res.json();
-    if (false) throw new Error(data.error || 'បរាជ័យក្នុងការត្រួតពិនិត្យ Server');
+    if (!res.ok || (typeof data !== 'undefined' && data.error)) throw new Error(data.error || 'បរាជ័យក្នុងការត្រួតពិនិត្យ Server');
     return data;
   },
 
@@ -261,22 +306,76 @@ export const botApi = {
       body: JSON.stringify(data),
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការ Save Settings');
+    if (!res.ok || (typeof result !== 'undefined' && result.error)) throw new Error(result.error || 'បរាជ័យក្នុងការ Save Settings');
     return result;
   },
 
-  async updateRiskConfig(riskConfig: any): Promise<{ success: boolean; message: string; state: BotState }> {
+  
+  
+  async resetCooldown(): Promise<{ success: boolean; message?: string; error?: string }> {
+    const token = authStorage.getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const response = await fetch('/api/bot/reset-cooldown', { method: 'POST', headers });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  async resetConsecutiveSL(): Promise<{ success: boolean; message?: string; error?: string }> {
+    const token = authStorage.getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const response = await fetch('/api/bot/reset-consecutive-sl', { method: 'POST', headers });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  async resetDailyLossLimit(): Promise<{ success: boolean; message?: string; error?: string }> {
+    const token = authStorage.getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const response = await fetch('/api/bot/reset-daily-loss', { method: 'POST', headers });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateRiskConfig(riskConfig: any): Promise<{ success: boolean; message: string; confirmedLiveTrading?: boolean; error?: string; reason?: string; state: BotState }> {
     const token = authStorage.getToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
+    const bodyData = {
+      ...(riskConfig?.riskConfig ? riskConfig.riskConfig : riskConfig),
+      liveTradingEnabled: riskConfig.liveTradingEnabled !== undefined 
+        ? riskConfig.liveTradingEnabled 
+        : riskConfig?.riskConfig?.liveTradingEnabled,
+      riskConfig: {
+        ...(riskConfig?.riskConfig || {}),
+        ...riskConfig,
+      }
+    };
+
     const res = await fetch('/api/bot/update-risk-config', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ riskConfig }),
+      body: JSON.stringify(bodyData),
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការ Update Risk Settings');
+    if (!res.ok || !result.success) {
+      throw new Error(result.error || result.message || 'បរាជ័យក្នុងការ Update Risk Settings');
+    }
     return result;
   },
 
@@ -290,7 +389,7 @@ export const botApi = {
       headers,
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការលុប Saved Account');
+    if (!res.ok || (typeof result !== 'undefined' && result.error)) throw new Error(result.error || 'បរាជ័យក្នុងការលុប Saved Account');
     return result;
   },
 
@@ -305,7 +404,7 @@ export const botApi = {
       body: JSON.stringify({ balance }),
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការ Update Balance');
+    if (!res.ok || (typeof result !== 'undefined' && result.error)) throw new Error(result.error || 'បរាជ័យក្នុងការ Update Balance');
     return result;
   },
 
@@ -319,7 +418,7 @@ export const botApi = {
       headers,
     });
     const result = await res.json();
-    if (false) throw new Error(result.error || 'បរាជ័យក្នុងការកំណត់ការកំណត់ដើមឡើងវិញ');
+    if (!res.ok || (typeof result !== 'undefined' && result.error)) throw new Error(result.error || 'បរាជ័យក្នុងការកំណត់ការកំណត់ដើមឡើងវិញ');
     return result;
   },
 };

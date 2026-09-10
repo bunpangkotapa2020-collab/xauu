@@ -1,1927 +1,2502 @@
 [
   {
-    "time": "2026-09-06T10:51:06.032Z",
+    "time": "2026-09-10T14:44:01.590Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:51:06.031Z",
+    "time": "2026-09-10T14:44:01.590Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:51:04.419Z",
+    "time": "2026-09-10T14:44:01.589Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:51:04.418Z",
+    "time": "2026-09-10T14:44:01.588Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:51:03.064Z",
+    "time": "2026-09-10T14:44:01.587Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:51:03.062Z",
+    "time": "2026-09-10T14:44:01.585Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:51:01.656Z",
+    "time": "2026-09-10T14:44:01.585Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:51:01.656Z",
+    "time": "2026-09-10T14:44:01.583Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:51:00.048Z",
+    "time": "2026-09-10T14:44:01.583Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:51:00.045Z",
+    "time": "2026-09-10T14:44:01.582Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:50:58.622Z",
+    "time": "2026-09-10T14:44:01.581Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:50:58.622Z",
+    "time": "2026-09-10T14:44:01.580Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:50:57.766Z",
+    "time": "2026-09-10T14:44:01.578Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:50:57.766Z",
+    "time": "2026-09-10T14:44:01.577Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:51.076Z",
+    "time": "2026-09-10T14:44:01.576Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:51.075Z",
+    "time": "2026-09-10T14:44:01.575Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:50.396Z",
+    "time": "2026-09-10T14:44:01.575Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:50.395Z",
+    "time": "2026-09-10T14:44:01.574Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:49.725Z",
+    "time": "2026-09-10T14:44:01.573Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:49.725Z",
+    "time": "2026-09-10T14:44:01.572Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:49.051Z",
+    "time": "2026-09-10T14:44:01.572Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:49.050Z",
+    "time": "2026-09-10T14:44:01.571Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:48.378Z",
+    "time": "2026-09-10T14:44:01.570Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:48.378Z",
+    "time": "2026-09-10T14:44:01.569Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:47.738Z",
+    "time": "2026-09-10T14:44:01.568Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:47.737Z",
+    "time": "2026-09-10T14:44:01.567Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:47.098Z",
+    "time": "2026-09-10T14:44:01.556Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:47.097Z",
+    "time": "2026-09-10T14:44:01.555Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:46.445Z",
+    "time": "2026-09-10T14:44:01.554Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:46.444Z",
+    "time": "2026-09-10T14:44:01.553Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:45.782Z",
+    "time": "2026-09-10T14:44:01.552Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:45.781Z",
+    "time": "2026-09-10T14:44:01.551Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:45.093Z",
+    "time": "2026-09-10T14:44:01.550Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:45.092Z",
+    "time": "2026-09-10T14:44:01.549Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:44.418Z",
+    "time": "2026-09-10T14:44:01.548Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:44.414Z",
+    "time": "2026-09-10T14:44:01.547Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:43.776Z",
+    "time": "2026-09-10T14:44:01.545Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:43.775Z",
+    "time": "2026-09-10T14:44:01.544Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:43.139Z",
+    "time": "2026-09-10T14:44:01.543Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:43.139Z",
+    "time": "2026-09-10T14:44:01.543Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:42.464Z",
+    "time": "2026-09-10T14:44:01.541Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:42.464Z",
+    "time": "2026-09-10T14:44:01.540Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:41.782Z",
+    "time": "2026-09-10T14:44:01.539Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:41.781Z",
+    "time": "2026-09-10T14:44:01.538Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:41.129Z",
+    "time": "2026-09-10T14:44:01.538Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:41.129Z",
+    "time": "2026-09-10T14:44:01.537Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:39.275Z",
+    "time": "2026-09-10T14:44:01.536Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:39.274Z",
+    "time": "2026-09-10T14:44:01.535Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:37.461Z",
+    "time": "2026-09-10T14:44:01.534Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:37.460Z",
+    "time": "2026-09-10T14:44:01.533Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:35.940Z",
+    "time": "2026-09-10T14:44:01.532Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:35.939Z",
+    "time": "2026-09-10T14:44:01.531Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:34.742Z",
+    "time": "2026-09-10T14:44:01.531Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:34.741Z",
+    "time": "2026-09-10T14:44:01.530Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:33.363Z",
+    "time": "2026-09-10T14:44:01.529Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:33.354Z",
+    "time": "2026-09-10T14:44:01.528Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:31.872Z",
+    "time": "2026-09-10T14:44:01.527Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:31.870Z",
+    "time": "2026-09-10T14:44:01.526Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:30.522Z",
+    "time": "2026-09-10T14:44:01.525Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:30.521Z",
+    "time": "2026-09-10T14:44:01.525Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:29.033Z",
+    "time": "2026-09-10T14:44:01.524Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:29.032Z",
+    "time": "2026-09-10T14:44:01.523Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:27.890Z",
+    "time": "2026-09-10T14:44:01.522Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:27.889Z",
+    "time": "2026-09-10T14:44:01.521Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:27.247Z",
+    "time": "2026-09-10T14:44:01.520Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:27.246Z",
+    "time": "2026-09-10T14:44:01.519Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:26.507Z",
+    "time": "2026-09-10T14:44:01.518Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:26.506Z",
+    "time": "2026-09-10T14:44:01.517Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:49:25.845Z",
+    "time": "2026-09-10T14:44:01.516Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:49:25.843Z",
+    "time": "2026-09-10T14:44:01.515Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:40.835Z",
+    "time": "2026-09-10T14:44:01.514Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:40.834Z",
+    "time": "2026-09-10T14:44:01.513Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:40.147Z",
+    "time": "2026-09-10T14:44:01.512Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:40.147Z",
+    "time": "2026-09-10T14:44:01.510Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:39.478Z",
+    "time": "2026-09-10T14:44:01.509Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:39.478Z",
+    "time": "2026-09-10T14:44:01.508Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:38.814Z",
+    "time": "2026-09-10T14:44:01.508Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:38.814Z",
+    "time": "2026-09-10T14:44:01.507Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:38.134Z",
+    "time": "2026-09-10T14:44:01.506Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:38.133Z",
+    "time": "2026-09-10T14:44:01.505Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:37.507Z",
+    "time": "2026-09-10T14:44:01.505Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:37.507Z",
+    "time": "2026-09-10T14:44:01.504Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:36.840Z",
+    "time": "2026-09-10T14:44:01.503Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:36.839Z",
+    "time": "2026-09-10T14:44:01.502Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:36.162Z",
+    "time": "2026-09-10T14:44:01.501Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:36.162Z",
+    "time": "2026-09-10T14:44:01.501Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:35.463Z",
+    "time": "2026-09-10T14:44:01.500Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:35.463Z",
+    "time": "2026-09-10T14:44:01.498Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:34.778Z",
+    "time": "2026-09-10T14:44:01.497Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:34.777Z",
+    "time": "2026-09-10T14:44:01.496Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:34.058Z",
+    "time": "2026-09-10T14:44:01.483Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:34.057Z",
+    "time": "2026-09-10T14:44:01.483Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:33.427Z",
+    "time": "2026-09-10T14:44:01.482Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:33.426Z",
+    "time": "2026-09-10T14:44:01.481Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:32.769Z",
+    "time": "2026-09-10T14:44:01.480Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:32.768Z",
+    "time": "2026-09-10T14:44:01.479Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:32.110Z",
+    "time": "2026-09-10T14:44:01.478Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:32.109Z",
+    "time": "2026-09-10T14:44:01.477Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:31.465Z",
+    "time": "2026-09-10T14:44:01.476Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:31.465Z",
+    "time": "2026-09-10T14:44:01.475Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:48:30.828Z",
+    "time": "2026-09-10T14:44:01.474Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:48:30.827Z",
+    "time": "2026-09-10T14:44:01.473Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:59.040Z",
+    "time": "2026-09-10T14:44:01.471Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:59.039Z",
+    "time": "2026-09-10T14:44:01.470Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:58.335Z",
+    "time": "2026-09-10T14:44:01.468Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:58.334Z",
+    "time": "2026-09-10T14:44:01.467Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:57.658Z",
+    "time": "2026-09-10T14:44:01.466Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:57.658Z",
+    "time": "2026-09-10T14:44:01.465Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:56.993Z",
+    "time": "2026-09-10T14:44:01.464Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:56.992Z",
+    "time": "2026-09-10T14:44:01.463Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:56.380Z",
+    "time": "2026-09-10T14:44:01.462Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:56.380Z",
+    "time": "2026-09-10T14:44:01.462Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:55.732Z",
+    "time": "2026-09-10T14:44:01.461Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:55.731Z",
+    "time": "2026-09-10T14:44:01.460Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:55.037Z",
+    "time": "2026-09-10T14:44:01.459Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:55.036Z",
+    "time": "2026-09-10T14:44:01.458Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:54.374Z",
+    "time": "2026-09-10T14:44:01.457Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:54.373Z",
+    "time": "2026-09-10T14:44:01.457Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:53.671Z",
+    "time": "2026-09-10T14:44:01.456Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:53.670Z",
+    "time": "2026-09-10T14:44:01.455Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:52.996Z",
+    "time": "2026-09-10T14:44:01.454Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:52.995Z",
+    "time": "2026-09-10T14:44:01.453Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:52.342Z",
+    "time": "2026-09-10T14:44:01.452Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:52.342Z",
+    "time": "2026-09-10T14:44:01.451Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:51.658Z",
+    "time": "2026-09-10T14:44:01.450Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:51.657Z",
+    "time": "2026-09-10T14:44:01.449Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:50.956Z",
+    "time": "2026-09-10T14:44:01.449Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:50.955Z",
+    "time": "2026-09-10T14:44:01.448Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:50.310Z",
+    "time": "2026-09-10T14:44:01.447Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:50.309Z",
+    "time": "2026-09-10T14:44:01.446Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:49.634Z",
+    "time": "2026-09-10T14:44:01.445Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:49.633Z",
+    "time": "2026-09-10T14:44:01.444Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:48.253Z",
+    "time": "2026-09-10T14:44:01.444Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:48.252Z",
+    "time": "2026-09-10T14:44:01.443Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:47.051Z",
+    "time": "2026-09-10T14:44:01.442Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:47.050Z",
+    "time": "2026-09-10T14:44:01.441Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:45.852Z",
+    "time": "2026-09-10T14:44:01.440Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:45.852Z",
+    "time": "2026-09-10T14:44:01.439Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:44.466Z",
+    "time": "2026-09-10T14:44:01.438Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:44.465Z",
+    "time": "2026-09-10T14:44:01.437Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:43.037Z",
+    "time": "2026-09-10T14:44:01.436Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:43.036Z",
+    "time": "2026-09-10T14:44:01.435Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:41.563Z",
+    "time": "2026-09-10T14:44:01.435Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:41.562Z",
+    "time": "2026-09-10T14:44:01.434Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:40.027Z",
+    "time": "2026-09-10T14:44:01.433Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:40.026Z",
+    "time": "2026-09-10T14:44:01.432Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:38.470Z",
+    "time": "2026-09-10T14:44:01.431Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:38.470Z",
+    "time": "2026-09-10T14:44:01.430Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:37.377Z",
+    "time": "2026-09-10T14:44:01.429Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:37.376Z",
+    "time": "2026-09-10T14:44:01.428Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:36.721Z",
+    "time": "2026-09-10T14:44:01.427Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:36.720Z",
+    "time": "2026-09-10T14:44:01.426Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:36.050Z",
+    "time": "2026-09-10T14:44:01.425Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:36.049Z",
+    "time": "2026-09-10T14:44:01.424Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:35.340Z",
+    "time": "2026-09-10T14:44:01.412Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:35.338Z",
+    "time": "2026-09-10T14:44:01.411Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:34.686Z",
+    "time": "2026-09-10T14:44:01.410Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:34.686Z",
+    "time": "2026-09-10T14:44:01.409Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:34.008Z",
+    "time": "2026-09-10T14:44:01.408Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:34.007Z",
+    "time": "2026-09-10T14:44:01.407Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:33.363Z",
+    "time": "2026-09-10T14:44:01.406Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:33.363Z",
+    "time": "2026-09-10T14:44:01.405Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:32.656Z",
+    "time": "2026-09-10T14:44:01.404Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:32.655Z",
+    "time": "2026-09-10T14:44:01.403Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:31.979Z",
+    "time": "2026-09-10T14:44:01.402Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:31.978Z",
+    "time": "2026-09-10T14:44:01.400Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:31.338Z",
+    "time": "2026-09-10T14:44:01.399Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:31.337Z",
+    "time": "2026-09-10T14:44:01.398Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:29.839Z",
+    "time": "2026-09-10T14:44:01.397Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:29.838Z",
+    "time": "2026-09-10T14:44:01.396Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:28.672Z",
+    "time": "2026-09-10T14:44:01.395Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:28.672Z",
+    "time": "2026-09-10T14:44:01.394Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:27.438Z",
+    "time": "2026-09-10T14:44:01.393Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:27.437Z",
+    "time": "2026-09-10T14:44:01.393Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:26.121Z",
+    "time": "2026-09-10T14:44:01.392Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:26.120Z",
+    "time": "2026-09-10T14:44:01.391Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:24.525Z",
+    "time": "2026-09-10T14:44:01.390Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:24.525Z",
+    "time": "2026-09-10T14:44:01.390Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:22.982Z",
+    "time": "2026-09-10T14:44:01.389Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:22.982Z",
+    "time": "2026-09-10T14:44:01.388Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:21.541Z",
+    "time": "2026-09-10T14:44:01.388Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:21.540Z",
+    "time": "2026-09-10T14:44:01.387Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:20.053Z",
+    "time": "2026-09-10T14:44:01.386Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:20.053Z",
+    "time": "2026-09-10T14:44:01.386Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:18.980Z",
+    "time": "2026-09-10T14:44:01.385Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:18.980Z",
+    "time": "2026-09-10T14:44:01.384Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:18.332Z",
+    "time": "2026-09-10T14:44:01.383Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:18.332Z",
+    "time": "2026-09-10T14:44:01.383Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:17.692Z",
+    "time": "2026-09-10T14:44:01.382Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:17.692Z",
+    "time": "2026-09-10T14:44:01.381Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:17.059Z",
+    "time": "2026-09-10T14:44:01.381Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:17.058Z",
+    "time": "2026-09-10T14:44:01.380Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:16.395Z",
+    "time": "2026-09-10T14:44:01.379Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:16.394Z",
+    "time": "2026-09-10T14:44:01.378Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:04.720Z",
+    "time": "2026-09-10T14:44:01.378Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:04.719Z",
+    "time": "2026-09-10T14:44:01.377Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:04.034Z",
+    "time": "2026-09-10T14:44:01.376Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:04.032Z",
+    "time": "2026-09-10T14:44:01.375Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:03.360Z",
+    "time": "2026-09-10T14:44:01.375Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:03.359Z",
+    "time": "2026-09-10T14:44:01.374Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:02.642Z",
+    "time": "2026-09-10T14:44:01.373Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:02.642Z",
+    "time": "2026-09-10T14:44:01.372Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:01.983Z",
+    "time": "2026-09-10T14:44:01.372Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:01.983Z",
+    "time": "2026-09-10T14:44:01.371Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:01.302Z",
+    "time": "2026-09-10T14:44:01.370Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:01.302Z",
+    "time": "2026-09-10T14:44:01.369Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:46:00.622Z",
+    "time": "2026-09-10T14:44:01.369Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:46:00.622Z",
+    "time": "2026-09-10T14:44:01.368Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:59.982Z",
+    "time": "2026-09-10T14:44:01.367Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:59.981Z",
+    "time": "2026-09-10T14:44:01.366Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:59.319Z",
+    "time": "2026-09-10T14:44:01.366Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:59.319Z",
+    "time": "2026-09-10T14:44:01.365Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:58.653Z",
+    "time": "2026-09-10T14:44:01.364Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:58.653Z",
+    "time": "2026-09-10T14:44:01.363Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:58.014Z",
+    "time": "2026-09-10T14:44:01.362Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:58.014Z",
+    "time": "2026-09-10T14:44:01.362Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:57.341Z",
+    "time": "2026-09-10T14:44:01.361Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:57.340Z",
+    "time": "2026-09-10T14:44:01.360Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:56.710Z",
+    "time": "2026-09-10T14:44:01.349Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:56.710Z",
+    "time": "2026-09-10T14:44:01.349Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:56.025Z",
+    "time": "2026-09-10T14:44:01.348Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:56.024Z",
+    "time": "2026-09-10T14:44:01.347Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:55.351Z",
+    "time": "2026-09-10T14:44:01.347Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:55.351Z",
+    "time": "2026-09-10T14:44:01.346Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:54.698Z",
+    "time": "2026-09-10T14:44:01.345Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:54.698Z",
+    "time": "2026-09-10T14:44:01.344Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:41.195Z",
+    "time": "2026-09-10T14:44:01.344Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:41.194Z",
+    "time": "2026-09-10T14:44:01.343Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:40.543Z",
+    "time": "2026-09-10T14:44:01.342Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:40.543Z",
+    "time": "2026-09-10T14:44:01.341Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:39.913Z",
+    "time": "2026-09-10T14:44:01.341Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:39.912Z",
+    "time": "2026-09-10T14:44:01.340Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:39.237Z",
+    "time": "2026-09-10T14:44:01.339Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:39.237Z",
+    "time": "2026-09-10T14:44:01.338Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:38.597Z",
+    "time": "2026-09-10T14:44:01.338Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:38.597Z",
+    "time": "2026-09-10T14:44:01.337Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:37.928Z",
+    "time": "2026-09-10T14:44:01.336Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:37.928Z",
+    "time": "2026-09-10T14:44:01.335Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:37.310Z",
+    "time": "2026-09-10T14:44:01.335Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:37.310Z",
+    "time": "2026-09-10T14:44:01.334Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:36.659Z",
+    "time": "2026-09-10T14:44:01.333Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:36.658Z",
+    "time": "2026-09-10T14:44:01.332Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:36.027Z",
+    "time": "2026-09-10T14:44:01.331Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:36.027Z",
+    "time": "2026-09-10T14:44:01.331Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:35.366Z",
+    "time": "2026-09-10T14:44:01.329Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:35.366Z",
+    "time": "2026-09-10T14:44:01.328Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:34.693Z",
+    "time": "2026-09-10T14:44:01.327Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:34.692Z",
+    "time": "2026-09-10T14:44:01.326Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:34.037Z",
+    "time": "2026-09-10T14:44:01.325Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:34.036Z",
+    "time": "2026-09-10T14:44:01.324Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:33.424Z",
+    "time": "2026-09-10T14:44:01.324Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:33.424Z",
+    "time": "2026-09-10T14:44:01.323Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:32.756Z",
+    "time": "2026-09-10T14:44:01.322Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:32.755Z",
+    "time": "2026-09-10T14:44:01.321Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:32.105Z",
+    "time": "2026-09-10T14:44:01.321Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:32.105Z",
+    "time": "2026-09-10T14:44:01.320Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:45:31.444Z",
+    "time": "2026-09-10T14:44:01.319Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:45:31.443Z",
+    "time": "2026-09-10T14:44:01.318Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:28.725Z",
+    "time": "2026-09-10T14:44:01.317Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:28.725Z",
+    "time": "2026-09-10T14:44:01.316Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:28.106Z",
+    "time": "2026-09-10T14:44:01.315Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:28.106Z",
+    "time": "2026-09-10T14:44:01.314Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:27.363Z",
+    "time": "2026-09-10T14:44:01.313Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:27.363Z",
+    "time": "2026-09-10T14:44:01.313Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:26.728Z",
+    "time": "2026-09-10T14:44:01.312Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:26.727Z",
+    "time": "2026-09-10T14:44:01.311Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:26.033Z",
+    "time": "2026-09-10T14:44:01.310Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:26.032Z",
+    "time": "2026-09-10T14:44:01.310Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:25.357Z",
+    "time": "2026-09-10T14:44:01.309Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:25.357Z",
+    "time": "2026-09-10T14:44:01.308Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:24.645Z",
+    "time": "2026-09-10T14:44:01.307Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:24.644Z",
+    "time": "2026-09-10T14:44:01.306Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:23.956Z",
+    "time": "2026-09-10T14:44:01.306Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:23.955Z",
+    "time": "2026-09-10T14:44:01.305Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:23.310Z",
+    "time": "2026-09-10T14:44:01.304Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:23.310Z",
+    "time": "2026-09-10T14:44:01.303Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:22.685Z",
+    "time": "2026-09-10T14:44:01.303Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:22.684Z",
+    "time": "2026-09-10T14:44:01.302Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:22.015Z",
+    "time": "2026-09-10T14:44:01.301Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:22.015Z",
+    "time": "2026-09-10T14:44:01.300Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:21.365Z",
+    "time": "2026-09-10T14:44:01.299Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:21.364Z",
+    "time": "2026-09-10T14:44:01.298Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:20.265Z",
+    "time": "2026-09-10T14:44:01.288Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:20.264Z",
+    "time": "2026-09-10T14:44:01.287Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:19.076Z",
+    "time": "2026-09-10T14:44:01.286Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:19.075Z",
+    "time": "2026-09-10T14:44:01.285Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:17.990Z",
+    "time": "2026-09-10T14:44:01.285Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:17.989Z",
+    "time": "2026-09-10T14:44:01.284Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:17.345Z",
+    "time": "2026-09-10T14:44:01.283Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:17.345Z",
+    "time": "2026-09-10T14:44:01.282Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:16.706Z",
+    "time": "2026-09-10T14:44:01.281Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:16.706Z",
+    "time": "2026-09-10T14:44:01.280Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:16.071Z",
+    "time": "2026-09-10T14:44:01.279Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:16.071Z",
+    "time": "2026-09-10T14:44:01.279Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-06T10:44:15.413Z",
+    "time": "2026-09-10T14:44:01.278Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-06T10:44:15.413Z",
+    "time": "2026-09-10T14:44:01.277Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-09-01T04:55:52.747Z",
+    "time": "2026-09-10T14:44:01.276Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-09-01T04:55:52.745Z",
+    "time": "2026-09-10T14:44:01.275Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T11:04:20.467Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 0.1 minutes."
+    "time": "2026-09-10T14:44:01.274Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.274Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.273Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.272Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.271Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.270Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.269Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.268Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.268Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.267Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.266Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.265Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.264Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.264Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.263Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.262Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.261Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.260Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.260Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.259Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.258Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.257Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.256Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.255Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.254Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.254Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.253Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.252Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.251Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.250Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.249Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.249Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.248Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.247Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.246Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.245Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.244Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.244Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.243Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.242Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.241Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.240Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.239Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.238Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.237Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.237Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.236Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.234Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.224Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.223Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.221Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.221Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.220Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.219Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.218Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.217Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.217Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.216Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.215Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.214Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.213Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.212Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.211Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.210Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.210Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.209Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.208Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.207Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.206Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.205Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.205Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.204Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T11:04:14.467Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.203Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.202Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.201Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.200Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.199Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.198Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.197Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.196Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.196Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.195Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.194Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.193Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.192Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.191Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.190Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.189Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.189Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.188Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.187Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.175Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.174Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.174Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.173Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.172Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.171Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.170Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.169Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T11:00:47.421Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 0.3 minutes."
+    "time": "2026-09-10T14:44:01.168Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.167Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.166Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.166Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.165Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.164Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.163Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.162Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.161Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.160Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T11:00:29.415Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.159Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T10:57:08.369Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 1.1 minutes."
+    "time": "2026-09-10T14:44:01.158Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T10:56:05.352Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.157Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T10:48:37.305Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.146Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T10:33:33.084Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.145Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T10:15:27.736Z",
+    "time": "2026-09-10T14:44:01.144Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T10:10:27.661Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.143Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T04:09:10.359Z",
+    "time": "2026-09-10T14:44:01.143Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "RESOLVED: MT5 Reconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T04:09:10.358Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 7.3 minutes."
+    "time": "2026-09-10T14:44:01.142Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T04:06:55.325Z",
+    "time": "2026-09-10T14:44:01.141Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T04:01:55.261Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.140Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T03:30:07.860Z",
+    "time": "2026-09-10T14:44:01.139Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T03:25:07.796Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.138Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T03:15:31.522Z",
+    "time": "2026-09-10T14:44:01.137Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.137Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T03:10:31.436Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.136Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T03:10:16.434Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 1.7 minutes."
+    "time": "2026-09-10T14:44:01.135Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T03:08:34.413Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.134Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T03:08:25.686Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.133Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:42:46.093Z",
+    "time": "2026-09-10T14:44:01.132Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:37:46.047Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.131Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:36:57.087Z",
+    "time": "2026-09-10T14:44:01.130Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.129Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:35:21.359Z",
+    "time": "2026-09-10T14:44:01.128Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:35:21.357Z",
+    "time": "2026-09-10T14:44:01.127Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:31:57.009Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.126Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:30:07.079Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.125Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:29:43.076Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 0.2 minutes."
+    "time": "2026-09-10T14:44:01.124Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:29:31.073Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.123Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:25:48.614Z",
+    "time": "2026-09-10T14:44:01.122Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:20:48.570Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.121Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:19:05.977Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.120Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:18:41.972Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 0.4 minutes."
+    "time": "2026-09-10T14:44:01.119Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:18:20.971Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.118Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:13:16.116Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.118Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T02:12:52.111Z",
+    "time": "2026-09-10T14:44:01.117Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "RESOLVED: MT5 Reconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T02:12:52.110Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 22.5 minutes."
+    "time": "2026-09-10T14:44:01.116Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T01:55:21.880Z",
+    "time": "2026-09-10T14:44:01.115Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.114Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T01:50:21.821Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.114Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T01:49:45.313Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.113Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T01:40:46.910Z",
+    "time": "2026-09-10T14:44:01.112Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.111Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-31T01:35:46.849Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.110Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-31T01:32:00.047Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.109Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:55:59.925Z",
+    "time": "2026-09-10T14:44:01.109Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:50:59.859Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.108Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.107Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:46:19.873Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.106Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:45:58.474Z",
+    "time": "2026-09-10T14:44:01.105Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:45:58.474Z",
+    "time": "2026-09-10T14:44:01.104Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:45:52.028Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.103Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:44:55.879Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.102Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:44:38.777Z",
+    "time": "2026-09-10T14:44:01.100Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.099Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:39:38.707Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.098Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:39:05.208Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.097Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:38:51.455Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.097Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:38:39.014Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.096Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:34:20.285Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.095Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:31:51.958Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.094Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:27:37.806Z",
+    "time": "2026-09-10T14:44:01.093Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:22:37.738Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.091Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:19:26.143Z",
+    "time": "2026-09-10T14:44:01.090Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:14:26.075Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.089Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:13:59.779Z",
+    "time": "2026-09-10T14:44:01.088Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:08:59.709Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.087Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:06:03.661Z",
+    "time": "2026-09-10T14:44:01.074Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T17:01:03.594Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.073Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T17:00:40.996Z",
+    "time": "2026-09-10T14:44:01.073Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T16:55:40.924Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.072Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.070Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T16:52:16.892Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.069Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T16:26:27.543Z",
+    "time": "2026-09-10T14:44:01.069Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T16:21:27.462Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.068Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T15:41:04.868Z",
+    "time": "2026-09-10T14:44:01.067Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-10T14:44:01.066Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T15:36:04.788Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.066Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T15:33:04.448Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.065Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T09:12:09.037Z",
+    "time": "2026-09-10T14:44:01.064Z",
     "event": "EMAIL_ALERT_DISABLED",
     "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T09:12:09.037Z",
+    "time": "2026-09-10T14:44:01.063Z",
     "event": "CRASH",
-    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T09:06:25.575Z",
+    "time": "2026-09-10T14:44:01.062Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "RESOLVED: MT5 Reconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T09:06:25.574Z",
-    "event": "RECOVERED",
-    "details": "MT5 Connection restored after 6.5 minutes."
+    "time": "2026-09-10T14:44:01.061Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T09:04:58.550Z",
+    "time": "2026-09-10T14:44:01.060Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T08:59:58.465Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.059Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T08:59:04.905Z",
+    "time": "2026-09-10T14:44:01.058Z",
     "event": "EMAIL_ALERT_DISABLED",
-    "details": "CRITICAL: MT5 Disconnected"
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T08:54:04.840Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.058Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
+  },
+  {
+    "time": "2026-09-10T14:44:01.057Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T08:53:56.209Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.056Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T08:47:18.105Z",
-    "event": "EMAIL_FAILED",
-    "details": "Error: Invalid login: 534-5.7.9 Application-specific password required. For more information, go to\n534 5.7.9  https://support.google.com/mail/?p=InvalidSecondFactor ada2fe7eead31-786b21c60fdsm3768697137.12 - gsmtp"
+    "time": "2026-09-10T14:44:01.055Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T08:42:17.918Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.054Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   },
   {
-    "time": "2026-08-30T08:42:08.628Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.053Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
   },
   {
-    "time": "2026-08-30T08:38:44.395Z",
-    "event": "DISCONNECTED",
-    "details": "MT5 Connection lost. Tracking downtime."
+    "time": "2026-09-10T14:44:01.052Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: write EPIPE"
   }
 ]

@@ -50,7 +50,8 @@ export class DaRaOrderExecution {
     currentAsk: number,
     currentBid: number,
     settings: DaRaUserSettings,
-    levelIndex: number
+    levelIndex: number,
+    isBotRunning: boolean
   ): Promise<ExecutionResult> {
     const positionNumber = levelIndex + 1;
     // 0. Hard Limit: 1 Confirmed Signal = 5 Positions MAX
@@ -126,6 +127,26 @@ export class DaRaOrderExecution {
       console.log(`[DaRa M1 EA v1.0] 🚀 Sending ${setup.direction} Order to Broker...`);
 
       const comment = positionNumber > 1 ? `DaRa v1.0 ${setup.direction} #${positionNumber}` : `DaRa v1.0 ${setup.direction}`;
+      
+      // ==========================================
+      // FINAL LIVE TRADING SAFETY GUARD
+      // ==========================================
+      if (!isBotRunning) {
+        const errorMsg = 'HARD BLOCK: Bot is NOT explicitly RUNNING. Execution aborted.';
+        console.error(`[DaRa M1 EA] ❌ ${errorMsg}`);
+        return { success: false, error: errorMsg };
+      }
+      
+      if (settings.liveTradingEnabled !== true) {
+        console.log(`[DaRa M1 EA] ℹ️ LIVE TRADING IS OFF (Monitor Mode). Execution aborted.`);
+        return { success: false, error: 'MONITOR_MODE' };
+      }
+      
+      if (!this.broker) {
+         return { success: false, error: 'HARD BLOCK: Broker connection is invalid or unavailable.' };
+      }
+      // ==========================================
+      
       const brokerResponse = await this.broker.sendOrder({
         symbol,
         type: setup.direction,
@@ -152,7 +173,7 @@ export class DaRaOrderExecution {
         }
         return {
           success: false,
-          error: `Broker Rejection: ${brokerResponse.error || 'Execution failed'}`
+          error: `Broker Rejection: ${typeof brokerResponse.error === 'object' ? JSON.stringify(brokerResponse.error) : brokerResponse.error || 'Execution failed'}`
         };
       }
 

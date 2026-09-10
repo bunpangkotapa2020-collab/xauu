@@ -32,6 +32,7 @@ export interface TradingHoursConfig {
 }
 
 export interface RiskConfig {
+  liveTradingEnabled?: boolean;
   lotSizeMode?: 'fixed' | 'risk_percent'; // 'fixed' (default) or 'risk_percent'
   lotSize: number; // 0.01
   riskPercent?: number; // 1.0 (%)
@@ -230,6 +231,8 @@ export interface BotState {
   askPrice?: number;
   lastPriceUpdate?: string;
   lastTickTime?: number;
+  brokerQuoteTime?: number;
+  lastFeedArrivalTime?: number;
   tickHistory?: number[];
   marketDataStatus?: string;
   newsProviderStatus?: 'CONNECTED' | 'UNAVAILABLE';

@@ -1,6 +1,7 @@
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import React, { useState, useEffect, useCallback } from 'react';
 import { BotState, AccountType } from './types';
-import { botApi } from './services/api';
+import { botApi, authStorage } from './services/api';
 import { LoginView } from './components/LoginView';
 import { MainDashboard } from './components/MainDashboard';
 import { InstallAppModal } from './components/InstallAppModal';
@@ -116,29 +117,81 @@ export function App() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    // Verify session with backend
+    // Resilient Session Verification with Auto-Retry across PM2 Restarts & Transient Network Glitches
+    let isCancelled = false;
     const initSession = async () => {
-      try {
-        const session = await botApi.verifySession();
-        if (session.valid && session.user) {
-          setIsLoggedIn(true);
-          setUserRole(session.user.role || 'admin');
-          setCurrentUser(session.user.role === 'admin' ? 'Admin (Owner)' : 'Admin (Owner)');
-        } else {
-          // If no active token found, stay on login
-          setIsLoggedIn(false);
-        }
-      } catch {
+      const existingToken = authStorage.getToken();
+      if (!existingToken) {
         setIsLoggedIn(false);
-      } finally {
         setIsLoading(false);
         fetchState();
+        return;
       }
+
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      const attemptVerify = async () => {
+        if (isCancelled) return;
+        attempts++;
+
+        try {
+          const session = await botApi.verifySession();
+          if (isCancelled) return;
+
+          if (session.valid && session.user) {
+            setIsLoggedIn(true);
+            setUserRole(session.user.role || 'admin');
+            setCurrentUser(session.user.role === 'admin' ? 'Admin (Owner)' : 'Admin (Owner)');
+            setIsLoading(false);
+            fetchState();
+            return;
+          }
+
+          // Explicit 401 / Token invalid or revoked -> perform clean logout
+          if (session.isUnauthorized) {
+            // Check if user logged in while we were verifying
+            const currentToken = authStorage.getToken();
+            if (currentToken && currentToken !== existingToken) {
+               console.log('Token changed during verification, ignoring unauthorized response');
+               return;
+            }
+            setIsLoggedIn(false);
+            setIsLoading(false);
+            fetchState();
+            return;
+          }
+
+          // Transient error (502, 503, Network drop, Server reboot in progress) -> retry
+          if (attempts < maxAttempts) {
+            setTimeout(attemptVerify, 1200);
+            return;
+          }
+
+          // If all retries exhausted during prolonged server reboot, keep token & session alive optimistically
+          setIsLoggedIn(true);
+          setIsLoading(false);
+          fetchState();
+        } catch {
+          if (attempts < maxAttempts) {
+            setTimeout(attemptVerify, 1200);
+          } else {
+            setIsLoggedIn(true);
+            setIsLoading(false);
+            fetchState();
+          }
+        }
+      };
+
+      attemptVerify();
     };
 
     initSession();
 
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      isCancelled = true;
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, [fetchState]);
 
   const triggerPWAInstall = async () => {
@@ -156,21 +209,39 @@ export function App() {
   useEffect(() => {
     if (!isLoggedIn) return;
     
-    // Initial fetch to get latest state immediately
-    fetchState();
-    
-    const interval = setInterval(fetchState, 1000);
+    let isMounted = true;
+    let isFetching = false;
+    let timeoutId: any = null;
+
+    const poll = async () => {
+      if (!isMounted) return;
+      if (!isFetching) {
+        isFetching = true;
+        try {
+          await fetchState();
+        } finally {
+          isFetching = false;
+        }
+      }
+      if (!isMounted) return;
+      const delay = document.visibilityState === 'visible' ? 5000 : 10000;
+      timeoutId = setTimeout(poll, delay);
+    };
+
+    poll();
     
     // Force immediate sync when app comes to foreground (especially important for iPhone/Mobile Safari)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        fetchState();
+        if (timeoutId) clearTimeout(timeoutId);
+        poll();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      clearInterval(interval);
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchState, isLoggedIn]);
@@ -180,6 +251,9 @@ export function App() {
     setIsLoading(true);
     try {
       const res = await botApi.login(username, password);
+      if (!res?.token) {
+        throw new Error('មិនទទួលបាន Auth Token ត្រឹមត្រូវពី Server ឡើយ');
+      }
       const role = res.user?.role || 'admin';
       setCurrentUser(`Admin (${res.user?.username || 'Owner'})`);
       setUserRole('admin');
@@ -241,7 +315,8 @@ export function App() {
 
   return (
     <>
-      <MainDashboard
+       <ErrorBoundary>
+        <MainDashboard
         botState={botState}
         onAction={handleAction}
         onLogout={handleLogout}
@@ -250,6 +325,7 @@ export function App() {
         onOpenInstallModal={() => setIsInstallModalOpen(true)}
         isStandalone={isStandalone}
       />
+      </ErrorBoundary>
       <InstallAppModal
         isOpen={isInstallModalOpen}
         onClose={() => setIsInstallModalOpen(false)}

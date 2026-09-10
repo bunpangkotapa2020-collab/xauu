@@ -1,33 +1,22 @@
 const fs = require('fs');
-let code = fs.readFileSync('server.ts', 'utf8');
+let code = fs.readFileSync('src/components/BotSettingsModal.tsx', 'utf8');
 
-// The original import might have been lost or something. Let's find the first standard import.
-const startIndex = code.indexOf('import express from');
+// The corrupted top is:
+/*
+        </div>
+        {/* Content *}
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+t, { useState, useEffect, useRef } from 'react';
+import { X, Settings, Shield, Clock, Server, CheckCircle2, Save, AlertCircle } from 'lucide-react';
+*/
 
-// If there's garbage before it, remove it.
-if (startIndex !== -1) {
-  let cleanCode = code.substring(startIndex);
-  const correctTop = `import fs from 'fs';
-import path from 'path';
+const target = `        </div>
+        {/* Content */}
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+t, { useState, useEffect, useRef } from 'react';`;
 
-function updateEnvVariable(key: string, value: string) {
-  const envPath = path.resolve(process.cwd(), '.env');
-  let envContent = '';
-  if (fs.existsSync(envPath)) {
-    envContent = fs.readFileSync(envPath, 'utf8');
-  }
-  
-  const regex = new RegExp(\`^\\\\s*\${key}\\\\s*=\\\\s*(.*)$\`, 'm');
-  if (regex.test(envContent)) {
-    envContent = envContent.replace(regex, \`\${key}="\${value}"\`);
-  } else {
-    envContent += \`\\n\${key}="\${value}"\\n\`;
-  }
-  fs.writeFileSync(envPath, envContent.trim() + '\\n');
-  process.env[key] = value;
-}
+const replacement = `import React, { useState, useEffect, useRef } from 'react';`;
 
-`;
-  fs.writeFileSync('server.ts', correctTop + cleanCode);
-  console.log('Fixed top of file');
-}
+code = code.replace(target, replacement);
+fs.writeFileSync('src/components/BotSettingsModal.tsx', code);
+console.log("Fixed top.");

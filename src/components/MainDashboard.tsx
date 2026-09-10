@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Loader2, 
+  Loader2, Lock, 
   Play, 
   Pause, 
   Square, 
@@ -54,6 +54,26 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
   const [executingAction, setExecutingAction] = useState<string | null>(null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [confirmingCloseId, setConfirmingCloseId] = useState<string | null>(null);
+
+  const handleCloseSingle = async (tradeId: string) => {
+    if (confirmingCloseId !== tradeId) {
+      setConfirmingCloseId(tradeId);
+      setTimeout(() => {
+        setConfirmingCloseId(prev => (prev === tradeId ? null : prev));
+      }, 4000);
+      return;
+    }
+    
+    setConfirmingCloseId(null);
+    try {
+      await botApi.sendAction('close_single', { tradeId });
+      onRefresh?.();
+    } catch (err: any) {
+      console.error('Failed to close single trade:', err);
+    }
+  };
 
   const handleManualRefresh = async () => {
     if (!onRefresh || isRefreshing) return;
@@ -283,7 +303,10 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                  <div className="flex justify-between items-center mb-2">
                    <div className="text-[11px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold">តម្លៃទីផ្សារបច្ចុប្បន្ន (Live Market Feed)</div>
                    <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
-                     <span className={state.marketDataStatus?.includes('LIVE') ? 'text-emerald-400 text-glow' : 'text-red-400'}>
+                     <span className={
+                       state.marketDataStatus?.includes('SLOW') ? 'text-amber-400 text-glow' :
+                       state.marketDataStatus?.includes('LIVE') ? 'text-emerald-400 text-glow' : 'text-red-400'
+                     }>
                         {state.marketDataStatus || '🔴 NO LIVE MARKET DATA'}
                      </span>
                      {state.lastPriceUpdate ? ` (Update: ${state.lastPriceUpdate})` : ''}
@@ -293,7 +316,7 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                     <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-amber-500/20">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-xs md:text-sm font-bold text-amber-400 truncate tracking-tight flex items-center gap-1.5 text-glow">
-                          🟡 {state.activeGoldSymbol || 'XAUUSD'} (Spot Gold)
+                          🟡 {state.activeGoldSymbol ? `${state.activeGoldSymbol} (Spot Gold)` : '--'}
                         </span>
                         <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold uppercase shrink-0 leading-none shadow-[0_0_8px_rgba(245,158,11,0.2)]">
                           ACTIVE LIVE FEED
@@ -301,9 +324,15 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] text-slate-400 font-medium">AI SIGNAL (M1):</span>
-                        <span className={`text-[10px] md:text-xs font-black px-2 py-0.5 rounded shrink-0 leading-none shadow-md ${state.signals?.gold === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : state.signals?.gold === 'SELL' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 border border-slate-700/50'}`}>
-                          {state.signals?.gold || 'WAIT'}
-                        </span>
+                        {(() => {
+                          const daraSetup = state.signalDetails?.daraSetup || state.signalDetails?.daraTelemetry?.setup;
+                          const daraSignal = (daraSetup?.direction === 'BUY' || daraSetup?.direction === 'SELL') ? daraSetup.direction : 'WAIT';
+                          return (
+                            <span className={`text-[10px] md:text-xs font-black px-2 py-0.5 rounded shrink-0 leading-none shadow-md ${daraSignal === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : daraSignal === 'SELL' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-slate-800 text-slate-400 border border-slate-700/50'}`}>
+                              {daraSignal}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -312,19 +341,21 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                         <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300 hover:border-emerald-500/30">
                           <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">BID PRICE</div>
                           <div className="text-sm sm:text-base md:text-xl font-mono font-bold text-emerald-400 tabular-nums drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
-                            {typeof state.bidPrice === 'number' ? state.bidPrice.toFixed(2) : (typeof state.goldPrice === 'number' ? state.goldPrice.toFixed(2) : '0.00')}
+                            {typeof state.bidPrice === 'number' ? state.bidPrice.toString() : (typeof state.goldPrice === 'number' ? state.goldPrice.toString() : '0.00')}
                           </div>
                         </div>
                         <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300 hover:border-rose-500/30">
                           <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">ASK PRICE</div>
                           <div className="text-sm sm:text-base md:text-xl font-mono font-bold text-rose-400 tabular-nums drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]">
-                            {typeof state.askPrice === 'number' ? state.askPrice.toFixed(2) : (typeof state.goldPrice === 'number' ? state.goldPrice.toFixed(2) : '0.00')}
+                            {typeof state.askPrice === 'number' ? state.askPrice.toString() : (typeof state.goldPrice === 'number' ? state.goldPrice.toString() : '0.00')}
                           </div>
                         </div>
                         <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300 hover:border-amber-500/30">
-                          <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">SPREAD</div>
-                          <div className="text-sm sm:text-base md:text-lg font-mono font-bold text-amber-400 tabular-nums text-glow">
-                            {state.spreadPoints} pts
+                          <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">
+                            SPREAD <span className="text-amber-400 font-bold">(POINTS)</span>
+                          </div>
+                          <div className="text-base sm:text-xl md:text-2xl font-mono font-bold text-amber-400 tabular-nums text-glow">
+                            {typeof state.spreadPoints === 'number' && state.spreadPoints > 0 ? state.spreadPoints : '--'}
                           </div>
                         </div>
                       </div>
@@ -334,27 +365,45 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                       <div className="text-xs text-slate-500 italic py-2 text-center animate-pulse">{state.marketDataStatus || 'WATCHING LIVE MARKET DATA...'}</div>
                     )}
                   </div>
-                 {/* DYNAMIC MARKET ENGINE STATUS */}
-                 <div className="mt-3 grid grid-cols-3 gap-2">
-                    <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
-                      <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">MARKET SPEED</div>
-                      <div className={`text-xs sm:text-sm font-bold uppercase ${state.marketSpeed === 'EXTREME' ? 'text-rose-400' : state.marketSpeed === 'FAST' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                        {state.marketSpeed || 'NORMAL'}
-                      </div>
-                    </div>
-                    <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
-                      <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">VOLATILITY (RNG)</div>
-                      <div className="text-xs sm:text-sm font-mono font-bold text-slate-200">
-                        {typeof state.volatilityValue === 'number' ? state.volatilityValue.toFixed(2) : '0.00'}
-                      </div>
-                    </div>
-                    <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
-                      <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">SL / TP MODE</div>
-                      <div className="text-xs sm:text-sm font-bold text-indigo-400">
-                        AUTO DYNAMIC
-                      </div>
-                    </div>
-                 </div>
+                 {/* DARA M1 ENGINE STATUS & RISK TELEMETRY */}
+                 {(() => {
+                   const telemetry = state.signalDetails?.daraTelemetry || (state as any).daraTelemetry;
+                   const settings = telemetry?.settings;
+
+                   const hasDailyLoss = typeof telemetry?.dailyLossAccumulated === 'number';
+                   const dailyLoss = hasDailyLoss ? (telemetry.dailyLossAccumulated as number) : null;
+                   const dailyLossLimit = typeof settings?.dailyLossLimit === 'number' ? settings.dailyLossLimit : null;
+
+                   const hasSlHits = typeof telemetry?.consecutiveLossCount === 'number';
+                   const slHits = hasSlHits ? (telemetry.consecutiveLossCount as number) : null;
+                   const maxSL = typeof settings?.maxConsecutiveSL === 'number' ? settings.maxConsecutiveSL : null;
+
+                   const slDist = typeof settings?.slDistance === 'number' ? settings.slDistance : null;
+                   const tpDist = typeof settings?.tpDistance === 'number' ? settings.tpDistance : null;
+
+                   return (
+                     <div className="mt-3 grid grid-cols-3 gap-2">
+                       <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
+                         <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">DAILY LOSS</div>
+                         <div className={`text-xs sm:text-sm font-mono font-bold ${dailyLoss !== null && dailyLossLimit !== null && dailyLoss >= dailyLossLimit ? 'text-rose-400' : dailyLoss !== null && dailyLoss > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                           {dailyLoss !== null ? dailyLoss.toFixed(2) : '--'} / {dailyLossLimit !== null ? dailyLossLimit : '--'}
+                         </div>
+                       </div>
+                       <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
+                         <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">SL HITS</div>
+                         <div className={`text-xs sm:text-sm font-mono font-bold ${slHits !== null && maxSL !== null && slHits >= maxSL ? 'text-rose-400' : slHits !== null && slHits > 0 ? 'text-amber-400' : 'text-slate-200'}`}>
+                           {slHits !== null ? slHits : '--'} / {maxSL !== null ? maxSL : '--'}
+                         </div>
+                       </div>
+                       <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
+                         <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">SL / TP MODE</div>
+                         <div className="text-xs sm:text-sm font-mono font-bold text-indigo-400">
+                           {slDist !== null && tpDist !== null ? `SL ${slDist} / TP ${tpDist}` : '--'}
+                         </div>
+                       </div>
+                     </div>
+                   );
+                 })()}
               </div>
            </div>
 
@@ -596,124 +645,203 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
              </div>
            </div>
 
-           {/* 4-Entry Sequence Pipeline Visualizer */}
-           <div className="mb-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-inner">
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 pb-3 border-b border-slate-800/80">
-               <div className="flex items-center gap-2.5 flex-wrap">
-                 <span className="text-xs sm:text-sm font-bold text-white tracking-wider flex items-center gap-2">
-                   <Layers size={16} className="text-amber-400 shrink-0" />
-                   AI 4-ENTRY SEQUENCE PIPELINE
-                 </span>
-                 <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700/80 text-amber-300">
-                   {state.riskConfig?.lotSize || 0.01} LOT / ENTRY
-                 </span>
-               </div>
-               <div className="flex items-center gap-2 text-xs">
-                 {state.status === 'running' ? (
-                   state.openTrades?.length === 4 ? (
-                     <span className="text-emerald-400 font-bold flex items-center gap-2 text-xs font-mono bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-lg">
-                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                       គ្រប់ 4 Entries — កំពុងតាមដាន TP / SL
-                     </span>
-                   ) : (
-                     <span className="text-amber-400 font-bold flex items-center gap-2 text-xs font-mono bg-amber-950/40 border border-amber-500/30 px-3 py-1 rounded-lg">
-                       <Loader2 size={13} className="animate-spin text-amber-400" />
-                       កំពុងស្កេនរក Entry #{(state.openTrades?.length || 0) + 1}/4
-                     </span>
-                   )
-                 ) : (
-                   <span className="text-slate-400 font-medium flex items-center gap-2 text-xs font-mono bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg">
-                     <span className="w-2 h-2 rounded-full bg-rose-500/80"></span>
-                     BOT STOPPED (STANDBY)
-                   </span>
-                 )}
-               </div>
-             </div>
+                     {/* DaRa 5-LEVEL ENTRY PIPELINE */}
+          <div className="mb-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-inner">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 pb-3 border-b border-slate-800/80">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-xs sm:text-sm font-bold text-white tracking-wider flex items-center gap-2">
+                  <Layers size={16} className="text-amber-400 shrink-0" />
+                  DaRa 5-LEVEL ENTRY PIPELINE
+                </span>
+                <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700/80 text-amber-300">
+                  {state.riskConfig?.lotSize || 0.01} LOT / ENTRY
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                {state.status === 'running' ? (
+                  state.openTrades?.length === 5 ? (
+                    <span className="text-emerald-400 font-bold flex items-center gap-2 text-xs font-mono bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-lg">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      គ្រប់ 5 Entries — កំពុងតាមដាន TP / SL
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 font-bold flex items-center gap-2 text-xs font-mono bg-amber-950/40 border border-amber-500/30 px-3 py-1 rounded-lg">
+                      <Loader2 size={13} className="animate-spin text-amber-400" />
+                      កំពុងស្កេនរក Entry #{(state.openTrades?.length || 0) + 1}/5
+                    </span>
+                  )
+                ) : (
+                  <span className="text-slate-400 font-medium flex items-center gap-2 text-xs font-mono bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg">
+                    <span className="w-2 h-2 rounded-full bg-rose-500/80"></span>
+                    BOT STOPPED (STANDBY)
+                  </span>
+                )}
+              </div>
+            </div>
 
-             {/* 4-Step Pipeline Grid */}
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-               {[
-                 { slot: 1, label: 'Entry #1', stage: 'Trend Confirm' },
-                 { slot: 2, label: 'Entry #2', stage: 'Pullback Entry' },
-                 { slot: 3, label: 'Entry #3', stage: 'Breakout Push' },
-                 { slot: 4, label: 'Entry #4', stage: 'Full Momentum' },
-               ].map(({ slot, label, stage }) => {
-                 const openCount = state.openTrades?.length || 0;
-                 const tradeInSlot = state.openTrades?.[slot - 1];
-                 const isAnalyzingSlot = state.status === 'running' && openCount === slot - 1;
-                 const isFilled = slot <= openCount;
+            {/* 5-Step Pipeline Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {[
+                { slot: 1, label: 'Entry #1', stage: 'Level 1' },
+                { slot: 2, label: 'Entry #2', stage: 'Level 2' },
+                { slot: 3, label: 'Entry #3', stage: 'Level 3' },
+                { slot: 4, label: 'Entry #4', stage: 'Level 4' },
+                { slot: 5, label: 'Entry #5', stage: 'Level 5' },
+              ].map(({ slot, label, stage }) => {
+                const openCount = state.openTrades?.length || 0;
+                
+                const setup = state.signalDetails?.daraSetup;
+                const levelState = setup?.entryLevels?.[slot - 1];
+                let tradeInSlot = null;
+                if (levelState && levelState.executed) {
+                   tradeInSlot = (state.openTrades || []).find(t => String((t as any).ticket) === String(levelState.ticket) || String(t.id) === String(levelState.ticket));
+                } else {
+                   tradeInSlot = state.openTrades?.[slot - 1];
+                }
+                
+                const targetPrice = levelState?.targetPrice;
+                const daraState = state.signalDetails?.daraState || '';
+                
+                // Detailed State Machine Logic
+                let cardStatus = 'WAIT';
+                let isActiveStyle = false;
+                let isFilled = false;
+                
+                if (!setup) {
+                   cardStatus = 'WAIT FOR NEXT SETUP';
+                } else if (levelState) {
+                   if (levelState.executed) {
+                       if (tradeInSlot) {
+                           isFilled = true;
+                           isActiveStyle = true;
+                           const isTrailed = setup.sharedSL && tradeInSlot.sl && (tradeInSlot.side === 'BUY' ? tradeInSlot.sl > setup.sharedSL : tradeInSlot.sl < setup.sharedSL);
+                           if (isTrailed || daraState === 'TRAILING') {
+                               cardStatus = 'PROFIT TRAILING';
+                           } else {
+                               cardStatus = 'TRADE ACTIVE';
+                           }
+                       } else {
+                           cardStatus = 'TRADE CLOSED';
+                       }
+                   } else {
+                       let nextPendingLevel = 0;
+                       for (let i = 0; i < 5; i++) {
+                           if (setup.entryLevels && !setup.entryLevels[i]?.executed) {
+                               nextPendingLevel = i;
+                               break;
+                           }
+                       }
+                       if (slot - 1 === nextPendingLevel) {
+                           isActiveStyle = true;
+                           if (daraState === 'EXECUTING') {
+                               cardStatus = 'BROKER CONFIRMATION';
+                           } else if (daraState === 'ENTRY_REACHED' || setup.status === 'ENTRY_REACHED') {
+                               cardStatus = 'ENTRY REACHED';
+                           } else if (daraState === 'WAIT_FOR_LOCKED_ENTRY' || setup.lockedEntryPrice) {
+                               cardStatus = 'LOCKED ENTRY / TARGET REACHED';
+                           } else {
+                               cardStatus = 'WAIT';
+                           }
+                       } else {
+                           cardStatus = 'WAIT';
+                       }
+                   }
+                }
+                
+                // Keep UI backwards compatible
+                const isAnalyzingSlot = isActiveStyle && !isFilled;
 
-                 return (
-                   <div
-                     key={slot}
-                     className={`p-4 rounded-xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[108px] ${
-                       isFilled
-                         ? 'bg-gradient-to-b from-emerald-950/35 via-slate-900 to-slate-950 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.12)]'
-                         : isAnalyzingSlot
-                         ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-950 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] ring-1 ring-amber-500/30'
-                         : 'bg-slate-900/50 border-slate-800/80 hover:border-slate-700/80'
-                     }`}
-                   >
-                     {/* Top card header */}
-                     <div className="flex justify-between items-center mb-2">
-                       <div className="flex items-center gap-2">
-                         <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black font-mono shadow-sm ${
-                           isFilled
-                             ? 'bg-emerald-500 text-slate-950'
-                             : isAnalyzingSlot
-                             ? 'bg-amber-400 text-slate-950'
-                             : 'bg-slate-800 text-slate-400'
-                         }`}>
-                           {slot}
-                         </span>
-                         <span className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider">{label}</span>
-                       </div>
-                       <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-800/90 text-amber-300 border border-slate-700/60">
-                         {state.riskConfig?.lotSize || 0.01} Lot
-                       </span>
-                     </div>
+                return (
+                  <div
+                    key={slot}
+                    className={`p-4 rounded-xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[120px] ${
+                      isFilled
+                        ? 'bg-gradient-to-b from-emerald-950/35 via-slate-900 to-slate-950 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.12)]'
+                        : isAnalyzingSlot
+                        ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-950 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] ring-1 ring-amber-500/30'
+                        : 'bg-slate-900/50 border-slate-800/80 hover:border-slate-700/80'
+                    }`}
+                  >
+                    {/* Top card header */}
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black font-mono shadow-sm ${
+                          isFilled
+                            ? 'bg-emerald-500 text-slate-950'
+                            : isAnalyzingSlot
+                            ? 'bg-amber-400 text-slate-950'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {slot}
+                        </span>
+                        <span className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider">{label}</span>
+                      </div>
+                      <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-800/90 text-amber-300 border border-slate-700/60">
+                        {state.riskConfig?.lotSize || 0.01} Lot
+                      </span>
+                    </div>
 
-                     <div className="text-xs font-semibold text-slate-300 mb-2.5">{stage}</div>
+                    <div className="text-xs font-semibold text-slate-300 mb-2.5 flex items-center justify-between">
+                      <div>
+                        {stage}
+                        {targetPrice && !isFilled && <span className="ml-2 font-mono text-slate-400">@{targetPrice.toFixed(3)}</span>}
+                      </div>
+                      {(isFilled || cardStatus === 'TRADE CLOSED') && <span className="font-mono text-cyan-400 text-[9px] uppercase tracking-wider">{cardStatus}</span>}
+                    </div>
 
-                     {/* Content status */}
-                     <div>
-                       {isFilled && tradeInSlot ? (
-                         <div className="bg-slate-950/90 border border-emerald-500/40 rounded-xl p-2.5 flex justify-between items-center shadow-inner">
-                           <div className="flex items-center gap-1.5">
-                             {tradeInSlot.side === 'BUY' ? (
-                               <span className="text-xs font-black px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-0.5">
-                                 <ArrowUpRight size={13} /> BUY
-                               </span>
-                             ) : (
-                               <span className="text-xs font-black px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-0.5">
-                                 <ArrowDownRight size={13} /> SELL
-                               </span>
-                             )}
-                             <span className="text-xs font-mono text-slate-300 ml-1">@{tradeInSlot.entryPrice}</span>
-                           </div>
-                           <span className={`font-mono text-xs sm:text-sm font-black ${(tradeInSlot.floatingProfit ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                             {(tradeInSlot.floatingProfit ?? 0) >= 0 ? '+' : ''}{(tradeInSlot.floatingProfit ?? 0).toFixed(2)}
-                           </span>
-                         </div>
-                       ) : isAnalyzingSlot ? (
-                         <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-2.5 text-center text-amber-300 font-bold font-mono text-xs flex items-center justify-center gap-2 animate-pulse shadow-sm">
-                           <Loader2 size={13} className="animate-spin text-amber-400" />
-                           <span>SCANNING M1 ENTRY...</span>
-                         </div>
-                       ) : (
-                         <div className="bg-slate-950/50 border border-slate-800/80 rounded-xl p-2.5 text-center text-slate-400 font-medium font-mono text-[11px] flex items-center justify-center gap-1.5">
-                           <Clock size={12} className="text-slate-500" />
-                           <span>STANDBY QUEUE</span>
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 );
-               })}
-             </div>
-           </div>
-           
-           {/* Active Trades Table or Modern Empty State */}
+                    {/* Content status & Functional Control */}
+                    <div className="mt-auto pt-2 border-t border-slate-800/50">
+                      {isFilled && tradeInSlot ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="bg-slate-950/90 border border-emerald-500/40 rounded-xl p-2.5 flex justify-between items-center shadow-inner">
+                            <div className="flex items-center gap-1.5">
+                                {tradeInSlot.side === 'BUY' ? (
+                                <span className="text-xs font-black px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-0.5">
+                                    <ArrowUpRight size={13} /> BUY
+                                </span>
+                                ) : (
+                                <span className="text-xs font-black px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-0.5">
+                                    <ArrowDownRight size={13} /> SELL
+                                </span>
+                                )}
+                                <span className="text-xs font-mono text-slate-300 ml-1">@{tradeInSlot.entryPrice}</span>
+                            </div>
+                            <span className={`font-mono text-xs sm:text-sm font-black ${(tradeInSlot.floatingProfit ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {(tradeInSlot.floatingProfit ?? 0) >= 0 ? '+' : ''}{(tradeInSlot.floatingProfit ?? 0).toFixed(2)}
+                            </span>
+                            </div>
+                            <button 
+                                onClick={() => handleCloseSingle(String(tradeInSlot.id || (tradeInSlot as any).ticket))}
+                                className={`w-full py-1.5 px-3 rounded-lg font-bold text-xs font-mono transition-colors flex items-center justify-center gap-1.5 ${
+                                  confirmingCloseId === String(tradeInSlot.id || (tradeInSlot as any).ticket)
+                                    ? 'bg-rose-600 text-white shadow-lg animate-pulse'
+                                    : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                }`}
+                            >
+                                <Lock size={12} />
+                                {confirmingCloseId === String(tradeInSlot.id || (tradeInSlot as any).ticket)
+                                  ? '⚠️ ចុចម្តងទៀតដើម្បីបិទ'
+                                  : 'ចុចបិទទីផ្សារនេះ (CLOSE)'}
+                            </button>
+                        </div>
+                      ) : isAnalyzingSlot ? (
+                        <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-center gap-2 text-amber-400 text-[10px] sm:text-xs font-bold font-mono w-full text-center">
+                          <Loader2 size={13} className="animate-spin text-amber-400 shrink-0" />
+                          <span className="truncate">{cardStatus}</span>
+                        </div>
+                      ) : (
+                        <div className="bg-slate-950/50 border border-slate-800/80 rounded-xl p-2.5 text-center text-slate-500 font-medium font-mono text-[10px] sm:text-[11px] flex items-center justify-center gap-1.5 w-full">
+                          {cardStatus === 'TRADE CLOSED' ? <CheckCircle2 size={12} className="text-emerald-500/70" /> : <Clock size={12} />}
+                          <span className="truncate">{cardStatus}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* Active Trades Table or Modern Empty State */}
            {!state.openTrades || state.openTrades.length === 0 ? (
               <div className="py-12 px-6 bg-slate-950/70 border border-slate-800/80 rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner">
                  
@@ -784,6 +912,11 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                            <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
                              #{trade.magicNumber || '778899'}
                            </span>
+                           {!trade.isBotTrade && (
+                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 ml-1">
+                               MANUAL
+                             </span>
+                           )}
                          </div>
                          <div className="flex items-center gap-2 font-mono">
                            <span className="text-xs text-slate-400">P/L:</span>
@@ -839,6 +972,7 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
           executingAction={executingAction}
           actionResult={actionResult}
           onAction={handleAction}
+          onRefresh={onRefresh}
         />
 
         {/* 🟢 LIVE DaRa SETUP VIEW */}

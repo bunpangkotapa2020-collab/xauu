@@ -1,7 +1,6 @@
 const fs = require('fs');
-const file = 'src/MASTER_ICT_EA.ts';
-let code = fs.readFileSync(file, 'utf8');
+let code = fs.readFileSync('server.ts', 'utf-8');
 
-// I need to ensure the closing braces are correct.
-code = code.replace("            }\n        }\n            }\n        else {", "            }\n        }\n        else {");
-fs.writeFileSync(file, code);
+code = code.replace(/executeAIAnalysis\(\)\.then\(\(\) => \{\s*botState\.startConfirmedTime = new Date\(\)\.toISOString\(\);\s*\}\)\.catch\(console\.error\);/m, 'botState.startConfirmedTime = new Date().toISOString();');
+
+fs.writeFileSync('server.ts', code);

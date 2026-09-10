@@ -1,0 +1,2 @@
+Fixed the symbol fallback logic in server.ts to retry 404s before switching symbols.
+Added diagnostic logging to /api/mt5/sync.

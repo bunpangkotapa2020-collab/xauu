@@ -1,19 +1,12 @@
 // Service Worker for XAUUSD AI Scalping Bot PWA
-const CACHE_NAME = 'xauusd-bot-v3.0.1';
+const CACHE_NAME = 'xauusd-bot-v4.0.0-live';
 const ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icon-192.svg',
   '/icon-512.svg'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
   self.skipWaiting();
 });
 
@@ -21,26 +14,27 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+        keys.map((key) => caches.delete(key))
       );
     })
   );
   self.clients.claim();
 });
 
-// Network first, falling back to cache for static assets to ensure latest bot logic is always fetched
+// Network first, strictly fresh for HTML and JS
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
   // API calls are strictly network-first
   if (event.request.url.includes('/api/')) {
+    // For auth endpoints, let browser handle fetch directly so retry and 401/transient errors are not masked
+    if (event.request.url.includes('/api/auth/')) {
+      return;
+    }
     event.respondWith(
       fetch(event.request).catch(() => {
         return new Response(JSON.stringify({ error: 'Offline - បាត់បង់ការភ្ជាប់អ៊ីនធឺណិត' }), {
+          status: 503,
           headers: { 'Content-Type': 'application/json' }
         });
       })
@@ -48,15 +42,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Always try network first to guarantee live UI updates
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
         return response;
       })
       .catch(() => caches.match(event.request))

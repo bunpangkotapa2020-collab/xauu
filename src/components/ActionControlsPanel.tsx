@@ -12,12 +12,16 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { BotState } from '../types';
+import { botApi } from '../services/api';
+import { useLiveTradingToggle } from '../hooks/useLiveTradingToggle';
+import { LiveTradingConfirmModal } from './LiveTradingConfirmModal';
 
 interface ActionControlsPanelProps {
   state: BotState;
   executingAction: string | null;
   actionResult: { action: string; status: 'success' | 'error' } | null;
   onAction: (action: 'start' | 'close_all') => void;
+  onRefresh?: (throwError?: boolean) => Promise<void> | void;
 }
 
 export function ActionControlsPanel({
@@ -25,7 +29,21 @@ export function ActionControlsPanel({
   executingAction,
   actionResult,
   onAction,
+  onRefresh,
 }: ActionControlsPanelProps) {
+  // Live Trading Controller
+  const {
+    isLiveEnabled,
+    isSubmitting: isChangingLive,
+    isOpenModal: isLiveModalOpen,
+    modalAction: liveModalAction,
+    errorMessage: liveErrorMessage,
+    preconditions,
+    handleToggleClick,
+    handleConfirm: handleConfirmLive,
+    handleClose: handleCloseLive,
+  } = useLiveTradingToggle(state, onRefresh);
+
   // Determine true started state (persisted desired state or active status)
   const isStarted = (state.desiredBotState === 'RUNNING' || state.status === 'running' || Boolean(state.isStartRequested) || Boolean(state.startConfirmation?.isStartRequested));
   
@@ -89,6 +107,59 @@ export function ActionControlsPanel({
             </span>
           )}
         </div>
+      </div>
+
+      {/* Live Trading Execution Mode Banner & Switch */}
+      <div className="mb-5 bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+        <div className="flex items-center gap-3">
+          <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
+            state.riskConfig?.liveTradingEnabled 
+              ? 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.9)]' 
+              : 'bg-slate-600'
+          }`}></div>
+          <div>
+            <div className="flex items-center flex-wrap gap-2">
+              <span className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                ការជួញដូរលុយពិត (LIVE TRADING EXECUTION) :
+              </span>
+              <span className={`text-xs font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
+                state.riskConfig?.liveTradingEnabled
+                  ? 'bg-red-500/20 border border-red-500/40 text-red-400 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.3)]'
+                  : 'bg-slate-800 border border-slate-700 text-slate-400'
+              }`}>
+                {state.riskConfig?.liveTradingEnabled ? '🔴 ACTIVE (បើកជួញដូរលុយពិត)' : '⚪ OFF / SAFE (ត្រឹមតែវិភាគ)'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {state.riskConfig?.liveTradingEnabled
+                ? '⚠️ ប្រយ័ត្ន៖ Bot នឹងបាញ់ Real Order ទៅកាន់គណនី Exness ពិតពេលមាន ICT Setup M1 ពេញលេញ។'
+                : '🛡️ សុវត្ថិភាពខ្ពស់៖ Bot កំពុងស្ថិតក្នុងទម្រង់វិភាគ (Monitor Only) មិនបាញ់ Real Order ទៅ Exness ទេ លុះត្រាតែអ្នកចុចបើក (ENABLE)។'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          id="enable-live-trading-btn"
+          type="button"
+          onClick={handleToggleClick}
+          disabled={isChangingLive}
+          className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 ${
+            isLiveEnabled
+              ? 'bg-red-600 hover:bg-red-500 text-white border border-red-500 shadow-red-500/30'
+              : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 hover:border-amber-400'
+          }`}
+        >
+          {isChangingLive ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>{isLiveEnabled ? 'TURNING OFF...' : 'TURNING ON...'}</span>
+            </>
+          ) : isLiveEnabled ? (
+            '⏹️ ចុចបិទ (TURN OFF LIVE)'
+          ) : (
+            '▶️ ចុចបើក (ENABLE LIVE TRADING)'
+          )}
+        </button>
       </div>
 
       {/* 2 Action Command Cards Grid */}
@@ -401,6 +472,21 @@ export function ActionControlsPanel({
         </button>
 
       </div>
+
+      <LiveTradingConfirmModal
+        isOpen={isLiveModalOpen}
+        action={liveModalAction}
+        isSubmitting={isChangingLive}
+        onConfirm={handleConfirmLive}
+        onClose={handleCloseLive}
+        errorMessage={liveErrorMessage}
+        loginId={state.account?.loginId}
+        lotSize={state.riskConfig?.lotSize || 0.01}
+        engineRunning={preconditions.isEngineRunning}
+        mt5Connected={preconditions.isMt5Connected}
+        safetyPassed={preconditions.isSafetyPassed}
+        safetyBlockedReason={preconditions.safetyBlockedReason}
+      />
     </div>
   );
 }

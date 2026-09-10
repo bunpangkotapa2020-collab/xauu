@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Settings, Shield, Clock, Server, CheckCircle2, Save, AlertCircle } from 'lucide-react';
+import { X, Settings, Shield, Clock, Server, CheckCircle2, Save, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
 import { BotState } from '../types';
 import { botApi } from '../services/api';
+import { useLiveTradingToggle } from '../hooks/useLiveTradingToggle';
+import { LiveTradingConfirmModal } from './LiveTradingConfirmModal';
 
 interface BotSettingsModalProps {
   isOpen: boolean;
@@ -16,6 +18,18 @@ export function BotSettingsModal({
   botState,
   onSaveSuccess
 }: BotSettingsModalProps) {
+  // Live Trading Controller
+  const {
+    isLiveEnabled,
+    isSubmitting: isChangingLive,
+    isOpenModal: isLiveModalOpen,
+    modalAction: liveModalAction,
+    errorMessage: liveErrorMessage,
+    handleToggleClick,
+    handleConfirm: handleConfirmLive,
+    handleClose: handleCloseLive,
+  } = useLiveTradingToggle(botState, onSaveSuccess);
+
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState(false);
@@ -35,6 +49,57 @@ export function BotSettingsModal({
   const [newsFilterEnabled, setNewsFilterEnabled] = useState(true);
   const [newsMinsBefore, setNewsMinsBefore] = useState('30');
   const [newsMinsAfter, setNewsMinsAfter] = useState('30');
+
+
+  const [isResettingDailyLoss, setIsResettingDailyLoss] = useState(false);
+  const [isResettingConsSL, setIsResettingConsSL] = useState(false);
+  const [isResettingCooldown, setIsResettingCooldown] = useState(false);
+  const [showDailyLossConfirm, setShowDailyLossConfirm] = useState(false);
+
+  const safety = botState?.signalDetails?.daraSafety || (botState as any)?.daraTelemetry?.safety;
+  const isDailyLossHit = safety?.isDailyLossHit || false;
+  const isMaxConsecutiveSLHit = safety?.isMaxConsecutiveSLHit || false;
+  const isInCooldown = safety?.isInCooldown || false;
+
+  const handleResetDailyLoss = async () => {
+    setIsResettingDailyLoss(true);
+    const res = await (botApi as any).resetDailyLossLimit();
+    setIsResettingDailyLoss(false);
+    setShowDailyLossConfirm(false);
+    if (res.success) {
+      setSuccessMsg(true);
+      setTimeout(() => setSuccessMsg(false), 3000);
+      if (onSaveSuccess) onSaveSuccess();
+    } else {
+      setErrorMsg(res.error || 'Failed to reset Daily Loss Limit');
+    }
+  };
+
+  const handleResetConsSL = async () => {
+    setIsResettingConsSL(true);
+    const res = await (botApi as any).resetConsecutiveSL();
+    setIsResettingConsSL(false);
+    if (res.success) {
+      setSuccessMsg(true);
+      setTimeout(() => setSuccessMsg(false), 3000);
+      if (onSaveSuccess) onSaveSuccess();
+    } else {
+      setErrorMsg(res.error || 'Failed to reset Consecutive SL');
+    }
+  };
+
+  const handleResetCooldown = async () => {
+    setIsResettingCooldown(true);
+    const res = await (botApi as any).resetCooldown();
+    setIsResettingCooldown(false);
+    if (res.success) {
+      setSuccessMsg(true);
+      setTimeout(() => setSuccessMsg(false), 3000);
+      if (onSaveSuccess) onSaveSuccess();
+    } else {
+      setErrorMsg(res.error || 'Failed to reset Cooldown');
+    }
+  };
 
   const hasInitialized = useRef(false);
 
@@ -112,6 +177,7 @@ export function BotSettingsModal({
         newsFilterEnabled: Boolean(newsFilterEnabled),
         minutesBeforeNewsBlock: parsedNewsBefore,
         minutesAfterNewsBlock: parsedNewsAfter,
+        liveTradingEnabled: isLiveEnabled,
       });
       setSuccessMsg(true);
       if (onSaveSuccess) onSaveSuccess();
@@ -148,6 +214,47 @@ export function BotSettingsModal({
 
         {/* Content */}
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+
+          {/* LIVE TRADING CONTROL */}
+          <div className="bg-slate-950/80 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none">
+              <Shield size={64} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isLiveEnabled ? 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-slate-600'}`}></div>
+                <h3 className="text-sm font-bold text-white uppercase">LIVE TRADING / ការជួញដូរលុយពិត</h3>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 relative z-10">
+                {isLiveEnabled 
+                  ? '⚠️ គ្រោះថ្នាក់ (DANGER): Bot នឹងបាញ់ Order ទៅកាន់ទីផ្សារពិត (REAL MONEY EXECUTION ACTIVE)។' 
+                  : 'សុវត្ថិភាព (SAFE): Bot ត្រឹមតែវិភាគ មិនបាញ់ Order លុយពិតទេ។'}
+              </p>
+            </div>
+            
+            <button
+              type="button"
+              onClick={handleToggleClick}
+              disabled={isChangingLive}
+              className={`relative z-10 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 ${
+                isLiveEnabled 
+                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700' 
+                  : 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-400 hover:from-red-500 hover:to-red-600 hover:text-white border border-red-500/50'
+              }`}
+            >
+              {isChangingLive ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>{isLiveEnabled ? 'TURNING OFF...' : 'TURNING ON...'}</span>
+                </>
+              ) : isLiveEnabled ? (
+                'TURN OFF LIVE'
+              ) : (
+                'ENABLE LIVE TRADING'
+              )}
+            </button>
+          </div>
+
           
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
             <Shield className="text-amber-400 shrink-0 mt-0.5" size={18} />
@@ -190,7 +297,7 @@ export function BotSettingsModal({
                 placeholder="2.0"
                 className="w-full bg-slate-900 border border-blue-600/50 focus:border-blue-400 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
               />
-              <p className="text-[10px] text-slate-400 mt-1">រង់ចាំតម្លៃ Pullback ថយក្រោយ 2.0$ ទើបបើក Trade Pos #1</p>
+              <p className="text-[10px] text-slate-400 mt-1">រង់ចាំតម្លៃ Pullback ថយក្រោយ {entryDistance || '2.0'} ទើបបើក Trade Pos #1</p>
             </div>
 
             {/* SL DISTANCE */}
@@ -218,21 +325,49 @@ export function BotSettingsModal({
             {/* DAILY LOSS LIMIT */}
             <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
               <label className="block text-xs text-slate-400 mb-1">Daily Loss Limit (USC) / ដែនកំណត់ខាតប្រចាំថ្ងៃ</label>
-              <input 
-                type="number" step="10" min="0"
-                value={dailyLoss} onChange={(e) => setDailyLoss(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input 
+                  type="number" step="10" min="0"
+                  value={dailyLoss} onChange={(e) => setDailyLoss(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
+                />
+                <button
+                  onClick={(e) => { e.preventDefault(); setShowDailyLossConfirm(true); }}
+                  disabled={!isDailyLossHit || isResettingDailyLoss}
+                  className={`px-3 rounded-lg text-[11px] font-semibold tracking-wide uppercase transition-colors flex items-center gap-1 ${
+                    isDailyLossHit
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-70'
+                  }`}
+                >
+                  {isResettingDailyLoss ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                  Reset
+                </button>
+              </div>
             </div>
 
             {/* MAX CONSECUTIVE SL */}
             <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
               <label className="block text-xs text-slate-400 mb-1">Max Consecutive SL / ខាតជាប់គ្នាអតិបរមា</label>
-              <input 
-                type="number" step="1" min="1"
-                value={maxConsSL} onChange={(e) => setMaxConsSL(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input 
+                  type="number" step="1" min="1"
+                  value={maxConsSL} onChange={(e) => setMaxConsSL(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
+                />
+                <button
+                  onClick={(e) => { e.preventDefault(); handleResetConsSL(); }}
+                  disabled={!isMaxConsecutiveSLHit || isResettingConsSL}
+                  className={`px-3 rounded-lg text-[11px] font-semibold tracking-wide uppercase transition-colors flex items-center gap-1 ${
+                    isMaxConsecutiveSLHit
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-70'
+                  }`}
+                >
+                  {isResettingConsSL ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                  Reset
+                </button>
+              </div>
             </div>
 
             {/* MAX SPREAD */}
@@ -248,11 +383,25 @@ export function BotSettingsModal({
             {/* COOLDOWN */}
             <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4 md:col-span-2">
               <label className="block text-xs text-slate-400 mb-1">Cooldown After SL (Minutes) / ផ្អាកបន្ទាប់ពីខាត (20 នាទី)</label>
-              <input 
-                type="number" step="1" min="0"
-                value={cooldown} onChange={(e) => setCooldown(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input 
+                  type="number" step="1" min="0"
+                  value={cooldown} onChange={(e) => setCooldown(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
+                />
+                <button
+                  onClick={(e) => { e.preventDefault(); handleResetCooldown(); }}
+                  disabled={!isInCooldown || isResettingCooldown}
+                  className={`px-3 rounded-lg text-[11px] font-semibold tracking-wide uppercase transition-colors flex items-center gap-1 ${
+                    isInCooldown
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-70'
+                  }`}
+                >
+                  {isResettingCooldown ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                  Reset
+                </button>
+              </div>
             </div>
 
           </div>
@@ -284,7 +433,7 @@ export function BotSettingsModal({
                   placeholder="1.5"
                   className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">រក្សាគម្លាតសុវត្ថិភាព 1.5$ ពីក្រោយតម្លៃ (SL រំកិលទៅមុខជានិច្ច មិនថយក្រោយឡើយ)</p>
+                <p className="text-[10px] text-slate-400 mt-1">រក្សាគម្លាតសុវត្ថិភាព {trailingDistance || '1.5'} ពីក្រោយតម្លៃ (SL រំកិលទៅមុខជានិច្ច មិនថយក្រោយឡើយ)</p>
               </div>
             )}
           </div>
@@ -366,6 +515,54 @@ export function BotSettingsModal({
           </button>
         </div>
       </div>
+
+      
+      {/* DAILY LOSS CONFIRM MODAL */}
+      {showDailyLossConfirm && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div className="p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-red-500/20 rounded-full flex-shrink-0">
+                  <AlertCircle size={24} className="text-red-400" />
+                </div>
+                <h2 className="text-base font-semibold text-white">Reset Daily Loss Limit?</h2>
+              </div>
+              <p className="text-sm text-slate-400 pl-[52px]">
+                Daily Loss Limit has been reached.<br/>
+                Reset protection and resume scanning?
+              </p>
+            </div>
+            <div className="p-4 border-t border-slate-800/60 bg-slate-800/20 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowDailyLossConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                CANCEL
+              </button>
+              <button 
+                onClick={handleResetDailyLoss}
+                disabled={isResettingDailyLoss}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-500 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isResettingDailyLoss ? <Loader2 size={16} className="animate-spin" /> : null}
+                RESET
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <LiveTradingConfirmModal
+        isOpen={isLiveModalOpen}
+        action={liveModalAction}
+        isSubmitting={isChangingLive}
+        onConfirm={handleConfirmLive}
+        onClose={handleCloseLive}
+        errorMessage={liveErrorMessage}
+        loginId={botState.account?.loginId}
+        lotSize={botState.riskConfig?.lotSize || 0.01}
+      />
     </div>
   );
 }

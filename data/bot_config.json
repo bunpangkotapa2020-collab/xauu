@@ -1,8 +1,8 @@
 {
-  "desiredBotState": "STOPPED",
-  "status": "stopped",
+  "desiredBotState": "RUNNING",
+  "status": "running",
   "selectedAsset": "XAUUSD",
-  "currentTradingDate": "2026-09-06T17:00:00.000Z",
+  "currentTradingDate": "2026-09-09T17:00:00.000Z",
   "dailyLossLimitHit": false,
   "account": {
     "accountType": "cent",
@@ -18,10 +18,10 @@
     "pingMs": 15,
     "connectionMethod": "rest_bridge",
     "vpsOnline": true,
-    "balance": 10561.67,
-    "equity": 10561.67,
-    "freeMargin": 10561.67,
-    "marginLevel": 999,
+    "balance": 10069.37,
+    "equity": 10131.17,
+    "freeMargin": 10113.63,
+    "marginLevel": 57760.376282782214,
     "currency": "USC",
     "stages": {
       "appLoggedIn": true,
@@ -37,46 +37,35 @@
   },
   "tradingHours": {
     "enabled": true,
-    "startHour": "17:00",
-    "stopHour": "03:30",
-    "mode": "daily"
+    "startHour": "08:00",
+    "stopHour": "22:00"
   },
   "riskConfig": {
     "lotSizeMode": "fixed",
-    "lotSize": 0.02,
+    "lotSize": 0.08,
     "riskPercent": 1,
-    "maxDailyLoss": 2000,
+    "maxDailyLoss": 3000,
     "maxDrawdownPercent": 5,
     "maxSpreadPoints": 27,
-    "entryDistance": 2,
-    "stopLossPips": 10,
+    "stopLossPips": 30,
     "takeProfitPips": 8,
-    "slDistance": 10,
-    "tpDistance": 8,
-    "slPriceDistance": 10,
-    "tpPriceDistance": 8,
     "trailingStopEnabled": true,
-    "trailingDistance": 1.5,
-    "trailingRule": "Auto at Original TP (1.5 Price Distance)",
-    "newsFilterEnabled": true,
-    "minutesBeforeNewsBlock": 30,
-    "minutesAfterNewsBlock": 30,
     "maxOpenTrades": 5,
-    "entriesPerSignal": 5,
-    "maxConsecutiveLosses": 6,
-    "cooldownMinutes": 20,
-    "maxDailyLossAmount": 2000,
+    "entriesPerSignal": 1,
+    "maxConsecutiveLosses": 70,
+    "cooldownMinutes": 15,
+    "maxDailyLossPercent": 5,
+    "maxDailyLossAmount": 3000,
     "noMartingale": true,
     "noGrid": true,
-    "trailingStopActivationPoints": 15,
-    "trailingStopDistancePoints": 5,
-    "dailyLossCurrency": "USC",
-    "maxDailyLossPercent_deprecated": "DEPRECATED_USE_FIXED_AMOUNT_ONLY"
+    "liveTradingEnabled": false,
+    "entryDistance": 1,
+    "trailingDistance": 2
   },
   "userPreferences": {
     "autoStartOnConnect": false,
     "soundEnabled": true,
     "theme": "dark"
   },
-  "lastSavedAt": "2026-09-07T02:12:17.949Z"
+  "lastSavedAt": "2026-09-10T11:48:13.860Z"
 }

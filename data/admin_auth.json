@@ -1,6 +1,7 @@
 {
-  "username": "Daraseng",
-  "passwordHash": "428cbae3322b0b17cbf8acbeba06b095b605a2bd4999b7b425bd13d416baf7b1d0d21a01987fcf098942cc32eddc3780775260e92b07f92d27c4ca87a1a3db80",
-  "salt": "5a460d1ec83afd71449a06a9b4f494d1",
-  "isCustomized": true
+  "username": "admin",
+  "passwordHash": "dffa0a9cebd429c9618bd88f9a4c43d25922ede2485f3d5c5e8e1d4e4262c11c878c81fa0d0e8021dde96b898c571d34393af71f62c9790a03b3e63234697ab2",
+  "salt": "4133d00e3d1aecf746b1500bf42e38e5",
+  "isCustomized": true,
+  "updatedAt": "2026-09-10T12:36:11.136Z"
 }

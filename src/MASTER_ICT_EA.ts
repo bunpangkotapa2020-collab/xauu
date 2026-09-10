@@ -301,7 +301,7 @@ export class IctXauusdEA {
             const isEaBridgeConnected = Boolean(botState.account?.eaConnected);
             const isVpsOnline = Boolean(botState.account?.vpsOnline);
             const isNewsOk = botState.newsProviderStatus !== 'UNAVAILABLE';
-            const isRiskOk = !botState.dailyLossLimitHit && (botState.consecutiveLosses || 0) < 3;
+            const isRiskOk = !botState.dailyLossLimitHit && (botState.consecutiveLosses || 0) < (botState.riskConfig?.maxConsecutiveLosses || 3);
 
             let problemReason = '';
             if (!isMt5Connected) problemReason = 'MT5 Server Disconnected';

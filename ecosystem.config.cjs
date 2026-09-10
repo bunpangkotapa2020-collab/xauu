@@ -1,3 +1,8 @@
+// Load environment variables from .env if present
+try {
+  require('dotenv').config();
+} catch (e) {}
+
 module.exports = {
   apps: [
     {
@@ -5,7 +10,8 @@ module.exports = {
       script: "dist/server.cjs",
       env: {
         NODE_ENV: "production",
-        PORT: 3000
+        PORT: 3000,
+        SESSION_SECRET: process.env.SESSION_SECRET || undefined
       },
       watch: false,
       max_memory_restart: "1G",

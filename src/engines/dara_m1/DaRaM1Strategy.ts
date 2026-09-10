@@ -21,6 +21,33 @@ export interface SwingPoint {
 }
 
 export class DaRaM1Strategy {
+  private lastProcessedMssTime: number = 0;
+  private scanBaselineTime: number = 0;
+
+  public markSetupProcessed(direction: string, mssTime: number): void {
+    if (mssTime > this.lastProcessedMssTime) {
+      this.lastProcessedMssTime = mssTime;
+    }
+  }
+
+  public setScanBaselineTime(time: number, force: boolean = false): void {
+    if (force || time > this.scanBaselineTime) {
+      this.scanBaselineTime = time;
+    }
+    if (force || time > this.lastProcessedMssTime) {
+      this.lastProcessedMssTime = time;
+    }
+  }
+
+  public getScanBaselineTime(): number {
+    return this.scanBaselineTime;
+  }
+
+  public reset(): void {
+    this.lastProcessedMssTime = 0;
+    this.scanBaselineTime = 0;
+  }
+
   /**
    * Identifies recent M1 swing points with standard fractal lookback (2 bars left, 2 bars right).
    */
@@ -125,6 +152,10 @@ export class DaRaM1Strategy {
       for (let i = swLow.index + 1; i < candles.length; i++) {
         const c = candles[i];
         if (c.low < swLow.price && c.close > swLow.price) {
+          // Any Sweep formed BEFORE or DURING previous trade must NOT be eligible
+          if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
+            continue;
+          }
           sweepIdx = i;
           break;
         }
@@ -137,6 +168,9 @@ export class DaRaM1Strategy {
       let displacementIdx = -1;
       for (let i = sweepIdx; i < candles.length; i++) {
         const c = candles[i];
+        if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
+          continue;
+        }
         const body = c.close - c.open;
         const range = c.high - c.low;
         if (body > 0 && range > 0 && body / range >= 0.45) {
@@ -159,6 +193,9 @@ export class DaRaM1Strategy {
       let mssCandle: DaRaCandle | null = null;
       for (let i = displacementIdx; i < candles.length; i++) {
         const c = candles[i];
+        if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
+          continue;
+        }
         if (c.close > targetSwingHigh.price) {
           mssConfirmed = true;
           mssCandle = c;
@@ -167,6 +204,13 @@ export class DaRaM1Strategy {
       }
 
       if (mssConfirmed && mssCandle) {
+        if (this.scanBaselineTime > 0 && (mssCandle.time <= this.scanBaselineTime || candles[sweepIdx].time <= this.scanBaselineTime)) {
+          return null; // Formed before or during previous trade. Discard stale setup.
+        }
+        if (this.lastProcessedMssTime > 0 && mssCandle.time <= this.lastProcessedMssTime) {
+          return null; // This setup (or a newer one) was already processed. Discard old setups.
+        }
+
         const lockedEntry = targetSwingHigh.price;
         const userSl = settings.slDistance;
         const userTp = settings.tpDistance;
@@ -221,6 +265,10 @@ export class DaRaM1Strategy {
       for (let i = swHigh.index + 1; i < candles.length; i++) {
         const c = candles[i];
         if (c.high > swHigh.price && c.close < swHigh.price) {
+          // Any Sweep formed BEFORE or DURING previous trade must NOT be eligible
+          if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
+            continue;
+          }
           sweepIdx = i;
           break;
         }
@@ -232,6 +280,9 @@ export class DaRaM1Strategy {
       let displacementIdx = -1;
       for (let i = sweepIdx; i < candles.length; i++) {
         const c = candles[i];
+        if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
+          continue;
+        }
         const body = c.open - c.close;
         const range = c.high - c.low;
         if (body > 0 && range > 0 && body / range >= 0.45) {
@@ -253,6 +304,9 @@ export class DaRaM1Strategy {
       let mssCandle: DaRaCandle | null = null;
       for (let i = displacementIdx; i < candles.length; i++) {
         const c = candles[i];
+        if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
+          continue;
+        }
         if (c.close < targetSwingLow.price) {
           mssConfirmed = true;
           mssCandle = c;
@@ -261,6 +315,13 @@ export class DaRaM1Strategy {
       }
 
       if (mssConfirmed && mssCandle) {
+        if (this.scanBaselineTime > 0 && (mssCandle.time <= this.scanBaselineTime || candles[sweepIdx].time <= this.scanBaselineTime)) {
+          return null; // Formed before or during previous trade. Discard stale setup.
+        }
+        if (this.lastProcessedMssTime > 0 && mssCandle.time <= this.lastProcessedMssTime) {
+          return null; // This setup (or a newer one) was already processed. Discard old setups.
+        }
+
         const lockedEntry = targetSwingLow.price;
         const userSl = settings.slDistance;
         const userTp = settings.tpDistance;

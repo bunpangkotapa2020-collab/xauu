@@ -38,6 +38,23 @@ import { DaRaM1StateMachine } from './DaRaM1StateMachine';
 import { DaRaOrderExecution } from './DaRaOrderExecution';
 import { DaRaProfitTrailing } from './DaRaProfitTrailing';
 
+const DEFAULT_DARA_SETTINGS: DaRaUserSettings = {
+  lotSize: 0.01,
+  slDistance: 30,
+  tpDistance: 8,
+  dailyLossLimit: 2000,
+  maxOpenTrades: 5,
+  maxConsecutiveSL: 3,
+  cooldownMinutes: 15,
+  maxSpreadPoints: 30,
+  newsFilterEnabled: false,
+  newsMinsBefore: 60,
+  newsMinsAfter: 60,
+  trailingEnabled: true,
+  entryDistance: 2.0,
+  liveTradingEnabled: false
+};
+
 export class DaRaM1Engine {
   public readonly name = 'DaRa M1 EA v1.0';
 
@@ -58,17 +75,17 @@ export class DaRaM1Engine {
   private isNewsBlockedNow: boolean = false;
   private isMt5ConnectedNow: boolean = true;
   private cachedPointSize: number = 0;
+  private lastKnownCandleTime: number = 0;
   private lastAnalysis: DaRaAnalysisDetails | null = null;
   private closedTicketsSet: Set<string> = new Set<string>();
-  private additionalEntryTriggered = new Set<string>();
 
   constructor(
     broker: DaRaBrokerInterface,
-    initialSettings: DaRaUserSettings,
+    initialSettings?: Partial<DaRaUserSettings>,
     telegram?: DaRaTelegramInterface
   ) {
     this.broker = broker;
-    this.userSettings = { ...initialSettings };
+    this.userSettings = { ...DEFAULT_DARA_SETTINGS, ...initialSettings };
     this.telegram = telegram;
 
     this.strategy = new DaRaM1Strategy();
@@ -123,7 +140,9 @@ export class DaRaM1Engine {
   public forceCloseAllAndStop(): void {
     this.isRunning = false;
     this.stateMachine.reset();
-    console.log(`[DaRa M1 EA v1.0] 🛑 CLOSE ALL executed. All setups cancelled, positions cleared, engine STOPPED.`);
+    const baselineTime = this.lastKnownCandleTime > 0 ? this.lastKnownCandleTime : Date.now();
+    this.strategy.setScanBaselineTime(baselineTime);
+    console.log(`[DaRa M1 EA v1.0] 🛑 CLOSE ALL executed. All setups cancelled, positions cleared, scan baseline reset to ${baselineTime}, engine STOPPED.`);
     if (this.telegram) {
       this.telegram.notify(
         `🛑 DaRa M1 EA v1.0 — CLOSE ALL TRADES`,
@@ -164,7 +183,16 @@ export class DaRaM1Engine {
       dailyLossAccumulated: this.dailyLossAccumulated,
       consecutiveLossCount: this.consecutiveLossCount,
       lastLossTime: this.lastLossTime,
+      scanBaselineTime: this.strategy.getScanBaselineTime()
     };
+  }
+
+  public getScanBaselineTime(): number {
+    return this.strategy.getScanBaselineTime();
+  }
+
+  public setScanBaselineTime(time: number, force: boolean = false): void {
+    this.strategy.setScanBaselineTime(time, force);
   }
 
   // ==========================================
@@ -232,6 +260,22 @@ export class DaRaM1Engine {
     }
   }
 
+  
+  public clearCooldown(): void {
+    this.lastLossTime = 0;
+    console.log('[DaRa M1 EA v1.0] 🔄 Loss Cooldown explicitly cleared by user.');
+  }
+
+  public clearConsecutiveSL(): void {
+    this.consecutiveLossCount = 0;
+    console.log('[DaRa M1 EA v1.0] 🔄 Consecutive SL counter explicitly reset by user.');
+  }
+
+  public clearDailyLossLimit(): void {
+    this.dailyLossAccumulated = 0;
+    console.log('[DaRa M1 EA v1.0] 🔄 Daily Loss limit state explicitly reset by user.');
+  }
+
   public resetDailyLoss(): void {
     this.dailyLossAccumulated = 0;
     this.consecutiveLossCount = 0;
@@ -263,10 +307,73 @@ export class DaRaM1Engine {
 
     // Continuously update live analysis details for transparency
     if (feed.m1Candles && feed.m1Candles.length >= 10) {
+      const latestBar = feed.m1Candles[feed.m1Candles.length - 1];
+      if (latestBar && typeof latestBar.time === 'number' && latestBar.time > 0) {
+        this.lastKnownCandleTime = latestBar.time;
+      }
       this.lastAnalysis = this.strategy.getAnalysisDetails(feed.m1Candles, this.userSettings, this.cachedPointSize || 0.01);
+    } else if (typeof feed.time === 'number' && feed.time > 0) {
+      this.lastKnownCandleTime = feed.time;
     }
 
-    // 1. Manage Profit Trailing & Monitor Protection for all active positions
+    // 1. Manage Setup-Level Shared Basket Trailing & Profit Lock
+    const activePositions = this.stateMachine.getActivePositions();
+    const setupForTrailing = this.stateMachine.getSetup();
+
+    if (activePositions.length > 0 && setupForTrailing) {
+      const trailingResult = this.trailing.evaluateSetupTrailing(
+        setupForTrailing,
+        activePositions,
+        currentBid,
+        currentAsk,
+        this.userSettings
+      );
+
+      if (trailingResult.shouldCloseBasket) {
+        console.log(`[DaRa M1 EA v1.0] 🛡️ ${trailingResult.reason}. Closing entire Basket!`);
+        await this.closeBasket('TRAILING_SL_HIT', trailingResult.reason, currentBid, currentAsk);
+        return;
+      }
+
+      if (trailingResult.activatedThisTick) {
+        console.log(`[DaRa M1 EA v1.0] 🛡️ ${trailingResult.reason}`);
+        if (this.telegram) {
+          const title = `🛡️ DaRa M1 - TRAILING ACTIVATED`;
+          const msg = [
+            `${setupForTrailing.direction} Basket | ${feed.symbol}`,
+            `Initial Hidden SL: ${trailingResult.newHiddenSL?.toFixed(3)}`,
+            `Active Positions: ${activePositions.length}`
+          ].join('\n');
+          this.telegram.notify(title, msg, `TRAIL_ACT_${setupForTrailing.id}`).catch(() => {});
+        }
+
+        // Adjust broker TP on all positions to 0 so broker does not close prematurely at original TP,
+        // and set initial Hidden SL
+        for (const pos of activePositions) {
+          pos.trailingActivated = true;
+          if (trailingResult.newHiddenSL !== undefined) {
+            pos.sl = trailingResult.newHiddenSL;
+            pos.lastTrailingSl = trailingResult.newHiddenSL;
+          }
+          const targetTp = trailingResult.newTp !== undefined ? trailingResult.newTp : 0;
+          pos.tp = targetTp;
+          if (this.broker.modifyPosition) {
+            await this.broker.modifyPosition(pos.ticket, pos.sl, targetTp);
+          }
+        }
+      } else if (trailingResult.shouldModifyBrokerSL && trailingResult.newHiddenSL) {
+        console.log(`[DaRa M1 EA v1.0] 🛡️ Advancing Shared Hidden Trailing SL: New SL = ${trailingResult.newHiddenSL} (${trailingResult.reason})`);
+        for (const pos of activePositions) {
+          pos.sl = trailingResult.newHiddenSL;
+          pos.lastTrailingSl = trailingResult.newHiddenSL;
+          if (this.broker.modifyPosition) {
+            await this.broker.modifyPosition(pos.ticket, trailingResult.newHiddenSL, pos.tp);
+          }
+        }
+      }
+    }
+
+    // 2. Manage Position Protection & Monitor Broker Closure
     for (const pos of this.stateMachine.getActivePositions()) {
       await this.manageActivePosition(pos, currentBid, currentAsk);
     }
@@ -293,13 +400,15 @@ export class DaRaM1Engine {
       const detectedSetup = this.strategy.scanForSetup(feed.m1Candles, this.userSettings, this.cachedPointSize);
       if (detectedSetup) {
         // Confirmed Signal!
+        this.strategy.markSetupProcessed(detectedSetup.direction, detectedSetup.mssTime);
+
         const sigPrice = detectedSetup.signalPrice ?? detectedSetup.lockedEntryPrice ?? (detectedSetup.direction === 'BUY' ? currentAsk : currentBid);
         detectedSetup.signalPrice = sigPrice;
         
         console.log(`[DaRa M1 EA v1.0] 🎯 CONFIRMED SIGNAL: ${detectedSetup.direction} | Sweep=${detectedSetup.sweepLevel} | MSS=${detectedSetup.mssLevel} | Signal Price=${sigPrice}`);
         console.log(`[DaRa M1 EA v1.0] ⏳ Waiting for price pullback... calculating 5 entry levels based on lockedEntryPrice.`);
         
-        this.stateMachine.onSetupDetected(detectedSetup);
+        this.stateMachine.onSetupDetected(detectedSetup, this.userSettings);
       }
       return;
     }
@@ -350,7 +459,8 @@ export class DaRaM1Engine {
           currentAsk,
           currentBid,
           this.userSettings,
-          nextLevel.levelIndex
+          nextLevel.levelIndex,
+          this.isRunning
         );
 
         if (execResult.success && execResult.position) {
@@ -361,12 +471,24 @@ export class DaRaM1Engine {
              console.log(`[DaRa M1 EA v1.0] 5/5 POSITIONS OPENED. 1 Confirmed Signal = 5 Positions MAX. STOPPING further entries.`);
           }
         } else {
+          if (execResult.error === 'MONITOR_MODE') {
+             console.log(`[DaRa M1 EA v1.0] Monitor Mode: Order not placed because Live Trading is OFF.`);
+             if (positionNumber === 1) {
+                this.stateMachine.cancelSetup('EXPIRED', `Monitor Mode Active: Order not placed.`);
+             }
+             // Notify via Telegram only for the first level to avoid spam
+             if (this.telegram && positionNumber === 1) {
+                this.telegram.notify('ℹ️ DaRa M1 EA - SAFE MONITOR MODE', `Signal reached entry, but Live Trading is OFF. Setup cancelled without execution.`).catch(() => {});
+             }
+             return;
+          }
+
           console.error(`[DaRa M1 EA v1.0] Execution rejected: ${execResult.error}`);
           if (positionNumber === 1) {
              this.stateMachine.cancelSetup('EXPIRED', `Execution error: ${execResult.error}`);
           }
           if (this.telegram) {
-            this.telegram.notify('🔴 DaRa M1 EA - ORDER REJECTED', `Broker execution failed for Level ${positionNumber}:\n${execResult.error}`).catch(() => {});
+            this.telegram.notify('🔴 DaRa M1 EA - ORDER REJECTED', `Broker execution failed for Level ${positionNumber}: ${String(execResult.error || "Unknown Error")}`).catch(() => {});
           }
         }
       }
@@ -430,42 +552,85 @@ export class DaRaM1Engine {
       return;
     }
 
-    // 3. Monotonic Trailing SL
-    const trailingCheck = this.trailing.calculateTrailingSL(
-      position,
-      currentBid,
-      currentAsk,
-      this.userSettings,
-      this.cachedPointSize
-    );
+    // 3. Fallback Trailing SL for standalone position without setup
+    if (!this.stateMachine.getSetup()) {
+      const trailingCheck = this.trailing.calculateTrailingSL(
+        position,
+        currentBid,
+        currentAsk,
+        this.userSettings,
+        this.cachedPointSize
+      );
 
-    if (trailingCheck.shouldModify && trailingCheck.newSl) {
-      console.log(`[DaRa M1 EA v1.0] 🛡️ Advancing Trailing SL for #${position.ticket}: New SL = ${trailingCheck.newSl} (${trailingCheck.reason})`);
-      if (this.telegram) {
-        // Calculate floating P/L in USC
-        const currentPrice = position.type === 'BUY' ? currentBid : currentAsk;
-        const pDiff = position.type === 'BUY' ? (currentPrice - position.openPrice) : (position.openPrice - currentPrice);
-        const floatingUsc = Number((pDiff * position.lot * 100).toFixed(2));
-        const pnlStr = floatingUsc >= 0 ? `+${floatingUsc.toFixed(2)}` : `-${Math.abs(floatingUsc).toFixed(2)}`;
-
-        const title = `🔵 Trailing SL`;
-        const msg = [
-          `${position.type} | ${position.symbol}`,
-          `SL ថ្មី: ${trailingCheck.newSl.toFixed(3)}`,
-          `P/L: ${pnlStr} USC`
-        ].join('\n');
-
-        this.telegram.notify(title, msg, `TRAILING_SL_${position.ticket}_${trailingCheck.newSl}`).catch(() => {});
-      }
-      const targetTp = trailingCheck.newTp !== undefined ? trailingCheck.newTp : position.tp;
-      const modResult = await this.broker.modifyPosition(position.ticket, trailingCheck.newSl, targetTp);
-      if (modResult.success) {
-        position.sl = trailingCheck.newSl;
-        position.lastTrailingSl = trailingCheck.newSl;
-        if (trailingCheck.newTp !== undefined) {
-          position.tp = trailingCheck.newTp;
+      if (trailingCheck.shouldModify && trailingCheck.newSl) {
+        console.log(`[DaRa M1 EA v1.0] 🛡️ Advancing Trailing SL for #${position.ticket}: New SL = ${trailingCheck.newSl} (${trailingCheck.reason})`);
+        const targetTp = trailingCheck.newTp !== undefined ? trailingCheck.newTp : position.tp;
+        const modResult = await this.broker.modifyPosition(position.ticket, trailingCheck.newSl, targetTp);
+        if (modResult.success) {
+          position.sl = trailingCheck.newSl;
+          position.lastTrailingSl = trailingCheck.newSl;
+          if (trailingCheck.newTp !== undefined) {
+            position.tp = trailingCheck.newTp;
+          }
         }
       }
+    }
+  }
+
+  /**
+   * Closes the entire Basket of positions belonging to the current Setup.
+   * Clears Setup, resets Trailing State, and returns to SCANNING.
+   */
+  public async closeBasket(
+    exitReason: DaRaExitReason,
+    reasonDetails?: string,
+    currentBid?: number,
+    currentAsk?: number
+  ): Promise<void> {
+    const activePositions = [...this.stateMachine.getActivePositions()];
+    const setup = this.stateMachine.getSetup();
+    if (activePositions.length === 0) return;
+
+    console.log(`[DaRa M1 EA v1.0] 🏁 Closing Basket (${activePositions.length} positions) | Reason: ${exitReason} | Details: ${reasonDetails || ''}`);
+
+    const bid = currentBid || activePositions[0].currentPrice;
+    const ask = currentAsk || activePositions[0].currentPrice;
+
+    for (const pos of activePositions) {
+      if (this.broker.closePosition) {
+        try {
+          await this.broker.closePosition(pos.ticket);
+        } catch (e) {
+          console.error(`[DaRa M1 EA v1.0] Broker close error for #${pos.ticket}:`, e);
+        }
+      }
+
+      let closePrice = pos.type === 'BUY' ? bid : ask;
+      if (setup?.trailingState?.currentHiddenSL) {
+        closePrice = setup.trailingState.currentHiddenSL;
+      }
+      const pDiff = pos.type === 'BUY' ? (closePrice - pos.openPrice) : (pos.openPrice - closePrice);
+      const pnl = Number((pDiff * pos.lot * 100).toFixed(2));
+
+      const closeTime = this.lastKnownCandleTime > 0 ? this.lastKnownCandleTime : Date.now();
+      const closedTrade: DaRaClosedTrade = {
+        ticket: pos.ticket,
+        symbol: pos.symbol,
+        type: pos.type,
+        lot: pos.lot,
+        openPrice: pos.openPrice,
+        closePrice,
+        sl: pos.sl,
+        tp: pos.tp,
+        originalTp: pos.originalTp,
+        trailingActivated: true,
+        pnl,
+        exitReason,
+        closedAt: closeTime
+      };
+
+      this.stateMachine.clearPosition(pos.ticket);
+      await this.finalizeTradeClose(closedTrade);
     }
   }
 
@@ -523,6 +688,7 @@ export class DaRaM1Engine {
       finalPnl = Number((pDiff * position.lot * 100).toFixed(2));
     }
 
+    const closeTime = this.lastKnownCandleTime > 0 ? this.lastKnownCandleTime : Date.now();
     const closedTrade: DaRaClosedTrade = {
       ticket: position.ticket,
       symbol: position.symbol,
@@ -536,7 +702,7 @@ export class DaRaM1Engine {
       trailingActivated: position.trailingActivated,
       pnl: finalPnl,
       exitReason,
-      closedAt: Date.now()
+      closedAt: closeTime
     };
 
     this.stateMachine.clearPosition(closedTrade.ticket);
@@ -551,7 +717,8 @@ export class DaRaM1Engine {
     ticket: string | number,
     overrideExitReason?: DaRaExitReason,
     overrideProfit?: number,
-    overridePrice?: number
+    overridePrice?: number,
+    overrideCloseTime?: number
   ): Promise<void> {
     const ticketKey = String(ticket);
     if (this.closedTicketsSet.has(ticketKey)) {
@@ -599,6 +766,10 @@ export class DaRaM1Engine {
       finalPnl = Number((pDiff * targetPos.lot * 100).toFixed(2));
     }
 
+    const closeTime = overrideCloseTime !== undefined 
+      ? overrideCloseTime 
+      : (this.lastKnownCandleTime > 0 ? this.lastKnownCandleTime : Date.now());
+
     const closedTrade: DaRaClosedTrade = {
       ticket: targetPos.ticket,
       symbol: targetPos.symbol,
@@ -612,7 +783,7 @@ export class DaRaM1Engine {
       trailingActivated: targetPos.trailingActivated,
       pnl: finalPnl,
       exitReason,
-      closedAt: Date.now()
+      closedAt: closeTime
     };
 
     this.stateMachine.clearPosition(closedTrade.ticket);
@@ -638,7 +809,9 @@ export class DaRaM1Engine {
     // 3. State Machine Transition: Only clear setup & return to SCANNING if no positions remain active
     if (!this.stateMachine.hasOpenPositions()) {
       this.stateMachine.onPositionClosed(closedTrade);
-      console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | All positions closed. Resuming SCANNING.`);
+      const baselineTime = Math.max(closedTrade.closedAt || 0, this.lastKnownCandleTime || 0) || Date.now();
+      this.strategy.setScanBaselineTime(baselineTime);
+      console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | All positions closed. Scan baseline reset to ${baselineTime}. Resuming SCANNING.`);
     } else {
       console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | 1 position still active.`);
     }

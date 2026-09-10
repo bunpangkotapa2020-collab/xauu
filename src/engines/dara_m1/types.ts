@@ -53,6 +53,16 @@ export type DaRaState =
   | 'TRADE_CLOSED'           // Trade closed (TP hit, SL hit, or Trailing SL hit)
   | 'SETUP_CANCELED';        // Virtual TP or Virtual SL touched before entry
 
+export interface DaRaSetupTrailingState {
+  activated: boolean;
+  activatedAt?: number;
+  activationPrice?: number;
+  initialHiddenSL?: number;
+  currentHiddenSL?: number;
+  highestPrice?: number;
+  lowestPrice?: number;
+}
+
 export interface DaRaSetup {
   id: string;
   direction: DaRaDirection;
@@ -69,14 +79,7 @@ export interface DaRaSetup {
   positionsOpened?: number;
   sharedSL?: number;
   sharedTP?: number;
-
-  // Legacy fields kept for interface compatibility
-  pos1TargetPrice?: number;
-  pos2TargetPrice?: number;
-  pos1Executed?: boolean;
-  pos2Executed?: boolean;
-  pos1Ticket?: string | number;
-  pos2Ticket?: string | number;
+  trailingState?: DaRaSetupTrailingState;
 
   virtualSLPrice: number;
   virtualTPPrice: number;
@@ -88,6 +91,7 @@ export interface DaRaSetup {
 }
 
 export interface DaRaUserSettings {
+  liveTradingEnabled?: boolean;
   lotSize: number;
   slDistance: number;          // Stop Loss (Price Distance) - Direct price distance from entry (e.g. 10 means Entry ± 10)
   tpDistance: number;          // Take Profit (Price Distance) - Direct price distance from entry (e.g. 10 means Entry ± 10)
@@ -132,6 +136,7 @@ export interface DaRaMarketFeed {
   ask: number;
   spreadPoints: number;
   serverTime: number;
+  time?: number;
   m1Candles: DaRaCandle[];
   openTradesCount?: number;
 }
@@ -190,6 +195,7 @@ export interface DaRaTelemetry {
   dailyLossAccumulated: number;
   consecutiveLossCount: number;
   lastLossTime: number;
+  scanBaselineTime?: number;
 }
 
 export interface DaRaBrokerInterface {
@@ -204,6 +210,7 @@ export interface DaRaBrokerInterface {
   }): Promise<{ success: boolean; ticket?: string | number; error?: string }>;
 
   modifyPosition(ticket: string | number, newSl: number, newTp?: number): Promise<{ success: boolean; error?: string }>;
+  closePosition?(ticket: string | number): Promise<{ success: boolean; error?: string }>;
 
   getOpenPositions(symbol: string): Promise<DaRaPosition[]>;
   getSymbolInfo(symbol: string): Promise<{ pointSize: number }>;

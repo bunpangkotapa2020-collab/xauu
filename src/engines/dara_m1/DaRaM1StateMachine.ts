@@ -109,7 +109,7 @@ export class DaRaM1StateMachine {
   /**
    * Locks in a new valid setup from Strategy (MSS Confirmed).
    */
-  public onSetupDetected(setup: DaRaSetup): void {
+  public onSetupDetected(setup: DaRaSetup, userSettings?: import('./types').DaRaUserSettings): void {
     if (this.currentState !== 'SCANNING') return;
     this.currentSetup = setup;
 
@@ -117,7 +117,8 @@ export class DaRaM1StateMachine {
     setup.entryLevels = [];
     
     for (let i = 1; i <= 5; i++) {
-      const dist = i * 1.0;
+      const step = (userSettings && userSettings.entryDistance !== undefined) ? userSettings.entryDistance : 1.0;
+      const dist = i * step;
       let target = setup.direction === 'BUY' ? locked - dist : locked + dist;
       setup.entryLevels.push({
         targetPrice: Number(target.toFixed(3)),
@@ -193,12 +194,6 @@ export class DaRaM1StateMachine {
     return false;
   }
 
-  /**
-   * Checks if price has touched or crossed the Pos #1 target price.
-   * BUY:  price <= pos1TargetPrice (or signalPrice - 2.0)
-   * SELL: price >= pos1TargetPrice (or signalPrice + 2.0)
-   */
-  
   public getNextPendingLevel(): { levelIndex: number; targetPrice: number } | null {
     if (!this.currentSetup || !this.currentSetup.entryLevels) return null;
     for (let i = 0; i < this.currentSetup.entryLevels.length; i++) {
@@ -230,12 +225,6 @@ export class DaRaM1StateMachine {
   }
 
 
-  /**
-   * Checks if price has reached Pos #2 target price after Pos #1 was opened.
-   * BUY:  price <= pos2TargetPrice (or signalPrice - 4.0)
-   * SELL: price >= pos2TargetPrice (or signalPrice + 4.0)
-   */
-  
 
   /**
    * Transitions from WAIT_FOR_LOCKED_ENTRY to EXECUTING.
@@ -263,11 +252,6 @@ export class DaRaM1StateMachine {
   public clearPosition(ticket: string | number): void {
     const ticketStr = String(ticket);
     this.activePositions = this.activePositions.filter(p => String(p.ticket) !== ticketStr);
-    
-    // If all positions are closed, go to TRADE_CLOSED
-    if (this.activePositions.length === 0 && this.currentState === 'TRADE_ACTIVE') {
-      this.onPositionClosed();
-    }
   }
 
   public hasOpenPositions(): boolean {

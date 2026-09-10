@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BotState, TradeOrder } from '../types';
+import { botApi } from '../services/api';
 import {
   Activity,
   ShieldCheck,
@@ -29,6 +30,9 @@ interface LogEntry {
 }
 
 export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
+  // Live Trading Status
+  const isLiveEnabled = Boolean(state.riskConfig?.liveTradingEnabled || (state as any).daraTelemetry?.settings?.liveTradingEnabled);
+
   // 1. Telemetry & State Extraction
   const signalDetails = state.signalDetails;
   const telemetry = (state as any).daraTelemetry || signalDetails?.daraTelemetry;
@@ -41,16 +45,16 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
   const activeTrade = state.openTrades?.find((t: TradeOrder) => t.isBotTrade || t.magicNumber === 778899 || t.magicNumber === 999111);
 
   const userSettings = telemetry?.settings || (state.riskConfig as any) || {};
-  const currentSpread = state.spread || (state as any).spreadPoints || 0;
+  const currentSpread = (state as any).spread || (state as any).spreadPoints || 0;
   const maxSpread = userSettings.maxSpreadPoints || 27;
   const dailyLossLimit = userSettings.dailyLossLimit || 50;
-  const dailyLossCurrent = telemetry?.dailyLossAccumulated ?? (state.dailyLoss || 0);
+  const dailyLossCurrent = telemetry?.dailyLossAccumulated ?? ((state as any).dailyLoss || 0);
   const maxTrades = userSettings.maxOpenTrades || 1;
   const openTradesCount = state.openTrades?.length || 0;
   const maxConsecutiveSL = userSettings.maxConsecutiveSL || 3;
   const consecutiveLosses = telemetry?.consecutiveLossCount ?? state.consecutiveLosses ?? 0;
   const isCooldown = safety?.isInCooldown ?? Boolean(state.cooldownUntil && Date.now() < state.cooldownUntil);
-  const isNewsBlocked = safety?.isNewsBlocked ?? Boolean(state?.account?.newsBlockedStatus);
+  const isNewsBlocked = safety?.isNewsBlocked ?? Boolean((state?.account as any)?.newsBlockedStatus);
   const isMt5Connected = Boolean(state?.account?.serverConnected || state?.account?.isConnected);
   const isRunning = state.status === 'running' || state.desiredBotState === 'RUNNING';
 
@@ -161,90 +165,42 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
   let currentStep = 1;
   if (!isRunning) {
     currentStep = 0; // IDLE
+  } else if (daraState === 'TRADE_CLOSED' || (setup?.status === 'EXECUTED' && !activeTrade && daraState !== 'TRADE_ACTIVE' && daraState !== 'TRAILING')) {
+    currentStep = 11;
   } else if (activeTrade) {
-    // If SL trailed beyond initial virtual SL or state is trailing
-    const isTrailed = setup && activeTrade.sl && (activeTrade.side === 'BUY' ? activeTrade.sl > setup.virtualSLPrice : activeTrade.sl < setup.virtualSLPrice);
-    currentStep = isTrailed || daraState === 'TRAILING' ? 8 : 7; // 8: TRAILING, 7: TRADE ACTIVE
-  } else if (daraState === 'TRADE_CLOSED' || (setup?.status === 'EXECUTED' && !activeTrade)) {
-    currentStep = 9; // 9: TRADE CLOSED
+    const isTrailed = setup && activeTrade.sl && setup.sharedSL && (activeTrade.side === 'BUY' ? activeTrade.sl > setup.sharedSL : activeTrade.sl < setup.sharedSL);
+    currentStep = isTrailed || daraState === 'TRAILING' ? 10 : 9;
   } else if (daraState === 'EXECUTING') {
-    currentStep = 6; // 6: MARKET EXECUTE
+    currentStep = 8; // SAFETY CHECK is part of execution phase
+  } else if (daraState === 'ENTRY_REACHED' || setup?.status === 'ENTRY_REACHED') {
+    currentStep = 7;
+  } else if (daraState === 'WAIT_FOR_LOCKED_ENTRY') {
+    currentStep = 6;
+  } else if (daraState === 'LOCK_ENTRY' || setup?.lockedEntryPrice) {
+    currentStep = 5;
   } else if (daraState === 'MSS_CONFIRMED' || setup?.mssLevel || analysis?.mss?.buy === 'CONFIRMED' || analysis?.mss?.sell === 'CONFIRMED') {
-    // MSS Confirmed -> evaluates safety
-    currentStep = !isEntryBlocked ? 5 : 4; // 5: SAFETY CHECK (passing -> executes), 4: MSS CONFIRMED
+    currentStep = 4;
   } else if (setup?.displacementConfirmed || analysis?.displacement?.buy === 'CONFIRMED' || analysis?.displacement?.sell === 'CONFIRMED') {
-    currentStep = 3; // 3: DISPLACEMENT
+    currentStep = 3;
   } else if ((setup?.sweepLevel && setup.sweepLevel > 0) || analysis?.liquiditySweep?.buy === 'DETECTED' || analysis?.liquiditySweep?.sell === 'DETECTED') {
-    currentStep = 2; // 2: LIQUIDITY SWEEP
+    currentStep = 2;
   } else {
-    currentStep = 1; // 1: SCANNING
+    currentStep = 1;
   }
 
   // 4. Setup Flow Step Definitions (9 Disciplined Steps Flow - Bilingual Khmer & English)
   const stepDefinitions = [
-    { 
-      num: 1, 
-      name: 'SCANNING', 
-      titleKh: 'កំពុងស្កេន M1', 
-      descKh: 'ស្កេនទៀន M1 ស្វែងរក Swings & Liquidity', 
-      descEn: 'Scan M1 candles for Swings & Liquidity' 
-    },
-    { 
-      num: 2, 
-      name: 'LIQUIDITY SWEEP', 
-      titleKh: 'បោសយកសាច់ប្រាក់', 
-      descKh: 'Wick ចេញហួស M1 Swing High/Low', 
-      descEn: 'Wick beyond recent M1 Swing High/Low' 
-    },
-    { 
-      num: 3, 
-      name: 'DISPLACEMENT', 
-      titleKh: 'ចលនាតម្លៃខ្លាំង', 
-      descKh: 'ទៀនធ្លាក់/ឡើងខ្លាំងភ្លាមៗ (Impulsive Candle)', 
-      descEn: 'Impulsive directional M1 displacement' 
-    },
-    { 
-      num: 4, 
-      name: 'MSS CONFIRMED', 
-      titleKh: 'បញ្ជាក់ MSS', 
-      descKh: 'Market Structure Shift បញ្ជាក់ទិសដៅច្បាស់', 
-      descEn: 'Market Structure Shift confirmed' 
-    },
-    { 
-      num: 5, 
-      name: 'SAFETY CHECK', 
-      titleKh: 'ផ្ទៀងផ្ទាត់សុវត្ថិភាព', 
-      descKh: 'ត្រួតពិនិត្យប្រព័ន្ធសុវត្ថិភាពទាំង ៩ ចំណុច', 
-      descEn: 'All 9 safety guards verification' 
-    },
-    { 
-      num: 6, 
-      name: 'MARKET EXECUTE', 
-      titleKh: 'ចូល ORDER ទីផ្សារ', 
-      descKh: 'Fast Market Execution (Ask/Bid) ភ្លាមៗ', 
-      descEn: 'Instant Market Order (Ask/Bid) at market price' 
-    },
-    { 
-      num: 7, 
-      name: 'TRADE ACTIVE', 
-      titleKh: 'TRADE ដំណើរការ', 
-      descKh: 'បើក Order រួចរាល់ជាមួយ Hard SL & TP', 
-      descEn: 'Position active with hard SL & TP' 
-    },
-    { 
-      num: 8, 
-      name: 'TRAILING', 
-      titleKh: 'រំកិលការពារ SL', 
-      descKh: 'Auto Trailing 1.5 ចាប់ផ្តើមនៅ TP រំកិលតាមទិសដៅ', 
-      descEn: 'Auto Trailing 1.5 at TP (Monotonic SL)' 
-    },
-    { 
-      num: 9, 
-      name: 'TRADE CLOSED', 
-      titleKh: 'TRADE បានបិទ', 
-      descKh: 'បិទ Order រួចរាល់ → ស្កេន M1 ថ្មីបន្ត', 
-      descEn: 'Position closed -> Reset to Scanning' 
-    }
+    { num: 1, name: 'SCANNING', titleKh: 'កំពុងស្កេន M1', shortDescKh: 'ស្កេន M1', shortDescEn: 'Scan M1', descKh: 'ស្កេនទៀន M1', descEn: 'Scan M1 candles' },
+    { num: 2, name: 'LIQUIDITY SWEEP', titleKh: 'បោសយកសាច់ប្រាក់', shortDescKh: 'បោស H/L', shortDescEn: 'Sweep H/L', descKh: 'Wick ហួស M1 Swing', descEn: 'Wick beyond recent M1 Swing' },
+    { num: 3, name: 'DISPLACEMENT', titleKh: 'ចលនាតម្លៃខ្លាំង', shortDescKh: 'ទៀនធំ', shortDescEn: 'Impulsive', descKh: 'ទៀនធ្លាក់/ឡើងខ្លាំង', descEn: 'Impulsive directional displacement' },
+    { num: 4, name: 'MSS CONFIRMED', titleKh: 'បញ្ជាក់ MSS', shortDescKh: 'បញ្ជាក់ MSS', shortDescEn: 'MSS Confirm', descKh: 'Structure Shift', descEn: 'Market Structure Shift' },
+    { num: 5, name: 'LOCK ENTRY', titleKh: 'កំណត់ទីតាំង Entry', shortDescKh: 'Lock Entry', shortDescEn: 'Lock Entry', descKh: 'គណនាទីតាំង Entry', descEn: 'Calculate Locked Entry Price' },
+    { num: 6, name: 'WAIT FOR ENTRY', titleKh: 'រង់ចាំតម្លៃ Entry', shortDescKh: 'Wait Entry', shortDescEn: 'Wait Entry', descKh: 'រង់ចាំតម្លៃថយក្រោយ', descEn: 'Wait for retracement' },
+    { num: 7, name: 'ENTRY REACHED', titleKh: 'ដល់ទីតាំង Entry', shortDescKh: 'Entry Reached', shortDescEn: 'Entry Reached', descKh: 'តម្លៃបច្ចុប្បន្នដល់ទីតាំង', descEn: 'Current price reached Entry level' },
+    { num: 8, name: 'SAFETY CHECK', titleKh: 'ផ្ទៀងផ្ទាត់សុវត្ថិភាព', shortDescKh: 'ឆែកសុវត្ថិភាព', shortDescEn: 'Safety Check', descKh: 'ត្រួតពិនិត្យសុវត្ថិភាព', descEn: 'Safety guards verification' },
+    { num: 9, name: 'TRADE ACTIVE', titleKh: 'TRADE ដំណើរការ', shortDescKh: 'Order & SL/TP', shortDescEn: 'Trade Active', descKh: 'បើក Order', descEn: 'Position active' },
+    { num: 10, name: 'TRAILING', titleKh: 'រំកិលការពារ SL', shortDescKh: 'Trailing', shortDescEn: 'Trailing', descKh: 'Auto Trailing', descEn: 'Auto Trailing SL' },
+    { num: 11, name: 'TRADE CLOSED', titleKh: 'TRADE បានបិទ', shortDescKh: 'បិទ & ស្កេន', shortDescEn: 'Trade Closed', descKh: 'បិទ Order → ស្កេនថ្មី', descEn: 'Trade closed, scanning again' }
   ];
 
   // 5. Activity Logs State
@@ -329,7 +285,8 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
     return matchesFilter && matchesSearch;
   });
 
-  const lastTickAgeSeconds = state.lastTickTime ? Math.max(0, (Date.now() - state.lastTickTime) / 1000).toFixed(1) : '---';
+  const currentRefTime = (state as any).serverTimeMs || Date.now();
+  const lastTickAgeSeconds = state.lastTickTime ? Math.max(0, (currentRefTime - state.lastTickTime) / 1000).toFixed(1) : '---' ;
 
   return (
     <div id="dara-m1-monitor" className="font-sans max-w-[1400px] mx-auto p-3 md:p-6 space-y-6 bg-[#05080F] min-h-screen text-slate-100">
@@ -338,7 +295,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       {/* SECTION 1: MAIN ENGINE & MARKET TELEMETRY BANNER (BILINGUAL)               */}
       {/* ========================================================================= */}
       <div id="dara-telemetry-header" className="bg-[#0B101A] border border-slate-800/90 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-6">
+        <div className="flex flex-col xl:flex-row flex-wrap justify-between items-start xl:items-center gap-4 sm:gap-6">
           
           {/* Left: Engine Identity & Pulse */}
           <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 w-full xl:w-auto">
@@ -358,9 +315,18 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider bg-amber-950/70 border border-amber-500/40 text-amber-300 whitespace-nowrap">
                   REAL USC CENT (គណនី Cent)
                 </span>
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider bg-slate-800/90 border border-slate-700 text-slate-300 whitespace-nowrap">
-                  READ-ONLY MONITOR (ផ្ទាំងតាមដាន)
-                </span>
+                
+                {isLiveEnabled ? (
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider bg-red-950/80 border border-red-500/60 text-red-400 whitespace-nowrap shadow-[0_0_12px_rgba(239,68,68,0.2)] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    LIVE TRADING ACTIVE (លុយពិត)
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider bg-slate-800/90 border border-slate-700 text-slate-300 whitespace-nowrap">
+                    READ-ONLY MONITOR (ផ្ទាំងតាមដាន)
+                  </span>
+                )}
+
               </div>
               <p className="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed">
                 ប្រព័ន្ធជួញដូរមាស M1 ICT ស្វ័យប្រវត្ត • Autonomous ICT Engine for Gold (XAUUSD) • Exness MT5
@@ -369,7 +335,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
           </div>
 
           {/* Right: Engine Status Badge */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0 w-full xl:w-auto justify-start xl:justify-end">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full xl:w-auto justify-start xl:justify-end">
             <div className={`px-4 py-2 rounded-xl border font-mono text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm whitespace-nowrap transition-colors ${
               !isRunning 
                 ? 'bg-rose-950/40 border-rose-600/40 text-rose-400' 
@@ -420,12 +386,12 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
           {/* Card 2: Tick Stream */}
           <div className="bg-slate-900/70 border border-slate-800/80 p-3.5 rounded-xl flex flex-col justify-between hover:border-slate-700/80 transition-all min-h-[78px]">
             <div className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-1.5 font-medium mb-1.5">
-              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+              <Zap className={`w-4 h-4 shrink-0 ${state.account?.marketDataReceiving ? 'text-amber-400' : 'text-slate-500'}`} />
               <span>ចរន្តតម្លៃ (Tick Stream)</span>
             </div>
-            <div className="text-xs sm:text-sm font-bold font-mono text-amber-300 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0"></span>
-              <span>កំពុងទទួល (RECEIVING)</span>
+            <div className={`text-xs sm:text-sm font-bold font-mono flex items-center gap-2 ${state.account?.marketDataReceiving ? 'text-amber-300' : 'text-rose-400'}`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${state.account?.marketDataReceiving ? 'bg-amber-400 animate-ping' : 'bg-rose-500'}`}></span>
+              <span>{state.account?.marketDataReceiving ? 'កំពុងទទួល (RECEIVING)' : 'រអាក់រអួល (STALE)'}</span>
             </div>
           </div>
 
@@ -435,7 +401,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               តម្លៃទិញចូល (Bid Price)
             </div>
             <div className="text-base sm:text-lg font-bold font-mono text-white tracking-wide">
-              {state.bidPrice ? state.bidPrice.toFixed(3) : state.goldPrice ? state.goldPrice.toFixed(3) : '---'}
+              {state.bidPrice ? state.bidPrice.toString() : state.goldPrice ? state.goldPrice.toString() : '---'}
             </div>
           </div>
 
@@ -445,7 +411,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               តម្លៃលក់ចេញ (Ask Price)
             </div>
             <div className="text-base sm:text-lg font-bold font-mono text-white tracking-wide">
-              {state.askPrice ? state.askPrice.toFixed(3) : '---'}
+              {state.askPrice ? state.askPrice.toString() : '---'}
             </div>
           </div>
 
@@ -454,9 +420,8 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
             <div className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1.5">
               គម្លាតតម្លៃផ្ទាល់ (Spread)
             </div>
-            <div className={`text-xs sm:text-sm font-bold font-mono flex items-baseline gap-2 flex-wrap ${currentSpread <= maxSpread ? 'text-cyan-400' : 'text-rose-400'}`}>
-              <span className="text-base sm:text-lg font-bold">{currentSpread} pts</span>
-              <span className="text-xs text-slate-400 font-normal">(Max: {maxSpread})</span>
+            <div className={`text-xs sm:text-sm font-bold font-mono flex items-baseline gap-2 flex-wrap ${currentSpread <= maxSpread ? 'text-amber-400' : 'text-rose-400'}`}>
+              <span className="text-base sm:text-lg font-bold">{typeof state.spreadPoints === 'number' && state.spreadPoints > 0 ? state.spreadPoints : '--'}</span>
             </div>
           </div>
 
@@ -475,19 +440,20 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
 
         {/* Live M1 Candle Breakdown */}
         {analysis?.currentCandle && (
-          <div className="mt-3 p-3 bg-slate-950/80 border border-slate-800/70 rounded-xl text-xs font-mono flex flex-wrap items-center justify-between gap-2.5 text-slate-300">
-            <span className="text-slate-400 uppercase text-[11px] tracking-wider font-sans font-bold flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> ទៀន M1 កំពុងរត់ (Active M1 Candle):
+          <div className={`mt-3 p-3 bg-slate-950/80 border ${state.account?.marketDataReceiving ? 'border-slate-800/70' : 'border-rose-900/50'} rounded-xl text-xs font-mono flex flex-wrap items-center justify-between gap-2.5 ${state.account?.marketDataReceiving ? 'text-slate-300' : 'text-slate-500'}`}>
+            <span className={`uppercase text-[11px] tracking-wider font-sans font-bold flex items-center gap-1.5 ${state.account?.marketDataReceiving ? 'text-slate-400' : 'text-rose-400'}`}>
+              <Eye className={`w-3.5 h-3.5 shrink-0 ${state.account?.marketDataReceiving ? 'text-cyan-400' : 'text-rose-500'}`} />
+              {state.account?.marketDataReceiving ? 'ទៀន M1 កំពុងរត់ (Active M1 Candle):' : 'ទៀន M1 បង្កក (STALE M1 CANDLE):'}
             </span>
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
-              <span>O: <span className="text-white font-bold">{analysis.currentCandle.open.toFixed(2)}</span></span>
-              <span>H: <span className="text-emerald-400 font-bold">{analysis.currentCandle.high.toFixed(2)}</span></span>
-              <span>L: <span className="text-rose-400 font-bold">{analysis.currentCandle.low.toFixed(2)}</span></span>
-              <span>C: <span className="text-cyan-300 font-bold">{analysis.currentCandle.close.toFixed(2)}</span></span>
+            <div className={`flex flex-wrap items-center gap-3 sm:gap-4 text-xs ${state.account?.marketDataReceiving ? '' : 'opacity-50 grayscale'}`}>
+              <span>O: <span className={state.account?.marketDataReceiving ? "text-white font-bold" : ""}>{analysis.currentCandle.open.toString()}</span></span>
+              <span>H: <span className={state.account?.marketDataReceiving ? "text-emerald-400 font-bold" : ""}>{analysis.currentCandle.high.toString()}</span></span>
+              <span>L: <span className={state.account?.marketDataReceiving ? "text-rose-400 font-bold" : ""}>{analysis.currentCandle.low.toString()}</span></span>
+              <span>C: <span className={state.account?.marketDataReceiving ? "text-cyan-300 font-bold" : ""}>{analysis.currentCandle.close.toString()}</span></span>
             </div>
             {analysis.previousCandle && (
-              <div className="text-[11px] text-slate-400">
-                បិទទៀនមុន (Prev Close): <span className="text-slate-200 font-bold">{analysis.previousCandle.close.toFixed(2)}</span>
+              <div className={`text-[11px] ${state.account?.marketDataReceiving ? 'text-slate-400' : 'text-slate-600'}`}>
+                បិទទៀនមុន (Prev Close): <span className={state.account?.marketDataReceiving ? "text-slate-200 font-bold" : ""}>{analysis.previousCandle.close.toString()}</span>
               </div>
             )}
           </div>
@@ -509,12 +475,12 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
             </p>
           </div>
           <div className="text-xs font-mono font-bold px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-cyan-400 whitespace-nowrap self-start sm:self-auto">
-            បច្ចុប្បន្ន (CURRENT): ជំហាន {currentStep.toString().padStart(2, '0')}/09 ({stepDefinitions.find(s => s.num === currentStep)?.titleKh || 'IDLE'})
+            បច្ចុប្បន្ន (CURRENT): ជំហាន {currentStep.toString().padStart(2, '0')}/11 ({stepDefinitions.find(s => s.num === currentStep)?.titleKh || 'IDLE'})
           </div>
         </div>
 
         {/* 9 Steps Grid / Stepper */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-9 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11 gap-2 min-w-0">
           {stepDefinitions.map(step => {
             const isActive = currentStep === step.num;
             const isCompleted = currentStep > step.num;
@@ -522,43 +488,55 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
             return (
               <div
                 key={step.num}
-                className={`relative p-3 rounded-xl border transition-all duration-300 flex flex-col justify-between min-h-[128px] ${
+                className={`relative p-2 sm:p-2.5 rounded-xl border transition-all duration-300 flex flex-col justify-between min-h-[148px] overflow-hidden min-w-0 ${
                   isActive
-                    ? 'bg-blue-950/50 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.35)] ring-2 ring-blue-500/60 scale-[1.02]'
+                    ? 'bg-blue-950/60 border-blue-400 shadow-[0_0_16px_rgba(59,130,246,0.35)] ring-1 ring-blue-400/80'
                     : isCompleted
                       ? 'bg-emerald-950/20 border-emerald-600/40'
-                      : 'bg-slate-900/40 border-slate-800/70 opacity-65'
+                      : 'bg-slate-900/40 border-slate-800/70 opacity-70'
                 }`}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 ${
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between gap-1 mb-1.5 min-w-0">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-[11px] font-bold shrink-0 ${
                       isActive
-                        ? 'bg-blue-500 text-white shadow-[0_0_10px_#3b82f6]'
+                        ? 'bg-blue-500 text-white shadow-[0_0_8px_#3b82f6]'
                         : isCompleted
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                           : 'bg-slate-800 text-slate-400'
                     }`}>
                       {isCompleted ? '✓' : step.num}
                     </span>
-                    <span className={`text-[9px] font-mono font-bold uppercase tracking-wider whitespace-nowrap px-1.5 py-0.5 rounded ${
-                      isActive ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40' : isCompleted ? 'text-emerald-400' : 'text-slate-500'
+                    <span className={`text-[8.5px] font-mono font-bold uppercase tracking-tight px-1.5 py-0.5 rounded shrink-0 ${
+                      isActive 
+                        ? 'bg-blue-500/25 text-blue-300 border border-blue-400/40' 
+                        : isCompleted 
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
+                          : 'bg-slate-800/80 text-slate-400 border border-slate-700/50'
                     }`}>
-                      {isActive ? '● សកម្ម (ACTIVE)' : isCompleted ? '✓ រួច (DONE)' : '○ រង់ចាំ (WAIT)'}
+                      {isActive ? '● ACTIVE' : isCompleted ? '✓ DONE' : 'WAIT'}
                     </span>
                   </div>
 
-                  <h4 className={`text-xs font-bold leading-snug ${isActive ? 'text-white font-black' : isCompleted ? 'text-slate-200' : 'text-slate-400'}`}>
+                  <h4 className={`text-xs font-bold leading-tight break-words min-h-[30px] flex items-center ${
+                    isActive ? 'text-white font-black' : isCompleted ? 'text-slate-200' : 'text-slate-300'
+                  }`}>
                     {step.titleKh}
                   </h4>
-                  <div className={`text-[10px] font-mono mt-0.5 tracking-wider uppercase ${isActive ? 'text-cyan-300 font-bold' : 'text-slate-400'}`}>
+                  <div className={`text-[9px] font-mono font-semibold tracking-tight uppercase break-words leading-tight mt-0.5 ${
+                    isActive ? 'text-cyan-300 font-bold' : 'text-slate-400'
+                  }`}>
                     {step.name}
                   </div>
                 </div>
 
-                <div className="mt-2 pt-2 border-t border-slate-800/50 text-[10px] text-slate-400 leading-snug space-y-0.5">
-                  <div className={isActive ? 'text-slate-200 font-medium' : 'text-slate-300'}>{step.descKh}</div>
-                  <div className="text-slate-500 font-mono text-[9px] truncate">{step.descEn}</div>
+                <div className="mt-2 pt-1.5 border-t border-slate-800/60 text-[9.5px] leading-tight space-y-0.5 min-w-0">
+                  <div className={`break-words font-medium ${isActive ? 'text-slate-200' : 'text-slate-300'}`}>
+                    {step.shortDescKh}
+                  </div>
+                  <div className="text-slate-500 font-mono text-[8.5px] break-words leading-tight">
+                    {step.shortDescEn}
+                  </div>
                 </div>
               </div>
             );
@@ -580,7 +558,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               ? `« ការត្រួតពិនិត្យសុវត្ថិភាព៖ រារាំងមិនទាន់ឱ្យចូល (${blockedReason}) • Safety Guard Active: Entry blocked. »` 
               : '« ប្រព័ន្ធសុវត្ថិភាពទាំង ៩ ចំណុចឆ្លងកាត់ទាំងអស់ (SAFETY PASS)! រួចរាល់ដើម្បីចូល Market Order ភ្លាមៗ • All 9 safety guards passed! Ready for instant market order execution. »')}
             {currentStep === 6 && '« កំពុងបញ្ជូន Market Order ភ្លាមៗ (Fast Market Execution) ទៅកាន់ Exness MT5 (Ask សម្រាប់ BUY / Bid សម្រាប់ SELL)... • Dispatching instant market order to broker at live market price... »'}
-            {currentStep === 7 && `« Trade កំពុងដំណើរការជាមួយសំបុត្រ #${activeTrade?.ticket || 'LIVE'} (Hard SL & TP ការពាររួចរាល់) • Trade active with Ticket #${activeTrade?.ticket || 'LIVE'}. Initial SL & TP established. »`}
+            {currentStep === 7 && `« Trade កំពុងដំណើរការជាមួយសំបុត្រ #${(activeTrade as any)?.ticket || 'LIVE'} (Hard SL & TP ការពាររួចរាល់) • Trade active with Ticket #${(activeTrade as any)?.ticket || 'LIVE'}. Initial SL & TP established. »`}
             {currentStep === 8 && '« Auto Trailing 1.5 កំពុងដំណើរការ! SL រំកិលតាមទិសដៅតែប៉ុណ្ណោះ មិនដែលថយក្រោយ • Auto Trailing active at TP. Stop Loss advances monotonically with 1.5 price distance. »'}
             {currentStep === 9 && (lastClosedTrade 
               ? `« Trade #${lastClosedTrade.ticket} ត្រូវបានបិទបញ្ចប់ដោយ ${lastClosedTrade.exitReason} (${lastClosedTrade.pnl >= 0 ? '+' : ''}${lastClosedTrade.pnl.toFixed(2)})! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed via ${lastClosedTrade.exitReason}. Resetting engine to Step 01 (Scanning) for next setup. »`
@@ -791,7 +769,6 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
           )}
         </div>
       </div>
-
     </div>
   );
 };

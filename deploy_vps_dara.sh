@@ -33,6 +33,14 @@ fi
 if [ -f ".env" ]; then
     cp ".env" "${BACKUP_DIR}/.env"
     echo "✅ .env credentials backed up to ${BACKUP_DIR}/.env"
+else
+    touch .env
+fi
+
+# Ensure persistent SESSION_SECRET exists in .env, preserving current VPS fallback
+if ! grep -q "^SESSION_SECRET=" .env 2>/dev/null; then
+    echo "SESSION_SECRET=xauusd_secure_owner_admin_session_key_2026" >> .env
+    echo "✅ Preserved current VPS SESSION_SECRET in .env"
 fi
 
 if [ -f "data/admin_auth.json" ]; then

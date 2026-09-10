@@ -1,23 +1,4 @@
-/**
- * ============================================================================
- * 🔥 DaRa M1 EA v1.0 — PROFIT TRAILING ENGINE (DaRaProfitTrailing)
- * 100% INDEPENDENT TRAILING SL MODULE
- * 
- * Rules (Auto-Managed by EA):
- * - Activates when trade reaches Original TP.
- * - BUY TP = 100 -> Trailing SL starts at 98.5 (TP - 1.5).
- *   If price continues to rise -> SL trails upward behind price maintaining 1.5 distance.
- *   BUY SL NEVER moves downward.
- * - SELL TP = 100 -> Trailing SL starts at 101.5 (TP + 1.5).
- *   If price continues to fall -> SL trails downward behind price maintaining 1.5 distance.
- *   SELL SL NEVER moves upward.
- * - Trailing SL never set equal to TP.
- * - Trailing SL always at 1.5 distance from Price/TP to protect profit.
- * - Normal SL, TP, and Lot Size from Settings remain 100% untouched.
- * ============================================================================
- */
-
-import { DaRaPosition, DaRaUserSettings } from './types';
+import { DaRaPosition, DaRaSetup, DaRaUserSettings } from './types';
 
 export interface TrailingUpdateResult {
   shouldModify: boolean;
@@ -26,16 +7,211 @@ export interface TrailingUpdateResult {
   reason?: string;
 }
 
+export interface TrailingEvaluationResult {
+  activatedThisTick: boolean;
+  shouldModifyBrokerSL: boolean;
+  newHiddenSL?: number;
+  newTp?: number;
+  shouldCloseBasket: boolean;
+  closeReason?: string;
+  reason?: string;
+}
+
 export class DaRaProfitTrailing {
-  public static readonly TRAILING_DISTANCE: number = 1.5; // Fixed 1.5 Price Distance
+  public static readonly ACTIVATION_DISTANCE: number = 1.5;
+  public static readonly TRAILING_DISTANCE: number = 1.5;
 
   /**
-   * Calculates the next trailing Stop Loss with strict monotonicity.
-   * 
-   * @param position Current active broker position
-   * @param currentBid Current Bid price
-   * @param currentAsk Current Ask price
-   * @param settings User settings
+   * Evaluates Setup-level Basket Trailing according to DaRa M1 Specification:
+   * - 1 Setup = ONE shared Trailing State
+   * - Up to 5 Positions share the SAME Hidden Trailing SL
+   * - Activation distance = 1.5 points from TP
+   * - Activation happens ONLY ONCE per Setup
+   * - Initial Hidden SL = TP ± 1.5
+   * - Continuous Trailing = Current Price ± 1.5
+   * - Never loosen the Hidden SL (Strict Monotonicity)
+   * - Basket Close when Price reaches the last Hidden SL
+   */
+  public evaluateSetupTrailing(
+    setup: DaRaSetup,
+    activePositions: DaRaPosition[],
+    currentBid: number,
+    currentAsk: number,
+    settings?: DaRaUserSettings
+  ): TrailingEvaluationResult {
+    if (settings && settings.trailingEnabled === false) {
+      return { activatedThisTick: false, shouldModifyBrokerSL: false, shouldCloseBasket: false, reason: 'Trailing disabled in settings' };
+    }
+
+    if (!activePositions || activePositions.length === 0) {
+      return { activatedThisTick: false, shouldModifyBrokerSL: false, shouldCloseBasket: false };
+    }
+
+    // Ensure shared trailing state exists on the Setup
+    if (!setup.trailingState) {
+      setup.trailingState = { activated: false };
+    }
+
+    const trailDistance = (settings && settings.trailingDistance !== undefined && settings.trailingDistance > 0)
+      ? settings.trailingDistance
+      : DaRaProfitTrailing.TRAILING_DISTANCE;
+
+    const targetTp = setup.sharedTP || setup.virtualTPPrice || activePositions[0].tp || activePositions[0].originalTp || 0;
+    if (targetTp <= 0) {
+      return { activatedThisTick: false, shouldModifyBrokerSL: false, shouldCloseBasket: false, reason: 'No valid target TP' };
+    }
+
+    // ==========================================================
+    // PHASE 1: TRAILING NOT YET ACTIVATED
+    // ==========================================================
+    if (!setup.trailingState.activated) {
+      if (setup.direction === 'BUY') {
+        const activationPrice = Number((targetTp - trailDistance).toFixed(3));
+        if (currentBid >= activationPrice) {
+          // ACTIVATE ONCE
+          setup.trailingState.activated = true;
+          setup.trailingState.activatedAt = Date.now();
+          setup.trailingState.activationPrice = activationPrice;
+          setup.trailingState.initialHiddenSL = activationPrice;
+          setup.trailingState.currentHiddenSL = activationPrice;
+          setup.trailingState.highestPrice = currentBid;
+
+          for (const pos of activePositions) {
+            pos.trailingActivated = true;
+            pos.lastTrailingSl = activationPrice;
+          }
+
+          return {
+            activatedThisTick: true,
+            shouldModifyBrokerSL: true,
+            newHiddenSL: activationPrice,
+            newTp: 0, // Clear broker TP so trade continues trailing beyond original TP
+            shouldCloseBasket: false,
+            reason: `BUY Trailing Activated ONCE: Price ${currentBid} reached activation level ${activationPrice} (TP ${targetTp} - ${trailDistance}). Initial Hidden SL = ${activationPrice}`
+          };
+        }
+      } else { // SELL
+        const activationPrice = Number((targetTp + trailDistance).toFixed(3));
+        if (currentAsk <= activationPrice) {
+          // ACTIVATE ONCE
+          setup.trailingState.activated = true;
+          setup.trailingState.activatedAt = Date.now();
+          setup.trailingState.activationPrice = activationPrice;
+          setup.trailingState.initialHiddenSL = activationPrice;
+          setup.trailingState.currentHiddenSL = activationPrice;
+          setup.trailingState.lowestPrice = currentAsk;
+
+          for (const pos of activePositions) {
+            pos.trailingActivated = true;
+            pos.lastTrailingSl = activationPrice;
+          }
+
+          return {
+            activatedThisTick: true,
+            shouldModifyBrokerSL: true,
+            newHiddenSL: activationPrice,
+            newTp: 0, // Clear broker TP so trade continues trailing beyond original TP
+            shouldCloseBasket: false,
+            reason: `SELL Trailing Activated ONCE: Price ${currentAsk} reached activation level ${activationPrice} (TP ${targetTp} + ${trailDistance}). Initial Hidden SL = ${activationPrice}`
+          };
+        }
+      }
+
+      // Before activation: Trailing = OFF, Profit Lock = OFF
+      return { activatedThisTick: false, shouldModifyBrokerSL: false, shouldCloseBasket: false };
+    }
+
+    // ==========================================================
+    // PHASE 2: TRAILING IS ACTIVE (CONTINUOUS TRAILING & BASKET CLOSE)
+    // ==========================================================
+    const currentHiddenSL = setup.trailingState.currentHiddenSL ?? setup.trailingState.initialHiddenSL ?? 0;
+
+    if (setup.direction === 'BUY') {
+      // 1. Check Basket Close: Price reversed and reached Hidden SL
+      if (currentBid <= currentHiddenSL) {
+        return {
+          activatedThisTick: false,
+          shouldModifyBrokerSL: false,
+          shouldCloseBasket: true,
+          closeReason: 'TRAILING_SL_HIT',
+          reason: `BUY Basket Hit Trailing SL: Current Bid ${currentBid} touched/reversed past Hidden SL ${currentHiddenSL}`
+        };
+      }
+
+      // 2. Continuous Trailing: Current Price - 1.5
+      setup.trailingState.highestPrice = Math.max(setup.trailingState.highestPrice || currentBid, currentBid);
+      const proposedSL = Number((currentBid - trailDistance).toFixed(3));
+
+      // 3. Strict Monotonicity: Never loosen the Hidden SL (New >= Previous)
+      if (proposedSL > currentHiddenSL) {
+        setup.trailingState.currentHiddenSL = proposedSL;
+        for (const pos of activePositions) {
+          pos.lastTrailingSl = proposedSL;
+        }
+
+        return {
+          activatedThisTick: false,
+          shouldModifyBrokerSL: true,
+          newHiddenSL: proposedSL,
+          newTp: 0,
+          shouldCloseBasket: false,
+          reason: `BUY Hidden SL advanced to ${proposedSL} (Current Bid ${currentBid} - ${trailDistance})`
+        };
+      }
+
+      return {
+        activatedThisTick: false,
+        shouldModifyBrokerSL: false,
+        newHiddenSL: currentHiddenSL,
+        shouldCloseBasket: false,
+        reason: `BUY Hidden SL held at ${currentHiddenSL} (Proposed ${proposedSL} would loosen)`
+      };
+
+    } else { // SELL
+      // 1. Check Basket Close: Price reversed and reached Hidden SL
+      if (currentAsk >= currentHiddenSL) {
+        return {
+          activatedThisTick: false,
+          shouldModifyBrokerSL: false,
+          shouldCloseBasket: true,
+          closeReason: 'TRAILING_SL_HIT',
+          reason: `SELL Basket Hit Trailing SL: Current Ask ${currentAsk} touched/reversed past Hidden SL ${currentHiddenSL}`
+        };
+      }
+
+      // 2. Continuous Trailing: Current Price + 1.5
+      setup.trailingState.lowestPrice = Math.min(setup.trailingState.lowestPrice || currentAsk, currentAsk);
+      const proposedSL = Number((currentAsk + trailDistance).toFixed(3));
+
+      // 3. Strict Monotonicity: Never loosen the Hidden SL (New <= Previous)
+      if (proposedSL < currentHiddenSL) {
+        setup.trailingState.currentHiddenSL = proposedSL;
+        for (const pos of activePositions) {
+          pos.lastTrailingSl = proposedSL;
+        }
+
+        return {
+          activatedThisTick: false,
+          shouldModifyBrokerSL: true,
+          newHiddenSL: proposedSL,
+          newTp: 0,
+          shouldCloseBasket: false,
+          reason: `SELL Hidden SL advanced to ${proposedSL} (Current Ask ${currentAsk} + ${trailDistance})`
+        };
+      }
+
+      return {
+        activatedThisTick: false,
+        shouldModifyBrokerSL: false,
+        newHiddenSL: currentHiddenSL,
+        shouldCloseBasket: false,
+        reason: `SELL Hidden SL held at ${currentHiddenSL} (Proposed ${proposedSL} would loosen)`
+      };
+    }
+  }
+
+  /**
+   * Compatibility wrapper for single position calculation
    */
   public calculateTrailingSL(
     position: DaRaPosition,
@@ -44,110 +220,37 @@ export class DaRaProfitTrailing {
     settings?: DaRaUserSettings,
     pointSize: number = 0.01
   ): TrailingUpdateResult {
-    if (settings && settings.trailingEnabled === false) {
-      return { shouldModify: false, reason: 'Trailing disabled in settings' };
-    }
-
-    const originalTp = position.originalTp || position.tp;
-    if (!originalTp || originalTp <= 0) {
-      return { shouldModify: false, reason: 'No valid Original TP found on position' };
-    }
-
     const trailDistance = (settings && settings.trailingDistance !== undefined && settings.trailingDistance > 0)
       ? settings.trailingDistance
-      : DaRaProfitTrailing.TRAILING_DISTANCE; // 1.5 direct price distance
+      : DaRaProfitTrailing.TRAILING_DISTANCE;
 
     if (position.type === 'BUY') {
       const currentPrice = currentBid;
-
-      // 1. Activation check: Has price reached Original TP?
-      if (!position.trailingActivated) {
-        if (currentPrice >= originalTp) {
-          position.trailingActivated = true;
-          position.highestPriceSinceOpen = Math.max(originalTp, currentPrice);
-        } else {
-          return {
-            shouldModify: false,
-            reason: `BUY price (${currentPrice.toFixed(3)}) has not reached Original TP (${originalTp.toFixed(3)}) yet`
-          };
-        }
-      }
-
-      // Update highest peak price reached since TP activation
-      position.highestPriceSinceOpen = Math.max(
-        position.highestPriceSinceOpen || originalTp,
-        currentPrice
-      );
-
-      // 2. Proposed new SL = Peak Price - 1.5
-      // Example: TP = 100 -> SL = 98.5. Price at 101 -> SL = 99.5.
+      position.highestPriceSinceOpen = Math.max(position.highestPriceSinceOpen || position.openPrice, currentPrice);
       const proposedSl = Number((position.highestPriceSinceOpen - trailDistance).toFixed(3));
-
-      // 3. Strict Monotonicity & Profit Protection:
-      // - BUY: SL moves UPWARD ONLY. Never moves down.
-      // - SL only moves towards profit (proposedSl > position.openPrice).
-      // - New SL must be strictly greater than current SL.
       const currentSl = position.sl || 0;
-      if (proposedSl > currentSl && proposedSl > position.openPrice) {
+      if (proposedSl > currentSl && proposedSl >= position.openPrice) {
         return {
           shouldModify: true,
           newSl: proposedSl,
-          newTp: 0, // Clear broker TP so trade can continue trailing beyond TP
-          reason: `BUY Trailing SL: TP reached (${originalTp}) -> SL advanced to ${proposedSl} (1.5 distance from peak ${position.highestPriceSinceOpen})`
-        };
-      } else {
-        return {
-          shouldModify: false,
-          reason: `BUY proposed SL (${proposedSl.toFixed(3)}) <= current SL (${currentSl.toFixed(3)}). Monotonicity preserved.`
+          newTp: 0,
+          reason: `BUY Trailing SL: ${proposedSl}`
         };
       }
-    } else if (position.type === 'SELL') {
+    } else {
       const currentPrice = currentAsk;
-
-      // 1. Activation check: Has price reached Original TP?
-      if (!position.trailingActivated) {
-        if (currentPrice <= originalTp) {
-          position.trailingActivated = true;
-          position.lowestPriceSinceOpen = Math.min(originalTp, currentPrice);
-        } else {
-          return {
-            shouldModify: false,
-            reason: `SELL price (${currentPrice.toFixed(3)}) has not reached Original TP (${originalTp.toFixed(3)}) yet`
-          };
-        }
-      }
-
-      // Update lowest trough price reached since TP activation
-      position.lowestPriceSinceOpen = Math.min(
-        position.lowestPriceSinceOpen || originalTp,
-        currentPrice
-      );
-
-      // 2. Proposed new SL = Trough Price + 1.5
-      // Example: TP = 100 -> SL = 101.5. Price at 99 -> SL = 100.5.
+      position.lowestPriceSinceOpen = Math.min(position.lowestPriceSinceOpen || position.openPrice, currentPrice);
       const proposedSl = Number((position.lowestPriceSinceOpen + trailDistance).toFixed(3));
-
-      // 3. Strict Monotonicity & Profit Protection:
-      // - SELL: SL moves DOWNWARD ONLY. Never moves up.
-      // - SL only moves towards profit (proposedSl < position.openPrice).
-      // - New SL must be strictly lower than current SL.
       const currentSl = position.sl || 9999999;
-      if (proposedSl < currentSl && proposedSl < position.openPrice) {
+      if (proposedSl < currentSl && proposedSl <= position.openPrice) {
         return {
           shouldModify: true,
           newSl: proposedSl,
-          newTp: 0, // Clear broker TP so trade can continue trailing beyond TP
-          reason: `SELL Trailing SL: TP reached (${originalTp}) -> SL advanced to ${proposedSl} (1.5 distance from trough ${position.lowestPriceSinceOpen})`
-        };
-      } else {
-        return {
-          shouldModify: false,
-          reason: `SELL proposed SL (${proposedSl.toFixed(3)}) >= current SL (${currentSl.toFixed(3)}). Monotonicity preserved.`
+          newTp: 0,
+          reason: `SELL Trailing SL: ${proposedSl}`
         };
       }
     }
-
     return { shouldModify: false };
   }
 }
-

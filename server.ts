@@ -1,3 +1,5 @@
+import { DaRaM1Engine } from "./src/engines/dara_m1/DaRaM1Engine.js";
+import { DaRaBrokerInterface, DaRaTelegramInterface } from "./src/engines/dara_m1/types.js";
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -5,225 +7,14 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 
-dotenv.config();
-
-import { createServer as createViteServer } from 'vite';
-
 const SERVER_INSTANCE_ID = crypto.randomBytes(4).toString('hex').toUpperCase();
 const SERVER_BOOT_TIME = new Date().toISOString();
 
 // ============================================
-// DaRa M1 EA INTEGRATION (SAFE MODE)
-// ============================================
-
-import { DaRaM1Engine } from './src/engines/dara_m1/DaRaM1Engine.js';
-import { DaRaBrokerInterface, DaRaTelegramInterface, DaRaUserSettings } from './src/engines/dara_m1/types.js';
-
-import { RealNewsProvider } from './src/ICT_NewsAdapter.js';
-
-// DaRa M1 EA v1.0 - Sole Active Engine
-const ictNewsProvider = new RealNewsProvider();
 
 
-class RealMetaApiExecution {
-    logDiagnosticContext(symbol, direction, lot, sl, tp, magic) {
-        console.log(`=== LIVE EXECUTION DIAGNOSTIC CONTEXT ===`);
-        console.log(`Symbol: ${symbol}`);
-        console.log(`Direction: ${direction}`);
-        console.log(`Lot: ${lot}`);
-        console.log(`Entry: ${direction === 'BUY' ? (botState.askPrice || botState.goldPrice) : (botState.bidPrice || botState.goldPrice)}`);
-        console.log(`SL: ${sl}`);
-        console.log(`TP: ${tp}`);
-        console.log(`Account: ${botState.account.loginId || 'UNKNOWN'}`);
-        console.log(`Trading Permission: ${botState.account.tradingPermission ? 'YES' : 'NO'}`);
-        console.log(`Market Data: ${botState.account.marketDataReceiving ? 'YES' : 'NO'}`);
-        console.log(`Live Trading Enabled: ${global.daraEngine.getIsRunning() ? 'YES' : 'NO'}`);
-        console.log(`Connection Status: ${botState.account.serverConnected ? 'CONNECTED' : 'DISCONNECTED'}`);
-        console.log(`=========================================`);
-    }
 
-    async executeBuy(symbol, lot, sl, tp, magic, signalEntry) {
-        console.log(`6. EXACT FUNCTION NAME: RealMetaApiExecution.executeBuy()`);
-        this.logDiagnosticContext(symbol, 'BUY', lot, sl, tp, magic);
-        
-        const accountId = botState.account.metaApiAccountId;
-        const token = botState.account.metaApiToken;
-        const baseUrl = botState.account.metaApiUrl;
-        
-        if (!accountId || !token || !baseUrl) {
-             console.log(`❌ STOPPED AT: METAAPI PRE-CHECK\nReason: MetaApi not connected (missing credentials)`);
-             throw new Error("MetaApi not connected");
-        }
-        
-        console.log(`7. METAAPI REQUEST STARTED`);
-        const currentEntry = botState.askPrice || botState.goldPrice || 0;
-        
-        const requestBody = {
-            actionType: 'ORDER_TYPE_BUY',
-            symbol: symbol,
-            volume: lot,
-            stopLoss: sl,
-            takeProfit: tp,
-            comment: `ICT_${magic}`
-        };
-        
-        console.log(`8. METAAPI REQUEST SENT`);
-        let res;
-        try {
-            res = await fetch(`${baseUrl}/users/current/accounts/${accountId}/trade`, {
-                method: 'POST',
-                headers: { 'auth-token': token, 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
-        } catch (err) {
-            console.log(`❌ STOPPED AT: METAAPI NETWORK REQUEST\nReason: ${err.message}`);
-            throw err;
-        }
-        console.log(`9. HTTP STATUS: ${res.status} ${res.statusText}`);
-        
-        let responseBodyText = await res.text();
-        console.log(`10. METAAPI RESPONSE BODY: ${responseBodyText}`);
-        
-        if (!res.ok) {
-            console.log(`❌ STOPPED AT: METAAPI RESPONSE\nReason: HTTP ${res.status} - ${responseBodyText}`);
-            sendOrderRejectedAlert({
-                reason: responseBodyText || 'MT5 Execution Failed',
-                type: 'BUY',
-                lot: lot,
-                entry: signalEntry || currentEntry,
-                sl: sl,
-                tp: tp
-            }).catch(console.error);
-            throw new Error(`MT5 Buy Failed: ${responseBodyText}`);
-        }
-        
-        let data;
-        try {
-            data = JSON.parse(responseBodyText);
-        } catch (e) {
-            console.log(`❌ STOPPED AT: JSON PARSE\nReason: Could not parse response body`);
-            throw e;
-        }
-        
-        console.log(`11. BROKER RESPONSE: ${JSON.stringify(data)}`);
-        
-        const ticketId = data.orderId || data.positionId || 'UNKNOWN';
-        const actualFillPrice = data.price || data.positionPrice || currentEntry;
-        
-        console.log(`12. ORDER_ID / POSITION_ID: ${ticketId}`);
-        
-        if (ticketId !== 'UNKNOWN') {
-             console.log(`13. POSITION_CREATED: YES`);
-        } else {
-             console.log(`13. POSITION_CREATED: NO (Ticket ID Unknown)`);
-        }
 
-        // sendTradeOpenAlert disabled per duplicate alert patch
-        return ticketId;
-    }
-
-    async executeSell(symbol, lot, sl, tp, magic, signalEntry) {
-        console.log(`6. EXACT FUNCTION NAME: RealMetaApiExecution.executeSell()`);
-        this.logDiagnosticContext(symbol, 'SELL', lot, sl, tp, magic);
-        
-        const accountId = botState.account.metaApiAccountId;
-        const token = botState.account.metaApiToken;
-        const baseUrl = botState.account.metaApiUrl;
-        
-        if (!accountId || !token || !baseUrl) {
-             console.log(`❌ STOPPED AT: METAAPI PRE-CHECK\nReason: MetaApi not connected (missing credentials)`);
-             throw new Error("MetaApi not connected");
-        }
-        
-        console.log(`7. METAAPI REQUEST STARTED`);
-        const currentEntry = botState.bidPrice || botState.goldPrice || 0;
-        
-        const requestBody = {
-            actionType: 'ORDER_TYPE_SELL',
-            symbol: symbol,
-            volume: lot,
-            stopLoss: sl,
-            takeProfit: tp,
-            comment: `ICT_${magic}`
-        };
-        
-        console.log(`8. METAAPI REQUEST SENT`);
-        let res;
-        try {
-            res = await fetch(`${baseUrl}/users/current/accounts/${accountId}/trade`, {
-                method: 'POST',
-                headers: { 'auth-token': token, 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
-        } catch (err) {
-            console.log(`❌ STOPPED AT: METAAPI NETWORK REQUEST\nReason: ${err.message}`);
-            throw err;
-        }
-
-        console.log(`9. HTTP STATUS: ${res.status} ${res.statusText}`);
-        
-        let responseBodyText = await res.text();
-        console.log(`10. METAAPI RESPONSE BODY: ${responseBodyText}`);
-        
-        if (!res.ok) {
-            console.log(`❌ STOPPED AT: METAAPI RESPONSE\nReason: HTTP ${res.status} - ${responseBodyText}`);
-            sendOrderRejectedAlert({
-                reason: responseBodyText || 'MT5 Execution Failed',
-                type: 'SELL',
-                lot: lot,
-                entry: signalEntry || currentEntry,
-                sl: sl,
-                tp: tp
-            }).catch(console.error);
-            throw new Error(`MT5 Sell Failed: ${responseBodyText}`);
-        }
-        
-        let data;
-        try {
-            data = JSON.parse(responseBodyText);
-        } catch (e) {
-            console.log(`❌ STOPPED AT: JSON PARSE\nReason: Could not parse response body`);
-            throw e;
-        }
-        
-        console.log(`11. BROKER RESPONSE: ${JSON.stringify(data)}`);
-        
-        const ticketId = data.orderId || data.positionId || 'UNKNOWN';
-        const actualFillPrice = data.price || data.positionPrice || currentEntry;
-        
-        console.log(`12. ORDER_ID / POSITION_ID: ${ticketId}`);
-        
-        if (ticketId !== 'UNKNOWN') {
-             console.log(`13. POSITION_CREATED: YES`);
-        } else {
-             console.log(`13. POSITION_CREATED: NO (Ticket ID Unknown)`);
-        }
-
-        // sendTradeOpenAlert disabled per duplicate alert patch
-        return ticketId;
-    }
-
-    async getOpenPositions(magic) {
-        return (botState.openTrades || []).map((t) => ({
-            ticket: String(t.id),
-            symbol: t.symbol,
-            type: (t.side === 'BUY' ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
-            lot: t.volume,
-            openPrice: t.entryPrice,
-            sl: t.stopLoss || 0,
-            tp: t.takeProfit || 0,
-            magic: magic,
-            setupId: t.comment || "unknown"
-        }));
-    }
-
-    async getAccountBalance() {
-        return botState.account.balance || 0;
-    }
-}
-
-const ictMarketAdapter = null;
-const ictEaEngine = { config: {}, state: {}, LIVE_TRADING_ENABLED: false };
 
 
 // ============================================
@@ -233,6 +24,26 @@ const ictEaEngine = { config: {}, state: {}, LIVE_TRADING_ENABLED: false };
 class DaRaServerBroker implements DaRaBrokerInterface {
     async sendOrder(order) {
         console.log(`[DaRa Broker] Executing ${order.type} for ${order.lot} lot...`);
+        
+        // ==========================================
+        // FINAL LIVE TRADING SAFETY GUARD (SERVER-SIDE METAAPI GATE)
+        // ==========================================
+        if (!global.daraEngine) {
+             const errorMsg = "HARD BLOCK: Engine not initialized.";
+             console.error(`[DaRa Broker] ❌ ${errorMsg}`);
+             return { success: false, error: errorMsg };
+        }
+        if (global.daraEngine.isRunning !== true) {
+             const errorMsg = "HARD BLOCK: Bot is NOT explicitly RUNNING. Execution aborted.";
+             console.error(`[DaRa Broker] ❌ ${errorMsg}`);
+             return { success: false, error: errorMsg };
+        }
+        const settings = global.daraEngine.getUserSettings();
+        if (settings.liveTradingEnabled !== true) {
+             console.log(`[DaRa Broker] ℹ️ LIVE TRADING IS OFF (Monitor Mode). Execution aborted.`);
+             return { success: false, error: 'MONITOR_MODE' };
+        }
+        // ==========================================
         const accountId = botState.account.metaApiAccountId;
         const token = botState.account.metaApiToken;
         const baseUrl = botState.account.metaApiUrl;
@@ -247,8 +58,7 @@ class DaRaServerBroker implements DaRaBrokerInterface {
             volume: order.lot,
             stopLoss: order.sl,
             takeProfit: order.tp,
-            comment: order.comment,
-            magic: botState.magicNumber || 778899
+            comment: order.comment
         };
         
         try {
@@ -262,8 +72,11 @@ class DaRaServerBroker implements DaRaBrokerInterface {
                 return { success: false, error: `HTTP ${res.status} - ${responseText}` };
             }
             const data = JSON.parse(responseText);
+            if (data.numericCode && data.numericCode !== 10009) {
+                return { success: false, error: data.stringCode || data.message || `MetaApi Error ${data.numericCode}` };
+            }
             return { success: true, ticket: data.orderId || data.positionId || 'UNKNOWN' };
-        } catch (err: any) {
+        } catch (err) {
             return { success: false, error: err.message };
         }
     }
@@ -282,6 +95,27 @@ class DaRaServerBroker implements DaRaBrokerInterface {
         };
         if (newTp !== undefined) modifyPayload.takeProfit = newTp;
         
+        // ==========================================
+        // FINAL LIVE TRADING SAFETY GUARD (POSITION_MODIFY)
+        // ==========================================
+        if (!global.daraEngine) {
+             const errorMsg = "HARD BLOCK: Engine not initialized.";
+             console.error(`[DaRa Broker Modify] ❌ ${errorMsg}`);
+             return { success: false, error: errorMsg };
+        }
+        if (global.daraEngine.isRunning !== true) {
+             const errorMsg = "HARD BLOCK: Bot is NOT explicitly RUNNING. Modify aborted.";
+             console.error(`[DaRa Broker Modify] ❌ ${errorMsg}`);
+             return { success: false, error: errorMsg };
+        }
+        // Removed liveTradingEnabled block for modifyPosition to ensure EA can manage existing positions even if Live Trading is toggled off.
+        if (!botState || !botState.account || botState.account.serverConnected !== true) {
+             const errorMsg = "HARD BLOCK: Server is NOT connected.";
+             console.error(`[DaRa Broker Modify] ❌ ${errorMsg}`);
+             return { success: false, error: errorMsg };
+        }
+        // ==========================================
+        
         try {
              const res = await fetch(`${baseUrl}/users/current/accounts/${accountId}/trade`, {
                  method: 'POST',
@@ -292,9 +126,43 @@ class DaRaServerBroker implements DaRaBrokerInterface {
              if (!res.ok) {
                  return { success: false, error: `HTTP ${res.status} - ${responseText}` };
              }
+             const data = JSON.parse(responseText);
+             if (data.numericCode && data.numericCode !== 10009) {
+                 return { success: false, error: data.stringCode || data.message || `MetaApi Error ${data.numericCode}` };
+             }
              return { success: true };
-        } catch (err: any) {
+        } catch (err) {
              return { success: false, error: err.message };
+        }
+    }
+
+    async closePosition(ticket) {
+        const accountId = botState.account.metaApiAccountId;
+        const token = botState.account.metaApiToken;
+        const baseUrl = botState.account.metaApiUrl;
+        if (!accountId || !token || !baseUrl) return { success: false, error: "MetaApi not connected" };
+
+        if (!global.daraEngine || global.daraEngine.isRunning !== true) {
+            return { success: false, error: "HARD BLOCK: Bot is not running" };
+        }
+        // Removed liveTradingEnabled block for closePosition to ensure EA can protect balance and close trades even if Live Trading is toggled off.
+
+        try {
+            const res = await fetch(`${baseUrl}/users/current/accounts/${accountId}/trade`, {
+                method: 'POST',
+                headers: { 'auth-token': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actionType: 'POSITION_CLOSE_ID',
+                    positionId: String(ticket)
+                })
+            });
+            if (res.ok) {
+                return { success: true };
+            }
+            const errText = await res.text();
+            return { success: false, error: errText };
+        } catch (err: any) {
+            return { success: false, error: err.message };
         }
     }
 
@@ -303,48 +171,13 @@ class DaRaServerBroker implements DaRaBrokerInterface {
             ticket: String(t.id),
             symbol: t.symbol,
             type: t.side,
-            lot: t.lot !== undefined ? t.lot : (t.volume !== undefined ? t.volume : 0.01),
+            lot: t.volume,
             openPrice: t.entryPrice,
             currentPrice: t.currentPrice,
-            sl: t.sl !== undefined ? t.sl : (t.stopLoss || 0),
-            tp: t.tp !== undefined ? t.tp : (t.takeProfit || 0),
-            openTime: t.openTime ? new Date(t.openTime).getTime() : Date.now()
+            sl: t.stopLoss || 0,
+            tp: t.takeProfit || 0,
+            openTime: new Date(t.openTime).getTime()
         }));
-    }
-
-    async getClosedDeal(ticket: string | number) {
-        const accountId = botState.account.metaApiAccountId;
-        const token = botState.account.metaApiToken;
-        const baseUrl = botState.account.metaApiUrl;
-        if (!accountId || !token || !baseUrl) return { found: false };
-
-        try {
-            const endTime = new Date().toISOString();
-            const startTime = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-            const encStart = encodeURIComponent(startTime);
-            const encEnd = encodeURIComponent(endTime);
-            const url = `${baseUrl}/users/current/accounts/${accountId}/history-deals/time/${encStart}/${encEnd}?limit=20`;
-            const response = await fetch(url, {
-                headers: { 'auth-token': token },
-                signal: AbortSignal.timeout(4000)
-            });
-            if (response.ok) {
-                const deals = await response.json();
-                if (Array.isArray(deals)) {
-                    const match = deals.find((d: any) => String(d.positionId) === String(ticket) || String(d.id) === String(ticket));
-                    if (match) {
-                        return {
-                            found: true,
-                            profit: Number(match.profit || 0) + Number(match.commission || 0) + Number(match.swap || 0) + Number(match.fee || 0),
-                            price: Number(match.price || 0),
-                            reason: match.reason,
-                            comment: match.comment
-                        };
-                    }
-                }
-            }
-        } catch (_) {}
-        return { found: false };
     }
 
     async getSymbolInfo(symbol) {
@@ -369,155 +202,89 @@ class DaRaServerBroker implements DaRaBrokerInterface {
 }
 
 class DaRaServerTelegram implements DaRaTelegramInterface {
-    async notify(title: string, message: string, customDedupeKey?: string) {
-        const fullMsg = title ? `${title}\n${message}` : message;
-        let dedupeKey: string | undefined = customDedupeKey;
-        let cooldown = 0;
-
-        if (!dedupeKey) {
-            if (title.includes('ប៉ះ TP') || title.includes('TP HIT')) {
-                const ticketMatch = message.match(/Ticket.*?#?(\d+)/i) || message.match(/#(\d+)/);
-                if (ticketMatch) {
-                    dedupeKey = `TRADE_TP_${ticketMatch[1]}`;
-                    cooldown = 1440;
-                }
-            } else if (title.includes('ប៉ះ SL') || title.includes('SL HIT')) {
-                const ticketMatch = message.match(/Ticket.*?#?(\d+)/i) || message.match(/#(\d+)/);
-                if (ticketMatch) {
-                    dedupeKey = `TRADE_SL_${ticketMatch[1]}`;
-                    cooldown = 1440;
-                }
-            } else if (title.includes('Trailing SL') || title.includes('TRAILING SL')) {
-                const ticketMatch = message.match(/Ticket.*?#?(\d+)/i) || message.match(/#(\d+)/);
-                const slMatch = message.match(/SL ថ្មី:\s*([\d.]+)/) || message.match(/New SL:\s*([\d.]+)/);
-                if (ticketMatch && slMatch) {
-                    dedupeKey = `TRAILING_SL_${ticketMatch[1]}_${slMatch[1]}`;
-                    cooldown = 1440;
-                } else if (ticketMatch) {
-                    dedupeKey = `TRAILING_SL_${ticketMatch[1]}`;
-                    cooldown = 1;
-                }
-            } else if (title.includes('បើក') || title.includes('ORDER OPENED')) {
-                const ticketMatch = message.match(/Ticket.*?#?(\d+)/i) || message.match(/#(\d+)/);
-                if (ticketMatch) {
-                    dedupeKey = `ORDER_OPEN_${ticketMatch[1]}`;
-                    cooldown = 1440;
-                }
-            } else if (title.includes('BROKER REJECTION') || title.includes('ORDER REJECTED')) {
-                dedupeKey = `ORDER_REJECTED_${Date.now()}`;
-                cooldown = 1;
-            } else if (title.includes('TRADE CLOSED') || title.includes('បិទ')) {
-                const ticketMatch = message.match(/Ticket.*?#?(\d+)/i) || message.match(/#(\d+)/);
-                if (ticketMatch) {
-                    dedupeKey = `TRADE_CLOSED_${ticketMatch[1]}`;
-                    cooldown = 1440;
-                }
-            }
+    async notify(title, message) {
+        // We can hook this to sendTelegramMessage(botState.userPreferences?.telegramChatId, message)
+        // Since sendTelegramMessage is already defined globally in server.ts
+        if (typeof global.sendTelegramMessage === 'function') {
+            global.sendTelegramMessage(message).catch(() => {});
         } else {
-            cooldown = 1440;
+            console.log(`[DaRa Telegram] ${title}
+${message}`);
         }
-        await sendTelegramRaw(fullMsg, dedupeKey, cooldown).catch(console.error);
     }
 }
 
 const daraBroker = new DaRaServerBroker();
 const daraTelegram = new DaRaServerTelegram();
-
-let initialSettings: DaRaUserSettings = {
-    lotSize: 0.02,
-    slDistance: 10,  // Stop Loss (Price Distance) - Direct price distance (e.g. 10 means Entry ± 10)
-    tpDistance: 8,   // Take Profit (Price Distance) - Direct price distance (e.g. 8 means Entry ± 8)
-    dailyLossLimit: 2000,
+// Initialize with safe defaults, will sync immediately after botState loads
+const initialDaraSettings = {
+    lotSize: 0.01,
+    slDistance: 30,
+    tpDistance: 30,
+    dailyLossLimit: 50,
     maxOpenTrades: 5,
-    maxConsecutiveSL: 6,
-    cooldownMinutes: 20,
-    maxSpreadPoints: 27,
-    entryDistance: 2.0,
-    newsFilterEnabled: true,
-    newsMinsBefore: 30,
-    newsMinsAfter: 30,
+    maxConsecutiveSL: 3,
+    cooldownMinutes: 15,
+    maxSpreadPoints: 30,
+    newsFilterEnabled: false,
+    newsMinsBefore: 60,
+    newsMinsAfter: 60,
     trailingEnabled: true,
-    trailingDistance: 1.5,
-    trailingRule: 'Auto at Original TP (1.5 Price Distance)'
+    entryDistance: 2.0,
+    liveTradingEnabled: false
 };
+const daraEngine = new DaRaM1Engine(daraBroker, initialDaraSettings, daraTelegram);
+global.daraEngine = daraEngine;
 
-try {
-    const rawConfigFile = path.join(process.cwd(), 'data', 'bot_config.json');
-    if (fs.existsSync(rawConfigFile)) {
-        const parsed = JSON.parse(fs.readFileSync(rawConfigFile, 'utf-8'));
-        if (parsed?.riskConfig) {
-            const rc = parsed.riskConfig;
-            initialSettings = {
-                lotSize: Number(rc.lotSize !== undefined && !isNaN(Number(rc.lotSize)) ? rc.lotSize : initialSettings.lotSize),
-                slDistance: Number(rc.slDistance !== undefined && !isNaN(Number(rc.slDistance)) ? rc.slDistance : (rc.stopLossPips !== undefined && !isNaN(Number(rc.stopLossPips)) ? rc.stopLossPips : initialSettings.slDistance)),
-                tpDistance: Number(rc.tpDistance !== undefined && !isNaN(Number(rc.tpDistance)) ? rc.tpDistance : (rc.takeProfitPips !== undefined && !isNaN(Number(rc.takeProfitPips)) ? rc.takeProfitPips : initialSettings.tpDistance)),
-                dailyLossLimit: Number(rc.maxDailyLossAmount !== undefined && !isNaN(Number(rc.maxDailyLossAmount)) ? rc.maxDailyLossAmount : (rc.maxDailyLoss || initialSettings.dailyLossLimit)),
-                maxOpenTrades: Number(rc.maxOpenTrades !== undefined && !isNaN(Number(rc.maxOpenTrades)) ? rc.maxOpenTrades : 5),
-                maxConsecutiveSL: Number(rc.maxConsecutiveLosses !== undefined && !isNaN(Number(rc.maxConsecutiveLosses)) ? rc.maxConsecutiveLosses : initialSettings.maxConsecutiveSL),
-                cooldownMinutes: Number(rc.cooldownMinutes !== undefined && !isNaN(Number(rc.cooldownMinutes)) ? rc.cooldownMinutes : initialSettings.cooldownMinutes),
-                maxSpreadPoints: Number(rc.maxSpreadPoints !== undefined && !isNaN(Number(rc.maxSpreadPoints)) ? rc.maxSpreadPoints : initialSettings.maxSpreadPoints),
-                entryDistance: Number(rc.entryDistance !== undefined && !isNaN(Number(rc.entryDistance)) ? rc.entryDistance : 2.0),
-                newsFilterEnabled: rc.newsFilterEnabled !== undefined ? Boolean(rc.newsFilterEnabled) : initialSettings.newsFilterEnabled,
-                newsMinsBefore: Number(rc.minutesBeforeNewsBlock !== undefined && !isNaN(Number(rc.minutesBeforeNewsBlock)) ? rc.minutesBeforeNewsBlock : initialSettings.newsMinsBefore),
-                newsMinsAfter: Number(rc.minutesAfterNewsBlock !== undefined && !isNaN(Number(rc.minutesAfterNewsBlock)) ? rc.minutesAfterNewsBlock : initialSettings.newsMinsAfter),
-                trailingEnabled: rc.trailingStopEnabled !== undefined ? Boolean(rc.trailingStopEnabled) : initialSettings.trailingEnabled,
-                trailingDistance: Number(rc.trailingDistance !== undefined && !isNaN(Number(rc.trailingDistance)) ? rc.trailingDistance : 1.5),
-                trailingRule: rc.trailingRule || 'Auto at Original TP (1.5 Price Distance)'
-            };
-            console.log('[DaRa Engine] Initialized directly with Saved User Settings from data/bot_config.json:', initialSettings);
-        }
-    }
-} catch (e) {
-    console.warn('[DaRa Engine] Note: initialized with default settings, will sync on boot:', e);
-}
 
-global.daraEngine = new DaRaM1Engine(daraBroker, initialSettings, daraTelegram);
+
+
+
+
 
 // ============================================
 // TELEGRAM NOTIFICATION LAYER (100% KHMER LANGUAGE)
 // ============================================
-function getTelegramCredentials() {
-    const token = (process.env.TELEGRAM_BOT_TOKEN || (botState as any)?.telegramBotToken || '').trim();
-    const chatId = (process.env.TELEGRAM_CHAT_ID || (botState as any)?.telegramChatId || '').trim();
-    return { token, chatId };
-}
-
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const alertCooldowns: Record<string, number> = {};
 const lastNotifiedTrailingSl: Record<string, number> = {};
 
-function formatICTTime(): string {
+function formatLocalTime(): string {
     return new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Phnom_Penh', hour12: false });
 }
 
 async function sendTelegramRaw(message: string, dedupeKey?: string, cooldownMinutes: number = 0) {
-    const { token, chatId } = getTelegramCredentials();
-    if (!token || !chatId) {
-        console.log(`[Telegram Alert Skipped - Missing Credentials] Token or Chat ID not set. Message preview:\n${message.slice(0, 100)}...`);
-        return;
-    }
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
     
     if (dedupeKey && cooldownMinutes > 0) {
         const now = Date.now();
         const lastSent = alertCooldowns[dedupeKey] || 0;
         if (now - lastSent < cooldownMinutes * 60 * 1000) {
-            console.log(`[Telegram Dedupe/Throttle] Alert skipped for key: ${dedupeKey}`);
             return; // Throttled / Deduplication
         }
         alertCooldowns[dedupeKey] = now;
     }
     
     try {
-        const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text: message })
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message })
+        }).then(res => {
+            if (!res.ok) {
+                console.error(`Telegram API Error: ${res.status} ${res.statusText} (Check Token/Chat ID)`);
+            }
+        }).catch(err => {
+            // Suppress noisy fetch failed (DNS/Network drops) but log other errors
+            if (err.message && err.message.toLowerCase().includes('fetch failed')) {
+                // Silently ignore transient network drops
+            } else {
+                console.error('Telegram Fetch Error:', err.message);
+            }
         });
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error(`Telegram API Error (HTTP ${response.status}):`, errText);
-        }
-    } catch (err: any) {
-        console.error('Telegram Alert Error:', err.message || err);
+    } catch (err) {
+        console.error('Telegram Alert Error:', err);
     }
 }
 
@@ -542,7 +309,7 @@ async function sendSystemRecoveredAlert(section: string, prevProblem: string, re
     await sendTelegramRaw(msg, `SYS_RECOVERED_${section}`, 1);
 }
 
-// ៣. ពេល Trade ចូល (Order Open Alert)
+// ៣. ពេល Trade ចូល
 async function sendTradeOpenAlert(trade: {
     type: 'BUY' | 'SELL';
     lot: number | string;
@@ -555,23 +322,31 @@ async function sendTradeOpenAlert(trade: {
     time?: string;
 }) {
     const formattedEntry = typeof trade.entry === 'number' ? trade.entry.toFixed(3) : trade.entry;
+    const formattedSignalEntry = trade.signalEntry ? (typeof trade.signalEntry === 'number' ? trade.signalEntry.toFixed(3) : trade.signalEntry) : formattedEntry;
     const formattedSl = typeof trade.sl === 'number' ? trade.sl.toFixed(3) : trade.sl;
     const formattedTp = typeof trade.tp === 'number' ? trade.tp.toFixed(3) : trade.tp;
-    const formattedLot = typeof trade.lot === 'number' ? trade.lot.toFixed(2) : trade.lot;
 
-    const msg = `🔥 DaRa M1 — បើក ${trade.type}\n` +
-                `XAUUSD\n` +
-                `Lot: ${formattedLot}\n` +
-                `ចូល: ${formattedEntry}\n` +
-                `SL: ${formattedSl}\n` +
-                `TP: ${formattedTp}`;
-    await sendTelegramRaw(msg, `TRADE_OPEN_${trade.ticket}`, 1440);
+    let msg = `🟢 TRADE OPENED\n\n` +
+              `Symbol: XAUUSD\n` +
+              `Direction: ${trade.type}\n\n`;
+              
+    if (formattedEntry !== formattedSignalEntry) {
+        msg += `Signal Entry: ${formattedSignalEntry}\n` +
+               `Fill Price: ${formattedEntry}\n`;
+    } else {
+        msg += `Entry: ${formattedEntry}\n`;
+    }
+    
+    msg += `SL: ${formattedSl}\n` +
+           `TP: ${formattedTp}\n\n` +
+           `Ticket: ${trade.ticket}`;
+    await sendTelegramRaw(msg);
 }
 
-// ៤. ពេលដល់ Take Profit (TP Hit Alert)
+// ៤. ពេលដល់ Take Profit
 async function sendTakeProfitAlert(trade: {
     type: 'BUY' | 'SELL';
-    lot?: number | string;
+    lot: number | string;
     entry: number | string;
     exit: number | string;
     tp: number | string;
@@ -579,23 +354,19 @@ async function sendTakeProfitAlert(trade: {
     ticket: string | number;
     time?: string;
 }) {
-    const formattedEntry = typeof trade.entry === 'number' ? trade.entry.toFixed(3) : trade.entry;
-    const formattedExit = typeof trade.exit === 'number' ? trade.exit.toFixed(3) : trade.exit;
-    const formattedTp = typeof trade.tp === 'number' ? trade.tp.toFixed(3) : trade.tp;
-    const profitVal = typeof trade.profit === 'number' ? Math.abs(trade.profit).toFixed(2) : String(trade.profit).replace('-', '');
-
-    const msg = `✅ បិទ ${trade.type} — ប៉ះ TP\n` +
-                `ចូល: ${formattedEntry}\n` +
-                `ចេញ: ${formattedExit}\n` +
-                `TP: ${formattedTp}\n` +
-                `ចំណេញ: +${profitVal} USC`;
-    await sendTelegramRaw(msg, `TRADE_TP_${trade.ticket}`, 1440);
+    const msg = `🏁 TRADE CLOSED\n\n` +
+                `Symbol: XAUUSD\n` +
+                `Direction: ${trade.type}\n\n` +
+                `Result: ✅ TP HIT\n` +
+                `P/L: +$${trade.profit}\n\n` +
+                `Ticket: ${trade.ticket}`;
+    await sendTelegramRaw(msg);
 }
 
-// ៥. ពេលដល់ Stop Loss (SL Hit Alert)
+// ៥. ពេលដល់ Stop Loss
 async function sendStopLossAlert(trade: {
     type: 'BUY' | 'SELL';
-    lot?: number | string;
+    lot: number | string;
     entry: number | string;
     exit: number | string;
     sl: number | string;
@@ -603,27 +374,23 @@ async function sendStopLossAlert(trade: {
     ticket: string | number;
     time?: string;
 }) {
-    const formattedEntry = typeof trade.entry === 'number' ? trade.entry.toFixed(3) : trade.entry;
-    const formattedExit = typeof trade.exit === 'number' ? trade.exit.toFixed(3) : trade.exit;
-    const formattedSl = typeof trade.sl === 'number' ? trade.sl.toFixed(3) : trade.sl;
     const lossVal = typeof trade.loss === 'number' ? Math.abs(trade.loss).toFixed(2) : String(trade.loss).replace('-', '');
-
-    const msg = `❌ បិទ ${trade.type} — ប៉ះ SL\n` +
-                `ចូល: ${formattedEntry}\n` +
-                `ចេញ: ${formattedExit}\n` +
-                `SL: ${formattedSl}\n` +
-                `ខាត: -${lossVal} USC`;
-    await sendTelegramRaw(msg, `TRADE_SL_${trade.ticket}`, 1440);
+    const msg = `🏁 TRADE CLOSED\n\n` +
+                `Symbol: XAUUSD\n` +
+                `Direction: ${trade.type}\n\n` +
+                `Result: ❌ SL HIT\n` +
+                `P/L: -$${lossVal}\n\n` +
+                `Ticket: ${trade.ticket}`;
+    await sendTelegramRaw(msg);
 }
 
-// ៦. ពេល Trailing Stop ផ្លាស់ទី (Trailing SL Alert)
+// ៦. ពេល Trailing Stop ផ្លាស់ទី
 async function sendTrailingStopMovedAlert(trade: {
     type: 'BUY' | 'SELL';
-    oldSl?: number | string;
+    oldSl: number | string;
     newSl: number | string;
-    price?: number | string;
+    price: number | string;
     ticket: string | number;
-    pnl?: number | string;
 }) {
     const ticketKey = String(trade.ticket);
     const newSlNum = Number(trade.newSl);
@@ -633,18 +400,15 @@ async function sendTrailingStopMovedAlert(trade: {
     }
     lastNotifiedTrailingSl[ticketKey] = newSlNum;
     
-    const formattedNewSl = typeof trade.newSl === 'number' ? trade.newSl.toFixed(3) : trade.newSl;
-    let pnlStr = '+0.00 USC';
-    if (trade.pnl !== undefined) {
-        const pnlNum = Number(trade.pnl);
-        pnlStr = pnlNum >= 0 ? `+${pnlNum.toFixed(2)} USC` : `-${Math.abs(pnlNum).toFixed(2)} USC`;
-    }
-
-    const msg = `🔵 Trailing SL\n` +
-                `${trade.type} | XAUUSD\n` +
-                `SL ថ្មី: ${formattedNewSl}\n` +
-                `P/L: ${pnlStr}`;
-    await sendTelegramRaw(msg, `TRAILING_SL_${ticketKey}_${newSlNum}`, 1440);
+    const typeKhmer = trade.type === 'BUY' ? 'ទិញ' : 'លក់';
+    const msg = `🔒 បានការពារប្រាក់ចំណេញ\n\n` +
+                `គូ៖ XAUUSD\n` +
+                `ប្រភេទ៖ ${typeKhmer}\n` +
+                `Stop Loss ចាស់៖ ${trade.oldSl}\n` +
+                `Stop Loss ថ្មី៖ ${trade.newSl}\n` +
+                `តម្លៃបច្ចុប្បន្ន៖ ${trade.price}\n` +
+                `លេខសំបុត្រ៖ ${trade.ticket}`;
+    await sendTelegramRaw(msg);
 }
 
 // ៧. ពេល Order ត្រូវបានបដិសេធ
@@ -672,7 +436,7 @@ async function sendNewsBlockAlert(news: {
     title: string;
     time?: string;
 }) {
-    const timeStr = news.time || formatICTTime();
+    const timeStr = news.time || formatLocalTime();
     const msg = `📰 ការចូល Trade ត្រូវបានផ្អាកដោយសារព័ត៌មាន\n\n` +
                 `ព័ត៌មាន៖ ${news.title}\n` +
                 `រូបិយប័ណ្ណ៖ USD\n` +
@@ -740,7 +504,7 @@ async function sendTelegramAlert(category: string, issue: string, action: string
         header = '🚨 បញ្ហាធ្ងន់ធ្ងរ';
     }
     
-    const tzTime = formatICTTime();
+    const tzTime = formatLocalTime();
     let message = `${header}\n\n`;
     if (issue) message += `${issue}\n`;
     if (action) message += `សកម្មភាព៖ ${action}\n`;
@@ -749,107 +513,12 @@ async function sendTelegramAlert(category: string, issue: string, action: string
     await sendTelegramRaw(message, `${category}_${issue}`, cooldownMinutes);
 }
 
-// 🔔 ICT SETUP CONFIRMED Telegram Alert (Single source of truth)
-async function sendIctSetupConfirmedAlert(data: {
-    symbol: string;
-    direction: 'BUY' | 'SELL';
-    entryZone: { low: number; high: number };
-    actualEntry: number | string;
-    sl: number | string;
-    tp: number | string;
-    rr: number | string;
-    status?: string;
-}) {
-    const formattedEntry = typeof data.actualEntry === 'number' ? data.actualEntry.toFixed(3) : data.actualEntry;
-    const formattedSl = typeof data.sl === 'number' ? data.sl.toFixed(3) : data.sl;
-    const formattedTp = typeof data.tp === 'number' ? data.tp.toFixed(3) : data.tp;
-    const formattedRr = typeof data.rr === 'number' ? data.rr.toFixed(2) : data.rr;
-
-    const msg = `🔔 ICT SETUP CONFIRMED\n\n` +
-                `Symbol: ${data.symbol || 'XAUUSDc'}\n` +
-                `Direction: ${data.direction}\n\n` +
-                `Entry: ${formattedEntry}\n` +
-                `SL: ${formattedSl}\n` +
-                `TP: ${formattedTp}\n` +
-                `RR: ${formattedRr}\n\n` +
-                `⏳ WAITING FOR ENTRY`;
-
-    await sendTelegramRaw(msg, `SETUP_CONFIRMED_${data.symbol}_${formattedEntry}_${formattedSl}`, 0);
-}
-
-
-
-// 🎯 ACTUAL ENTRY REACHED Telegram Alert (Single source of truth)
-async function sendActualEntryAlert(data: {
-    setupId?: string;
-    symbol: string;
-    direction: 'BUY' | 'SELL';
-    entry: number | string;
-    sl?: number;
-    tp?: number;
-    rr?: number;
-    status: string;
-}) {
-    const formattedEntry = typeof data.entry === 'number' ? data.entry.toFixed(3) : data.entry;
-    const formattedSl = data.sl ? data.sl.toFixed(3) : 'N/A';
-    const formattedTp = data.tp ? data.tp.toFixed(3) : 'N/A';
-    const formattedRr = typeof data.rr === 'number' ? data.rr.toFixed(2) : 'N/A';
-    
-    let msg = `🎯 ACTUAL ENTRY REACHED\n\n` +
-              `Symbol: ${data.symbol || 'XAUUSDc'}\n` +
-              `Direction: ${data.direction}\n\n` +
-              `Entry: ${formattedEntry}\n` +
-              `SL: ${formattedSl}\n` +
-              `TP: ${formattedTp}\n` +
-              `RR: ${formattedRr}\n\n` +
-              `⚡ ENTRY TRIGGERED`;
-              
-    await sendTelegramRaw(msg, `ACTUAL_ENTRY_${data.symbol}_${formattedEntry}`, 0);
-}
-
-
-
-
-async function sendOrderOpenedAlert(data: {
-    setupId: string;
-    symbol: string;
-    direction: 'BUY' | 'SELL';
-    entry: number;
-    sl: number;
-    tp: number;
-    lot: number;
-    ticket: string;
-}) {
-    const formattedEntry = typeof data.entry === 'number' ? data.entry.toFixed(3) : data.entry;
-    const formattedSl = typeof data.sl === 'number' ? data.sl.toFixed(3) : data.sl;
-    const formattedTp = typeof data.tp === 'number' ? data.tp.toFixed(3) : data.tp;
-    
-    let msg = `🟢 NEW ORDER OPENED [CONFIRMED]\n\n` +
-              `Symbol: ${data.symbol || 'XAUUSDc'}\n` +
-              `Direction: ${data.direction}\n\n` +
-              `Entry: ${formattedEntry}\n` +
-              `SL: ${formattedSl}\n` +
-              `TP: ${formattedTp}\n` +
-              `Lot: ${data.lot}\n\n` +
-              `Ticket: ${data.ticket}\n` +
-              `Status: EXECUTED`;
-              
-    await sendTelegramRaw(msg, `ORDER_OPENED_${data.ticket}`, 0);
-}
-
-
-
-
-
-// ============================================
-// SYSTEM STATE TRACKING & TELEGRAM ALERTS
 // ============================================
 
 const systemComponentStates: Record<string, { isHealthy: boolean; lastError: string }> = {
     'MT5 Connection': { isHealthy: true, lastError: '' },
     'Market Data': { isHealthy: true, lastError: '' },
-    'News Provider': { isHealthy: true, lastError: '' },
-    'DaRa M1 EA': { isHealthy: true, lastError: '' }
+    'News Provider': { isHealthy: true, lastError: '' }
 };
 
 async function sendDetailedSystemAlert(component: string, type: 'PROBLEM' | 'RECOVERY', description: string, tradingAffected: boolean) {
@@ -867,7 +536,7 @@ async function sendDetailedSystemAlert(component: string, type: 'PROBLEM' | 'REC
         } else {
             const componentKhmer = component === 'Market Data' ? 'ទិន្នន័យទីផ្សារ (Market Data)' :
                                    component === 'News Provider' ? 'ប្រព័ន្ធព័ត៌មាន (News Provider)' :
-                                   component === 'DaRa M1 EA' ? 'ប្រព័ន្ធ DaRa M1 EA' : component;
+                                   component;
             await sendSystemRecoveredAlert(componentKhmer, 'មានបញ្ហាពីមុន', description);
         }
     }
@@ -919,44 +588,7 @@ function monitorSystemTransitions() {
         true
     ).catch(console.error);
 
-    if (ictNewsProvider && typeof ictNewsProvider.getStatus === 'function') {
-        const ns = ictNewsProvider.getStatus();
-        const newsHealthy = (ns !== 'UNAVAILABLE');
-        handleSystemStateTransition(
-            'News Provider',
-            newsHealthy,
-            'មិនអាចទាញទិន្នន័យព័ត៌មានបាន',
-            'ទិន្នន័យព័ត៌មាន Forex Factory ដំណើរការធម្មតាឡើងវិញ',
-            true
-        ).catch(console.error);
-    }
-
-    // Check for high-impact USD news blocking event
-    if (ictNewsProvider && typeof ictNewsProvider.getUpcomingHighImpactEvents === 'function') {
-        ictNewsProvider.getUpcomingHighImpactEvents(Date.now()).then(events => {
-            if (events) {
-                const now = Date.now();
-                for (const event of events) {
-                    if (event.impact === 'HIGH') {
-                        const msBefore = 30 * 60 * 1000;
-                        const msAfter = 30 * 60 * 1000;
-                        if (now >= event.time - msBefore && now <= event.time + msAfter) {
-                            const eventKey = `${event.title || 'USD_NEWS'}_${event.time}`;
-                            if (lastNotifiedNewsEventKey !== eventKey) {
-                                lastNotifiedNewsEventKey = eventKey;
-                                const newsTimeStr = new Date(event.time).toLocaleTimeString('en-US', { timeZone: 'Asia/Phnom_Penh', hour12: false });
-                                sendNewsBlockAlert({
-                                    title: event.title || 'ព័ត៌មានសេដ្ឋកិច្ច USD ផលប៉ះពាល់ខ្ពស់',
-                                    time: newsTimeStr
-                                }).catch(console.error);
-                            }
-                        }
-                    }
-                }
-            }
-        }).catch(console.error);
-    }
-
+    
     if (!prevDailyLossHit && botState.dailyLossLimitHit) {
         const maxLoss = botState.riskConfig.maxDailyLossAmount || botState.riskConfig.maxDailyLoss || 50;
         sendDailyLossLimitAlert(botState.realizedDailyPnL || 0, maxLoss).catch(console.error);
@@ -1247,20 +879,37 @@ function generateAuthToken(username: string, role: 'admin'): string {
 }
 
 function verifyAuthToken(tokenString?: string): AuthTokenPayload | null {
-  if (!tokenString) return null;
+  if (!tokenString) {
+    console.error('[Auth] Token missing');
+    return null;
+  }
   try {
     const [payloadB64, signature] = tokenString.split('.');
-    if (!payloadB64 || !signature) return null;
-    if (revokedTokens.has(signature)) return null;
+    if (!payloadB64 || !signature) {
+      console.error('[Auth] Malformed token format');
+      return null;
+    }
+    if (revokedTokens.has(signature)) {
+      console.error('[Auth] Token has been revoked');
+      return null; 
+    }
     const expectedSignature = crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
-    if (signature !== expectedSignature) return null;
+    if (signature !== expectedSignature) { 
+      console.error('[Auth] Signature mismatch'); 
+      return null; 
+    }
     const payload: AuthTokenPayload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
-    if (Date.now() > payload.exp) return null;
+    if (Date.now() > payload.exp) { 
+      console.error('[Auth] Token expired'); 
+      return null; 
+    }
     return payload;
-  } catch {
+  } catch (err) {
+    console.error('[Auth] Token parse error:', err);
     return null;
   }
 }
+
 // In-Memory & Persistent State for XAUUSD Bot
 interface BotServerState {
   desiredBotState?: 'RUNNING' | 'STOPPED';
@@ -1271,6 +920,8 @@ interface BotServerState {
   askPrice?: number;
   lastPriceUpdate?: string;
   lastTickTime?: number;
+  brokerQuoteTime?: number;
+  lastFeedArrivalTime?: number;
   tickHistory?: number[];
   marketDataStatus?: string;
   newsProviderStatus?: 'CONNECTED' | 'UNAVAILABLE';
@@ -1310,6 +961,7 @@ interface BotServerState {
 };
   };
   isDailyPnLSynced?: boolean;
+  dailyLossResetOffset?: number;
   realizedDailyPnL?: number;
   currentTradingDate?: string;
   todayProfitLoss: number;
@@ -1317,7 +969,6 @@ interface BotServerState {
   todayWinCount: number;
   todayLossCount: number;
   signals?: { gold: string };
-  ictAnalysis?: any;
   metaApiAccountId?: string;
   metaApiToken?: string;
   metaApiUrl?: string;
@@ -1340,27 +991,20 @@ interface BotServerState {
     maxSpreadPoints: number;
     stopLossPips: number;
     takeProfitPips: number;
-    slDistance?: number;
-    tpDistance?: number;
-    slPriceDistance?: number;
-    tpPriceDistance?: number;
-    entryDistance?: number;
-    trailingDistance?: number;
-    trailingRule?: string;
-    dailyLossCurrency?: string;
     trailingStopEnabled: boolean;
     trailingStopActivationPoints?: number;
     trailingStopDistancePoints?: number;
     trailingStopBreakEven?: boolean;
     trailingStopBreakEvenOffset?: number;
-    newsFilterEnabled?: boolean;
-    minutesBeforeNewsBlock?: number;
-    minutesAfterNewsBlock?: number;
     maxOpenTrades: number;
+    newsFilterEnabled?: boolean;
+    entryDistance?: number;
+    trailingDistance?: number;
+    liveTradingEnabled?: boolean;
     entriesPerSignal: number;
     maxConsecutiveLosses: number;
     cooldownMinutes: number;
-    maxDailyLossPercent?: number;
+    maxDailyLossPercent: number;
     maxDailyLossAmount: number;
     noMartingale: boolean;
     noGrid: boolean;
@@ -1382,7 +1026,6 @@ interface BotServerState {
   isInsideTradingHours: boolean;
   openTrades: any[];
   signalDetails?: any;
-  daraTelemetry?: any;
   consecutiveLosses?: number;
   cooldownUntil?: number | null;
   isAutoSaved?: boolean;
@@ -1398,13 +1041,15 @@ const DEFAULT_BOT_CONFIG = {
   desiredBotState: 'STOPPED' as const,
   status: 'stopped' as const,
   selectedAsset: 'XAUUSD' as const,
-  activeGoldSymbol: 'XAUUSDc',
   currentTradingDate: '',
   dailyLossLimitHit: false,
   account: {
     accountType: 'cent' as const,
     server: 'Exness-Real21',
     loginId: '8492019',
+    metaApiAccountId: '8fdbc882-5233-42f9-8a6a-6af1adc1a012',
+    metaApiToken: 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1MGFmYzg1ZmQ0MzZhNjJlNDc4ODU1MTU0Y2ZhMzUyOCIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVzdC1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcnBjLWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6d3M6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJtZXRhc3RhdHMtYXBpIiwibWV0aG9kcyI6WyJtZXRhc3RhdHMtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6InJpc2stbWFuYWdlbWVudC1hcGkiLCJtZXRob2RzIjpbInJpc2stbWFuYWdlbWVudC1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoiY29weWZhY3RvcnktYXBpIiwibWV0aG9kcyI6WyJjb3B5ZmFjdG9yeS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoibXQtbWFuYWdlci1hcGkiLCJtZXRob2RzIjpbIm10LW1hbmFnZXItYXBpOnJlc3Q6ZGVhbGluZzoqOioiLCJtdC1tYW5hZ2VyLWFwaTpyZXN0OnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJiaWxsaW5nLWFwaSIsIm1ldGhvZHMiOlsiYmlsbGluZy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfV0sImlnbm9yZVJhdGVMaW1pdHMiOmZhbHNlLCJ0b2tlbklkIjoiMjAyMTAyMTMiLCJpbXBlcnNvbmF0ZWQiOmZhbHNlLCJyZWFsVXNlcklkIjoiNTBhZmM4NWZkNDM2YTYyZTQ3ODg1NTE1NGNmYTM1MjgiLCJpYXQiOjE3ODg2MzU2NzIsImV4cCI6MTc5NjQxMTY3Mn0.Ak3KxS2yL9PorDzTinDKbog_EilXdm9YGvwHY6tvbokWJbVT8BMc0OgN-zpHq2j7scnjqoG-0g9i1CiBTY8_D0cGWbkll10l-4UGCcZbtKicOVCirCtwABHsm2MU3NtJsfgVZmK2xcuvblLx28gI92lAG7WDnbbyAtjHIIyrRyjNPeEJeJmIXUUaqy6p4PLJxDjfHv5-8Pci0yoG9W-m59r8f8ikxEkjMBOBHXGN0t3rElMoLy2kzx1BFtxZ1vmijZUUHLykiEkztgHfTnr5ZW1QK_Lwga765DOihNt5KqS9SqcTbOYRvqrZouM3lxu8mNDt-iU28Tj0G5iJiu5ipMr-K8rlzqCgnZ0ylO3QaHJFzg9P4NcJavWIZuNUpqwcIh_14RoIP5k0Jeiot4SGMLxk_a5Qaem9PMZnh8n8wAyAHgtw6KVI9pDY9yYj36Wu5OlwNS1D4hjc-_et-9LS02wjurcbx-1NHuVdbLhYbfr3BdKLJlKqWZVjVwnK5BEJblhtNplm9cWy7-pquJjYO4ZXQhtoRZP2lzhqHmUAZvoxq7xoMGQAdY-YPP9_0FqHiEWMpsW1Rarox7DlYwzjqZ4Tishrt6n1B7YPHqUVlWak4CnlWh9JkVGYPRymfh2eI_xosaylM95lfvXd7Y-MxOFi0hCTU0bjuFUE_gFtasI',
+    metaApiUrl: 'https://mt-client-api-v1.backup-new-york.agiliumtrade.ai',
     isConnected: true,
     serverConnected: true,
     isRealAccount: true,
@@ -1436,31 +1081,24 @@ const DEFAULT_BOT_CONFIG = {
   },
   riskConfig: {
     lotSizeMode: 'fixed' as const,
-    lotSize: 0.02,
+    lotSize: 0.01,
     riskPercent: 1.0,
-    maxDailyLoss: 2000,
+    maxDailyLoss: 50.00,
     maxDrawdownPercent: 5.0,
-    maxSpreadPoints: 27,
-    entryDistance: 2.0,
-    stopLossPips: 10,
-    takeProfitPips: 8,
-    slDistance: 10,
-    tpDistance: 8,
-    slPriceDistance: 10,
-    tpPriceDistance: 8,
+    maxSpreadPoints: 30,
+    stopLossPips: 25,
+    takeProfitPips: 35,
     trailingStopEnabled: true,
-    trailingDistance: 1.5,
-    trailingRule: 'Auto at Original TP (1.5 Price Distance)',
-    newsFilterEnabled: true,
-    minutesBeforeNewsBlock: 30,
-    minutesAfterNewsBlock: 30,
+
     maxOpenTrades: 5,
-    entriesPerSignal: 5,
-    maxConsecutiveLosses: 6,
-    cooldownMinutes: 20,
-    maxDailyLossAmount: 2000,
+    entriesPerSignal: 1,
+    maxConsecutiveLosses: 3,
+    cooldownMinutes: 15,
+    maxDailyLossPercent: 5,
+    maxDailyLossAmount: 50,
     noMartingale: true,
     noGrid: true,
+    liveTradingEnabled: false,
   },
   userPreferences: {
     autoStartOnConnect: false,
@@ -1475,7 +1113,7 @@ function loadOrCreateBotConfig() {
       const raw = fs.readFileSync(CONFIG_FILE_PATH, 'utf-8');
       const data = JSON.parse(raw);
       if (data && data.account) {
-        const config = {
+        return {
           ...DEFAULT_BOT_CONFIG,
           ...data,
           desiredBotState: data.desiredBotState || (data.status === 'running' ? 'RUNNING' : 'STOPPED'),
@@ -1488,8 +1126,6 @@ function loadOrCreateBotConfig() {
           riskConfig: { ...DEFAULT_BOT_CONFIG.riskConfig, ...data.riskConfig },
           userPreferences: { ...DEFAULT_BOT_CONFIG.userPreferences, ...data.userPreferences },
         };
-        
-        return config;
       }
     }
   } catch (err) {
@@ -1501,51 +1137,11 @@ function loadOrCreateBotConfig() {
 const initialSavedConfig = loadOrCreateBotConfig();
 
 
-let lastSyncedSettingsJson = '';
-
-function syncConfigToDaRaEngine(state: any, forceSync: boolean = false) {
-  if (global.daraEngine && state?.riskConfig) {
-    const rc = state.riskConfig;
-    const cleanSettings: DaRaUserSettings = {
-      lotSize: Number(rc.lotSize !== undefined && !isNaN(Number(rc.lotSize)) ? rc.lotSize : 0.02),
-      slDistance: Number(rc.slDistance ?? rc.stopLossPips ?? 10),
-      tpDistance: Number(rc.tpDistance ?? rc.takeProfitPips ?? 8),
-      dailyLossLimit: Number(rc.maxDailyLossAmount !== undefined && !isNaN(Number(rc.maxDailyLossAmount)) ? rc.maxDailyLossAmount : (rc.maxDailyLoss || 2000)),
-      maxOpenTrades: Number(rc.maxOpenTrades !== undefined && !isNaN(Number(rc.maxOpenTrades)) ? rc.maxOpenTrades : 5),
-      maxConsecutiveSL: Number(rc.maxConsecutiveLosses !== undefined && !isNaN(Number(rc.maxConsecutiveLosses)) ? rc.maxConsecutiveLosses : 6),
-      cooldownMinutes: Number(rc.cooldownMinutes !== undefined && !isNaN(Number(rc.cooldownMinutes)) ? rc.cooldownMinutes : 20),
-      maxSpreadPoints: Number(rc.maxSpreadPoints !== undefined && !isNaN(Number(rc.maxSpreadPoints)) ? rc.maxSpreadPoints : 27),
-      entryDistance: Number(rc.entryDistance !== undefined && !isNaN(Number(rc.entryDistance)) ? rc.entryDistance : 2.0),
-      newsFilterEnabled: rc.newsFilterEnabled !== undefined ? Boolean(rc.newsFilterEnabled) : true,
-      newsMinsBefore: Number(rc.minutesBeforeNewsBlock !== undefined && !isNaN(Number(rc.minutesBeforeNewsBlock)) ? rc.minutesBeforeNewsBlock : 30),
-      newsMinsAfter: Number(rc.minutesAfterNewsBlock !== undefined && !isNaN(Number(rc.minutesAfterNewsBlock)) ? rc.minutesAfterNewsBlock : 30),
-      trailingEnabled: rc.trailingStopEnabled !== undefined ? Boolean(rc.trailingStopEnabled) : true,
-      trailingDistance: Number(rc.trailingDistance !== undefined && !isNaN(Number(rc.trailingDistance)) ? rc.trailingDistance : 1.5),
-      trailingRule: rc.trailingRule || 'Auto at Original TP (1.5 Price Distance)'
-    };
-    
-    // Only call updateUserSettings if settings actually changed or if forceSync is explicitly requested
-    const currentJson = JSON.stringify(cleanSettings);
-    console.log(`[DARA CONFIG TRACE] source=syncConfigToDaRaEngine passing cleanSettings.maxOpenTrades=${cleanSettings.maxOpenTrades}`);
-    if (forceSync || currentJson !== lastSyncedSettingsJson) {
-      global.daraEngine.updateUserSettings(cleanSettings);
-      lastSyncedSettingsJson = currentJson;
-    }
-    
-    if (state.status === 'running' || state.desiredBotState === 'RUNNING') {
-      global.daraEngine.start();
-    }
-  }
-}
-
-// Backward compatibility alias for any legacy callers
-const syncConfigToIctEa = syncConfigToDaRaEngine;
 
 const botState: BotServerState = {
   desiredBotState: initialSavedConfig.desiredBotState || (initialSavedConfig.status === 'running' ? 'RUNNING' : 'STOPPED'),
-  status: (initialSavedConfig.desiredBotState === 'RUNNING' || initialSavedConfig.status === 'running') ? 'running' : 'stopped',
+  status: initialSavedConfig.status === 'running' ? 'running' : 'stopped',
   selectedAsset: 'XAUUSD',
-  activeGoldSymbol: (initialSavedConfig as any).activeGoldSymbol || (initialSavedConfig.account.accountType === 'cent' ? 'XAUUSDc' : 'XAUUSDm'),
   goldPrice: 0,
   bidPrice: 0,
   askPrice: 0,
@@ -1592,6 +1188,7 @@ const botState: BotServerState = {
   },
   riskConfig: {
     ...initialSavedConfig.riskConfig,
+    liveTradingEnabled: initialSavedConfig.riskConfig?.liveTradingEnabled ?? false,
   },
   userPreferences: {
     ...initialSavedConfig.userPreferences,
@@ -1607,7 +1204,27 @@ const botState: BotServerState = {
   lastAnalysisLoopTime: 0,
 };
 
-syncConfigToDaRaEngine(botState, true);
+// Sync Dara Engine with loaded config
+if (global.daraEngine) {
+    global.daraEngine.updateUserSettings({
+        lotSize: botState.riskConfig.lotSize || 0.01,
+        slDistance: botState.riskConfig.stopLossPips || 30,
+        tpDistance: botState.riskConfig.takeProfitPips || 30,
+        dailyLossLimit: botState.riskConfig.maxDailyLossAmount || 50,
+        maxOpenTrades: botState.riskConfig.maxOpenTrades || 5,
+        maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses || 3,
+        cooldownMinutes: botState.riskConfig.cooldownMinutes || 15,
+        maxSpreadPoints: botState.riskConfig.maxSpreadPoints || 30,
+        newsFilterEnabled: botState.riskConfig.newsFilterEnabled || false,
+        trailingEnabled: botState.riskConfig.trailingStopEnabled !== false,
+        trailingDistance: botState.riskConfig.trailingDistance,
+        entryDistance: botState.riskConfig.entryDistance || 2.0,
+        liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
+    });
+    if (botState.status === 'running' || botState.desiredBotState === 'RUNNING') {
+        global.daraEngine.start();
+    }
+}
 
 function saveBotConfig() {
   try {
@@ -1673,42 +1290,8 @@ const AI_ANALYSIS_INTERVAL_MS = 60000; // 1 Minute (60 seconds) Analysis Interva
  * 🔍 Step 3: Check Risk & Entry Conditions (Trading hours, Daily loss, Max open trades, Spread)
  * 🔍 Step 4: Authorize Entry if valid AND conditions met. If signal is WAIT/unclear, do NOT trade and wait for next 1-minute cycle.
  */
-// === NEW ICT AUTO-TRADING EA ===
-// Strategy: H4 (Bias) -> M15 (Setup) -> M1 (Entry)
-// H4: Market Structure (HH, HL, LH, LL, BOS, MSS)
-// M15: PD Array, Liquidity Sweep, CISD, Breaker, IDM
-// M1: Order Block (OB), RR >= 1:2
-
-
-
-// Mocks the candle fetching and structural analysis using recent ticks 
-// to simulate the H4/M15/M1 analysis process since full history API isn't present.
-// === ICT MATH DEFINITIONS ===
-interface Candle {
-    time: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-}
-
-interface SwingPoint {
-    type: 'HIGH' | 'LOW';
-    index: number;
-    price: number;
-    time: string;
-}
-
-
-
-
-
-// EA State with Strict Sequence Management
 var eaState = {
   paperMode: false, // ENABLED LIVE REAL TRADING
-  consecutiveLosses: 0,
-  maxConsecutiveLosses: 3,
   h4Bias: 'NEUTRAL' as 'BULLISH' | 'BEARISH' | 'NEUTRAL',
   m15Setup: 'WAITING' as 'WAITING' | 'READY_FOR_M1' | 'WAITING_FOR_MITIGATION' | 'CONSUMED',
   setupSide: 'NONE' as 'BUY' | 'SELL' | 'NONE',
@@ -1717,8 +1300,7 @@ var eaState = {
 };
 
 function resetEASetup(reason: string) {
-  console.log(`[DaRa M1 EA] RESET SETUP - REASON = ${reason}`);
-  eaState.m15Setup = 'WAITING';
+    eaState.m15Setup = 'WAITING';
   eaState.setupSide = 'NONE';
   eaState.setupTimestamp = 0;
   eaState.m1ObZone = null;
@@ -1726,6 +1308,7 @@ function resetEASetup(reason: string) {
   botState.signalDetails = undefined;
 }
 
+export interface Candle { time: number | string; open: number; high: number; low: number; close: number; volume?: number; }
 async function fetchRealCandles(baseUrl: string, accountId: string, token: string, symbol: string, timeframe: string, limit: number): Promise<Candle[]> {
     try {
         const marketDataBaseUrl = baseUrl.replace('mt-client-api-v1', 'mt-market-data-client-api-v1');
@@ -1752,122 +1335,55 @@ async function fetchRealCandles(baseUrl: string, accountId: string, token: strin
     return [];
 }
 
+interface LocalM1Candle {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume?: number;
+}
+let daraM1CandlesBuffer: LocalM1Candle[] = [];
+let lastM1CandlesFetchTime = 0;
 
-async function manageTrailingSL() {
-    if (!botState.riskConfig.trailingStopEnabled) return;
-    if (!botState.openTrades || botState.openTrades.length === 0) return;
-    
-    const activePrice = botState.goldPrice || botState.bidPrice || botState.askPrice || 0;
-    if (activePrice <= 0) return;
-
-    for (let trade of botState.openTrades) {
-        if (!trade.isBotTrade) continue;
-        
-        const originalTp = trade.originalTp || trade.tp || 0;
-        if (!originalTp || originalTp <= 0) continue;
-
-        const trailDistance = 1.5; // Fixed 1.5 Price Distance
-        const currentMarketPrice = trade.side === 'BUY'
-            ? (botState.bidPrice || activePrice)
-            : (botState.askPrice || activePrice);
-
-        let shouldModify = false;
-        let potentialNewSl = 0;
-
-        if (trade.side === 'BUY') {
-            // Check if price reached Original TP
-            if (!trade.trailingActivated) {
-                if (currentMarketPrice >= originalTp) {
-                    trade.trailingActivated = true;
-                    trade.highestPriceSinceOpen = Math.max(originalTp, currentMarketPrice);
-                } else {
-                    continue; // Has not reached Original TP yet
-                }
-            }
-
-            trade.highestPriceSinceOpen = Math.max(
-                trade.highestPriceSinceOpen || originalTp,
-                currentMarketPrice
-            );
-
-            // BUY Trailing SL: 1.5 distance below peak price
-            // Example: TP = 100 -> SL starts at 98.5. Price at 101 -> SL = 99.5.
-            potentialNewSl = Number((trade.highestPriceSinceOpen - trailDistance).toFixed(3));
-
-            const currentSl = trade.sl || 0;
-            // BUY: SL can only move UP (never move down), and must lock profit
-            if (potentialNewSl > currentSl && potentialNewSl > trade.entryPrice) {
-                shouldModify = true;
-            }
-        } else if (trade.side === 'SELL') {
-            // Check if price reached Original TP
-            if (!trade.trailingActivated) {
-                if (currentMarketPrice <= originalTp) {
-                    trade.trailingActivated = true;
-                    trade.lowestPriceSinceOpen = Math.min(originalTp, currentMarketPrice);
-                } else {
-                    continue; // Has not reached Original TP yet
-                }
-            }
-
-            trade.lowestPriceSinceOpen = Math.min(
-                trade.lowestPriceSinceOpen || originalTp,
-                currentMarketPrice
-            );
-
-            // SELL Trailing SL: 1.5 distance above trough price
-            // Example: TP = 100 -> SL starts at 101.5. Price at 99 -> SL = 100.5.
-            potentialNewSl = Number((trade.lowestPriceSinceOpen + trailDistance).toFixed(3));
-
-            const currentSl = trade.sl || 9999999;
-            // SELL: SL can only move DOWN (never move up), and must lock profit
-            if (potentialNewSl < currentSl && potentialNewSl < trade.entryPrice) {
-                shouldModify = true;
-            }
+async function syncDaraM1CandlesBuffer(baseUrl: string, accountId: string, token: string, symbol: string) {
+    const now = Date.now();
+    if (daraM1CandlesBuffer.length >= 10 && (now - lastM1CandlesFetchTime < 120000)) return;
+    lastM1CandlesFetchTime = now;
+    try {
+        const raw = await fetchRealCandles(baseUrl, accountId, token, symbol, '1m', 50);
+        if (raw && raw.length >= 10) {
+            daraM1CandlesBuffer = raw.map((c: any) => ({
+                time: typeof c.time === 'string' ? new Date(c.time).getTime() : Number(c.time),
+                open: Number(c.open),
+                high: Number(c.high),
+                low: Number(c.low),
+                close: Number(c.close),
+                volume: Number(c.volume || 1)
+            }));
         }
+    } catch (_) {}
+}
 
-        if (shouldModify && potentialNewSl > 0 && potentialNewSl !== trade.sl) {
-            const oldSlVal = trade.sl;
-            trade.sl = potentialNewSl;
-            trade.trailingSlValue = potentialNewSl;
-            botState.statusMessageKhmer = `🔒 PROFIT LOCKING (TP Reached) -> SL TRAILING -> ${potentialNewSl}`;
-            
-            const accountId = botState.account.metaApiAccountId;
-            const token = botState.account.metaApiToken;
-            const baseUrl = botState.account.metaApiUrl;
-            if (accountId && token && baseUrl && botState.account.serverConnected) {
-                 const modifyPayload: any = {
-                     actionType: 'POSITION_MODIFY',
-                     positionId: trade.id,
-                     stopLoss: potentialNewSl
-                 };
-                 // Clear broker hard TP so trade can continue running and trailing beyond TP
-                 if (trade.tp && trade.tp > 0) {
-                     if (!trade.originalTp) trade.originalTp = trade.tp;
-                     modifyPayload.takeProfit = 0;
-                 }
-
-                 fetch(`${baseUrl}/users/current/accounts/${accountId}/trade`, {
-                    method: 'POST',
-                    headers: { 'auth-token': token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(modifyPayload)
-                 }).then(res => {
-                     if (res.ok) {
-                         sendTrailingStopMovedAlert({
-                             type: trade.side as 'BUY' | 'SELL',
-                             oldSl: oldSlVal || 0,
-                             newSl: potentialNewSl,
-                             price: currentMarketPrice,
-                             ticket: trade.id
-                         }).catch(console.error);
-                     } else {
-                         console.error(`MetaApi Trail SL Update Failed for ${trade.id}`);
-                     }
-                 }).catch(console.error);
-            }
-        }
+function feedLiveTickToCandlesBuffer(price: number, tickTime: number) {
+    if (price <= 0) return;
+    const barMinute = Math.floor(tickTime / 60000) * 60000;
+    if (daraM1CandlesBuffer.length === 0) {
+        daraM1CandlesBuffer.push({ time: barMinute, open: price, high: price, low: price, close: price, volume: 1 });
+        return;
+    }
+    const lastBar = daraM1CandlesBuffer[daraM1CandlesBuffer.length - 1];
+    if (lastBar.time === barMinute) {
+        lastBar.high = Math.max(lastBar.high, price);
+        lastBar.low = Math.min(lastBar.low, price);
+        lastBar.close = price;
+        lastBar.volume = (lastBar.volume || 0) + 1;
+    } else if (barMinute > lastBar.time) {
+        daraM1CandlesBuffer.push({ time: barMinute, open: price, high: price, low: price, close: price, volume: 1 });
+        if (daraM1CandlesBuffer.length > 100) daraM1CandlesBuffer.shift();
     }
 }
+
 
 
 
@@ -1893,7 +1409,7 @@ function calculateVolatilityAndSpeed() {
 
     if (range >= 4.0 || botState.spreadPoints >= 40) {
         botState.marketSpeed = 'EXTREME';
-    } else if (range >= 2.0 || botState.spreadPoints >= 27) {
+    } else if (range >= 2.0 || botState.spreadPoints >= 25) {
         botState.marketSpeed = 'FAST';
     } else {
         botState.marketSpeed = 'NORMAL';
@@ -2004,229 +1520,6 @@ async function checkActualMarketStatus() {
     }
 }
 
-let isExecutingAIAnalysis = false;
-async function executeAIAnalysis() {
-  if (isExecutingAIAnalysis) {
-    return; // Prevent duplicate concurrent AI analysis executions
-  }
-  isExecutingAIAnalysis = true;
-  try {
-    calculateVolatilityAndSpeed();
-    lastAnalysisTimestamp = Date.now();
-    const isRunning = botState.status === 'running';
-    
-    // 🟢 24/7 AUTO - Continuous Operation
-    botState.isInsideTradingHours = true;
-
-    if (!botState.account.isConnected || !botState.account.serverConnected) {
-      if (isRunning) {
-        botState.statusMessageKhmer = '🔴 [DaRa M1 EA] មិនទាន់ភ្ជាប់ MT5 Server — កំពុងរង់ចាំការតភ្ជាប់';
-      }
-      
-      return;
-    }
-
-    // 🟢 Market Open/Closed Status Verification (Broker Level)
-    await checkActualMarketStatus();
-     
-    if (!isMarketOpen) {
-      if (isRunning) {
-        botState.statusMessageKhmer = `⏸️ [MARKET CLOSED] WAITING FOR MARKET OPEN (${marketStatusReason})`;
-      }
-      
-      return;
-    }
-
-    if (isRunning) {
-      if (!botState.isDailyPnLSynced) {
-          botState.statusMessageKhmer = '⚠️ DAILY P/L UNKNOWN / RISK CHECK PAUSED — រង់ចាំទាញយកប្រវត្តិ P/L...';
-          
-          return;
-      }
-      
-      if (botState.dailyLossLimitHit) {
-          
-          return;
-      }
-
-      if (botState.marketSpeed === 'EXTREME') {
-          botState.statusMessageKhmer = `⚠️ [DaRa M1 EA] HIGH VOLATILITY (${botState.volatilityValue}) — NO NEW ENTRY`;
-          
-          return;
-      }
-    }
-
-    // 🟢 LIVE_TRADING_ENABLED is true when bot is running AND market is open AND no safety limits hit
-    const isSafeToTrade = isRunning && isMarketOpen && !botState.dailyLossLimitHit;
-    
-
-    botState.selectedAsset = 'XAUUSD';
-    const maxOpen = (botState.riskConfig as any)?.maxOpenTrades || 5;
-    const currentOpenCount = (botState.openTrades || []).length;
-
-    if (currentOpenCount >= maxOpen && isRunning) {
-      botState.statusMessageKhmer = `🟢 [DaRa M1 EA] គ្រប់គ្រង Trade សកម្ម (${currentOpenCount}/${maxOpen} Trades)`;
-      return;
-    }
-
-    let currentAsk = botState.askPrice || botState.goldPrice || 0;
-    let currentBid = botState.bidPrice || botState.goldPrice || 0;
-
-    // Strict Stale Price & Invalid Market Feed Protection: Block AI Analysis & Entries if price is invalid or stale (>60s)
-    const priceAgeMs = Date.now() - (botState.lastTickTime || 0);
-    if (currentAsk <= 0 || currentBid <= 0 || priceAgeMs > 60000) {
-        // botState.marketDataStatus is handled by watchdog
-        
-        const s = global.daraEngine.getCurrentSetup();
-        if (s && s.stage !== 'INVALIDATED') {
-            botState.signals = { gold: s.bias };
-            const exactEntryVal = s.lockedEntryPrice || (s.bias === 'BULLISH' ? s.obHigh : s.obLow);
-            const exactSlVal = s.lockedSlTarget;
-            const exactTpVal = s.lockedTpTarget;
-            botState.signalDetails = {
-               side: s.bias === 'BULLISH' ? 'BUY' : 'SELL',
-               entry: exactEntryVal,
-               actualEntry: exactEntryVal,
-               sl: exactSlVal,
-               tp: exactTpVal,
-               stage: s.stage,
-               executionState: 'CONNECTION RECOVERING',
-               ticket: s.executionTicket
-            };
-            if (isRunning) {
-              botState.statusMessageKhmer = `🔴 [CONNECTION LOST] រក្សាទុក ${s.bias} Setup ខណៈកំពុងតភ្ជាប់ឡើងវិញ...`;
-            }
-        } else {
-            botState.signals = { gold: 'WAIT' };
-            botState.signalDetails = undefined;
-            if (isRunning) {
-              botState.statusMessageKhmer = `🔴 [DaRa M1 EA SAFE-MODE] ទីផ្សារគ្មានទិន្នន័យ Live Price ពិតប្រាកដ — ផ្អាកការវិភាគ និងបិទការបើក Trade ជាបណ្តោះអាសន្ន`;
-            }
-        }
-        return;
-    }
-
-    const accountId = botState.account.metaApiAccountId || 'mock_account';
-    const token = botState.account.metaApiToken || 'mock_token';
-    const baseUrl = botState.account.metaApiUrl || 'https://mt-client-api-v1.backup-new-york.agiliumtrade.ai';
-    const symbolToTrade = botState.activeGoldSymbol || (botState.account.accountType === 'cent' ? 'XAUUSDc' : 'XAUUSDm');
-
-    if (isRunning) {
-      botState.statusMessageKhmer = `⏳ [DaRa M1 EA] Analyzing Real Market (${symbolToTrade})...`;
-    }
-    
-    // Autonomous MetaApi M1 Candle Fetch (Strictly M1-Only for DaRa M1 Engine)
-    const m1Candles = await fetchRealCandles(baseUrl, accountId, token, symbolToTrade, '1m', 100);
-    if (m1Candles && m1Candles.length > 0) {
-        cachedM1Candles = m1Candles;
-    }
-    const currentM1 = (m1Candles && m1Candles.length >= 10) ? m1Candles : cachedM1Candles;
-    
-    if (currentM1 && currentM1.length >= 10) {
-        
-        // Sync DaRa User Settings directly from Single Source of Truth (only updates if settings changed)
-        syncConfigToDaRaEngine(botState);
-
-        // Update Safety Context
-        global.daraEngine.setNewsBlockedStatus(Boolean(global.isNewsBlockedNow || false));
-        global.daraEngine.setMt5ConnectionStatus(botState.account.serverConnected);
-
-        // Forward tick
-        await global.daraEngine.onMarketUpdate({
-            symbol: symbolToTrade,
-            bid: currentBid,
-            ask: currentAsk,
-            spreadPoints: botState.spreadPoints,
-            serverTime: botState.lastTickTime || Date.now(),
-            m1Candles: currentM1,
-            openTradesCount: botState.openTrades?.length || 0
-        });
-        
-        // Expose state to frontend
-        const daraState = global.daraEngine.getState();
-        const daraSetup = global.daraEngine.getCurrentSetup();
-        const daraTelemetry = global.daraEngine.getTelemetry(botState.spreadPoints, botState.openTrades?.length || 0);
-        
-        botState.daraTelemetry = daraTelemetry;
-        
-        if (isRunning) {
-            botState.statusMessageKhmer = `🔥 [DaRa M1 EA] ${daraState} | Setup: ${daraSetup ? daraSetup.direction : 'None'}`;
-        }
-        
-        botState.signals = { gold: daraSetup ? daraSetup.direction : 'WAIT' };
-        if (daraSetup) {
-            botState.signalDetails = {
-               side: daraSetup.direction,
-               entry: daraSetup.lockedEntryPrice,
-               actualEntry: daraSetup.lockedEntryPrice,
-               sl: daraSetup.virtualSLPrice,
-               tp: daraSetup.virtualTPPrice,
-               stage: daraState,
-               executionState: daraState,
-               ticket: (daraSetup.status === 'EXECUTED') ? 'Yes' : undefined,
-               obHigh: daraSetup.mssLevel,
-               obLow: daraSetup.sweepLevel,
-               // DaRa Specific properties
-               daraState: daraState,
-               daraSetup: daraSetup,
-               daraTelemetry: daraTelemetry,
-               daraAnalysis: daraTelemetry.analysis,
-               daraSafety: daraTelemetry.safety
-            };
-        } else {
-            botState.signalDetails = {
-               stage: daraState,
-               executionState: daraState,
-               daraState: daraState,
-               daraSetup: null,
-               daraTelemetry: daraTelemetry,
-               daraAnalysis: daraTelemetry.analysis,
-               daraSafety: daraTelemetry.safety
-            };
-        }
-    } else {
-        if (isRunning) {
-          botState.statusMessageKhmer = `🔴 [DaRa M1 EA SAFE-MODE] MT5 Data Feed Error`;
-        }
-    }
-
-    // Update heartbeat & execution timestamps
-
-
-    if (botState.status === 'running' && !botState.startConfirmedTime && botState.isStartRequested) {
-      botState.startConfirmedTime = new Date().toISOString();
-    }
-  } finally {
-    botState.lastAnalysisLoopTime = Date.now();
-    botState.eaHeartbeatTime = Date.now();
-    isExecutingAIAnalysis = false;
-  }
-}
-
-// DEDICATED 1-MINUTE AI ANALYSIS TIMER
-setInterval(async () => {
-  try {
-
-    await executeAIAnalysis();
-
-    handleSystemStateTransition(
-        'DaRa M1 EA',
-        true,
-        '',
-        'AI Analysis loop recovered and is running normally',
-        false
-    ).catch(console.error);
-  } catch (err: any) {
-    console.error('AI Analysis 1-min interval error:', err?.message);
-    handleSystemStateTransition(
-        'DaRa M1 EA',
-        false,
-        `AI Analysis loop crashed: ${err?.message || 'Unknown error'}`,
-        '',
-        true
-    ).catch(console.error);
-  }
-}, AI_ANALYSIS_INTERVAL_MS);
 
 
 // ==== DAILY P/L SYNC SYSTEM ====
@@ -2249,6 +1542,7 @@ function getCambodiaMidnightISO() {
 
 let isSyncingPnL = false;
 let lastPnLSyncTime = 0;
+let pnlSyncConsecutiveFailures = 0;
 
 async function syncDailyRealizedPnL() {
     if (isSyncingPnL) return;
@@ -2256,7 +1550,20 @@ async function syncDailyRealizedPnL() {
 
     try {
         isSyncingPnL = true;
-        const startTime = getCambodiaMidnightISO();
+        const currentMidnight = getCambodiaMidnightISO();
+        if (botState.currentTradingDate && botState.currentTradingDate !== currentMidnight) {
+            botState.currentTradingDate = currentMidnight;
+            botState.realizedDailyPnL = 0;
+            botState.todayTradeCount = 0;
+            botState.todayWinCount = 0;
+            botState.todayLossCount = 0;
+            botState.dailyLossLimitHit = false;
+            botState.dailyLossResetOffset = 0;
+            botState.isDailyPnLSynced = false;
+            pnlSyncConsecutiveFailures = 0;
+        }
+
+        const startTime = currentMidnight;
         const endTime = new Date().toISOString();
         const baseUrl = botState.account.metaApiUrl;
         const accountId = botState.account.metaApiAccountId;
@@ -2272,90 +1579,71 @@ async function syncDailyRealizedPnL() {
             const url = `${baseUrl}/users/current/accounts/${accountId}/history-deals/time/${encStart}/${encEnd}?offset=${offset}&limit=${limit}`;
             const response = await fetch(url, { 
                 headers: { 'auth-token': token },
-                signal: AbortSignal.timeout(10000)
+                signal: AbortSignal.timeout(25000)
             });
             if (!response.ok) {
                 throw new Error(`History API failed: ${response.status}`);
             }
             const deals = await response.json();
-            if (Array.isArray(deals)) {
-                allDeals = allDeals.concat(deals);
-                if (deals.length < limit) break;
-            } else {
-                break;
-            }
+            allDeals = allDeals.concat(deals);
+            if (!Array.isArray(deals) || deals.length < limit) break;
             offset += limit;
         }
         
         let dailyRealized = 0;
-        let winTrades = 0;
-        let lossTrades = 0;
-        let totalTrades = 0;
+        let tCount = 0;
+        let wCount = 0;
+        let lCount = 0;
+
         for (const deal of allDeals) {
-            const dealMagic = Number(deal.magic || 0);
-            const isBotMagic = dealMagic === botState.magicNumber || dealMagic === 778899;
-            const dealSymbol = String(deal.symbol || '');
-            const isGold = dealSymbol.includes('XAU') || dealSymbol.includes('GOLD') || !dealSymbol;
-            const comment = String(deal.comment || '');
-            const isBotComment = comment.includes('ICT') || comment.includes('DARA') || comment.includes('DaRa') || comment.includes('BOT');
-
-            // In MT5 MetaApi, closed/exit deals have entryType:
-            // DEAL_ENTRY_OUT (or 'DEAL_ENTRY_OUT' or 1) or DEAL_ENTRY_INOUT (or 'DEAL_ENTRY_INOUT' or 2)
-            // or if profit is non-zero
-            const isCloseDeal = deal.entryType === 'DEAL_ENTRY_OUT' || 
-                               deal.entryType === 'DEAL_ENTRY_INOUT' || 
-                               deal.entryType === 1 || 
-                               deal.entryType === 2 || 
-                               (deal.profit !== undefined && Number(deal.profit) !== 0);
-
-            if ((isBotMagic || isBotComment || (isGold && dealMagic === 0)) && isCloseDeal) {
+            // Include both bot trades (magic === 778899) and manual user trades (magic === 0 or undefined)
+            // But skip other bots if they use different magic numbers
+            const magicNum = Number(deal.magic || 0);
+            if (magicNum === botState.magicNumber || magicNum === 0) {
                 const profit = Number(deal.profit || 0);
                 const commission = Number(deal.commission || 0);
                 const swap = Number(deal.swap || 0);
                 const fee = Number(deal.fee || 0);
                 const net = profit + commission + swap + fee;
-                dailyRealized += net;
-                totalTrades += 1;
-                if (net >= 0) {
-                    winTrades += 1;
-                } else {
-                    lossTrades += 1;
+                
+                // Exclude pure balance operations like deposits/withdrawals
+                if (deal.type !== 'DEAL_TYPE_BALANCE') {
+                    dailyRealized += net;
+
+                    // Count only closed trades for win/loss stats
+                    if (deal.entryType !== 'DEAL_ENTRY_IN') {
+                        tCount++;
+                        if (net >= 0) wCount++;
+                        else lCount++;
+                    }
                 }
             }
         }
         
-        botState.realizedDailyPnL = Number(dailyRealized.toFixed(2));
-        botState.todayTradeCount = totalTrades;
-        botState.todayWinCount = winTrades;
-        botState.todayLossCount = lossTrades;
+        botState.todayTradeCount = tCount;
+        botState.todayWinCount = wCount;
+        botState.todayLossCount = lCount;
+        
+        botState.realizedDailyPnL = dailyRealized;
         botState.isDailyPnLSynced = true;
         botState.currentTradingDate = startTime;
-
-        // Recalculate dynamic todayProfitLoss immediately: realized + open trades floating
-        let totalFloating = 0;
-        for (const pos of (botState.openTrades || [])) {
-            totalFloating += Number(pos.floatingProfit || 0) + Number(pos.commission || 0) + Number(pos.swap || 0);
-        }
-        botState.todayProfitLoss = Number((botState.realizedDailyPnL + totalFloating).toFixed(2));
+        pnlSyncConsecutiveFailures = 0;
         
     } catch (error: any) {
+        pnlSyncConsecutiveFailures++;
         if (error.name === 'TimeoutError') {
-            console.warn('[DaRa M1 EA] P/L Sync Error: Timeout (10s)');
+            console.warn(`[DaRa EA] P/L Sync Warning: Request timed out (25s). Consecutive failures: ${pnlSyncConsecutiveFailures}. Will retry in 20s.`);
+        } else if (error.message && error.message.includes('429')) {
+            console.warn('[DaRa EA] P/L Sync Warning: Rate limited (HTTP 429). Will retry later.');
+            lastPnLSyncTime = Date.now(); 
         } else {
-            if (error.message && (error.message.includes('429') || error.message.includes('504') || error.message.includes('502') || error.message.includes('503'))) {
-                // Silently ignore known transient broker/MetaApi timeouts (50x) and rate limits (429)
-                // to prevent log spam. The bot will automatically retry on the next cycle.
-                lastPnLSyncTime = Date.now(); 
-            } else {
-                console.error('[DaRa M1 EA] P/L Sync Error:', error.message || error);
-            }
+            console.error('[DaRa EA] P/L Sync Error:', error.message || error);
         }
-        // Fallback calculation: keep realizedDailyPnL and add currently open floating profit
-        let totalFloating = 0;
-        for (const pos of (botState.openTrades || [])) {
-            totalFloating += Number(pos.floatingProfit || 0) + Number(pos.commission || 0) + Number(pos.swap || 0);
+        // Fallback gracefully: drop sync status only after 3 consecutive failures to avoid spurious blocks on transient latency
+        if (pnlSyncConsecutiveFailures >= 3 || !botState.isDailyPnLSynced) {
+            botState.isDailyPnLSynced = false; // FAIL-SAFE: Block entry if persistent sync error
         }
-        botState.todayProfitLoss = Number(((botState.realizedDailyPnL || 0) + totalFloating).toFixed(2));
+        botState.realizedDailyPnL = botState.realizedDailyPnL || 0;
     } finally {
         botState.lastAnalysisLoopTime = Date.now();
         botState.eaHeartbeatTime = Date.now();
@@ -2368,14 +1656,15 @@ async function syncDailyRealizedPnL() {
 let lastAccountInfoTime = 0;
 let lastPositionsTime = 0;
 let isPollingMT5 = false;
-let lastQuoteErrorLogTime = 0;
-let lastQuoteErrorStatus = 0;
-let cachedM1Candles: Candle[] = [];
-let lastM1CandleFetchTime = 0;
-let lastMetaApiSuccessTime = 0;
-let nextAccountInfoAllowedTime = 0;
-let lastAccountInfoSaveTime = 0;
-let nextPositionsAllowedTime = 0;
+let metaApiBackoffUntil = 0;
+let lastMetaApiQuoteTime = 0;
+let lastMarketDataLogTime = 0;
+let symbolRetryCount = 0;
+let lastSymbolTried = '';
+
+
+
+
 
 // REAL MT5 Polling Loop (ultra-low latency live quotes & periodic account sync)
 setInterval(async () => {
@@ -2383,15 +1672,17 @@ setInterval(async () => {
     isPollingMT5 = true;
     try {
         monitorSystemTransitions();
-    if (!botState.account.metaApiToken && !botState.account.isConnected) return;
+    if (!botState.account.isConnected) return;
 
     const now = Date.now();
-    if ((botState.account.isConnected || botState.account.metaApiToken) && (now - lastPnLSyncTime >= 20000 || !botState.isDailyPnLSynced)) {
+    const pnlSyncInterval = botState.isDailyPnLSynced ? 60000 : 20000;
+    if (now - lastPnLSyncTime >= pnlSyncInterval) {
         lastPnLSyncTime = now;
         syncDailyRealizedPnL().catch(console.error);
     }
 
-    // Fallback: If local EA is syncing via WebRequest, keep states verified
+    // If EA is actively syncing via WebRequest, keep states solid and bypass conflicting REST errors
+    const lastSeen = Math.max(botState.lastTickTime || 0, lastSyncTimestamp || 0);
     const isEaActive = (lastSyncTimestamp > 0 && Date.now() - lastSyncTimestamp < 25000);
     if (isEaActive) {
         botState.account.isConnected = true;
@@ -2399,121 +1690,199 @@ setInterval(async () => {
         botState.account.eaConnected = true;
         botState.account.vpsOnline = true;
         botState.account.marketDataReceiving = true;
+                                 if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
         consecutivePollingFailures = 0;
+        return;
     }
     
     const accountId = botState.account.metaApiAccountId;
     const token = botState.account.metaApiToken;
     let baseUrl = botState.account.metaApiUrl || 'https://mt-client-api-v1.backup-new-york.agiliumtrade.ai';
     
+    if (accountId === 'mock_account') {
+        botState.marketDataStatus = '🔴 មិនមានការតភ្ជាប់ MetaAPI';
+        return;
+    }
     if (accountId && token && baseUrl && (baseUrl.includes('agiliumtrade.ai') || baseUrl.includes('metaapi.cloud'))) {
         try {
             let workingBaseUrl = baseUrl;
-            // Anchor to XAUUSDc on Cent Accounts and never cycle through non-existent symbols
-            if (botState.account.accountType === 'cent' || !botState.activeGoldSymbol || botState.activeGoldSymbol === 'GOLD' || botState.activeGoldSymbol === 'XAUUSDm') {
+            const isCentAccount = (
+                botState.account.accountType === 'cent' ||
+                botState.account.currency === 'USC' ||
+                Boolean(botState.account.server && /cent|usc/i.test(botState.account.server))
+            );
+            const primarySymbol = isCentAccount ? 'XAUUSDc' : (botState.activeGoldSymbol || (botState.account.server && botState.account.server.toLowerCase().includes('real') ? 'XAUUSDc' : 'XAUUSD'));
+            if (isCentAccount) {
                 botState.activeGoldSymbol = 'XAUUSDc';
             }
-            const primarySymbol = botState.activeGoldSymbol || 'XAUUSDc';
             const nowTime = Date.now();
 
-            // 1. High-Frequency Live Quote Fetch (ultra-low latency direct call: ~45ms)
-            try {
-                const quoteRes = await fetch(`${workingBaseUrl}/users/current/accounts/${accountId}/symbols/${primarySymbol}/current-price`, {
-                    headers: { 'auth-token': token },
-                    signal: AbortSignal.timeout(10000)
-                });
-                let quote = null;
-                if (quoteRes.ok) {
-                    quote = await quoteRes.json();
-                } else {
-                    if (quoteRes.status !== 429 && (nowTime - lastQuoteErrorLogTime > 30000 || quoteRes.status !== lastQuoteErrorStatus)) {
-                        lastQuoteErrorLogTime = nowTime;
-                        lastQuoteErrorStatus = quoteRes.status;
-                        console.log(`[MetaApi Quote Sync] HTTP ${quoteRes.status} (${quoteRes.statusText}) for ${primarySymbol} — waiting for quote stream`);
+            // 1. Live Quote Fetch with Adaptive Rate-Limiting Protection (max ~1 request per 3.5s to preserve 6h CPU quota)
+            const canFetchQuote = (nowTime >= metaApiBackoffUntil) && (nowTime - lastMetaApiQuoteTime >= 4000);
+            if (canFetchQuote) {
+                lastMetaApiQuoteTime = nowTime;
+                try {
+                    const quoteRes = await fetch(`${workingBaseUrl}/users/current/accounts/${accountId}/symbols/${primarySymbol}/current-price`, {
+                        headers: { 'auth-token': token },
+                        signal: AbortSignal.timeout(10000)
+                    });
+                    
+                    let quote: any = null;
+                    if (quoteRes.ok) {
+                        quote = await quoteRes.json();
+                    } else if (quoteRes.status === 429) {
+                        metaApiBackoffUntil = nowTime + 5000;
+                        console.warn(`[MARKET_DATA RATE_LIMIT] 429 TooManyRequests on ${primarySymbol}. Cooling down 5s until ${new Date(metaApiBackoffUntil).toISOString()}`);
+                    } else if (quoteRes.status === 404) {
+                        // MetaAPI returns 404 when terminal is subscribing or waiting for the first live tick.
+                        // Attempt instant fallback to latest 1m candle from historical-market-data
+                        try {
+                            const marketDataBaseUrl = workingBaseUrl.replace('mt-client-api-v1', 'mt-market-data-client-api-v1');
+                            const candleRes = await fetch(`${marketDataBaseUrl}/users/current/accounts/${accountId}/historical-market-data/symbols/${primarySymbol}/timeframes/1m/candles?limit=1`, {
+                                headers: { 'auth-token': token },
+                                signal: AbortSignal.timeout(5000)
+                            });
+                            if (candleRes.ok) {
+                                const candles = await candleRes.json().catch(() => []);
+                                if (candles && candles.length > 0 && candles[0].close) {
+                                    const c = candles[0];
+                                    const pointMultiplier = 0.001;
+                                    const spreadOffset = (c.spread ? (c.spread * pointMultiplier) : 0.26);
+                                    quote = {
+                                        bid: Number(c.close),
+                                        ask: Number((c.close + spreadOffset).toFixed(3)),
+                                        time: c.time || new Date().toISOString(),
+                                        brokerTime: c.brokerTime
+                                    };
+                                }
+                            }
+                        } catch (_) {}
+
+                        if (!quote) {
+                            if (lastSymbolTried !== primarySymbol) {
+                                symbolRetryCount = 0;
+                                lastSymbolTried = primarySymbol;
+                            }
+                            symbolRetryCount++;
+                            if (isCentAccount) {
+                                // FIX #3: Exness CENT account symbol is locked strictly to XAUUSDc.
+                                // Never cycle to invalid fallback symbols (XAUUSDm, XAUUSD, GOLD).
+                                botState.activeGoldSymbol = 'XAUUSDc';
+                                if (symbolRetryCount % 10 === 1) {
+                                    console.log(`[QUOTE WARMUP] Exness CENT symbol locked to XAUUSDc. Waiting for tick (MetaApi subscribing/warming up). Retry ${symbolRetryCount}`);
+                                }
+                            } else {
+                                // Non-Cent accounts: preserve standard fallback cycling
+                                if (symbolRetryCount >= 5) {
+                                    console.log(`[QUOTE FALLBACK] Symbol ${primarySymbol} not found after 5 retries. Switching activeGoldSymbol from ${botState.activeGoldSymbol}`);
+                                    if (primarySymbol === 'XAUUSDc') botState.activeGoldSymbol = 'XAUUSDm';
+                                    else if (primarySymbol === 'XAUUSDm') botState.activeGoldSymbol = 'XAUUSD';
+                                    else if (primarySymbol === 'XAUUSD') botState.activeGoldSymbol = 'GOLD';
+                                    else if (primarySymbol === 'GOLD') botState.activeGoldSymbol = 'XAUUSDc';
+                                    console.log(`[QUOTE FALLBACK] New activeGoldSymbol is ${botState.activeGoldSymbol}`);
+                                    symbolRetryCount = 0;
+                                } else {
+                                    console.log(`[QUOTE WARMUP] Symbol ${primarySymbol} waiting for tick. MetaApi might be subscribing. Retry ${symbolRetryCount}/5`);
+                                }
+                            }
+                        }
+                    } else {
+                        console.warn(`[MARKET_DATA NOTICE] ${quoteRes.status} ${quoteRes.statusText} on ${primarySymbol}`);
                     }
-                }
-                if (quoteRes.ok && quote) {
-                    if (quote && (quote.bid || quote.ask || quote.price)) {
-                        const bid = Number(quote.bid || quote.price || quote.ask || 0);
-                        const ask = Number(quote.ask || quote.price || quote.bid || 0);
-                        if (bid > 0) {
-                            botState.goldPrice = bid;
-                            botState.activeGoldSymbol = primarySymbol;
-                            botState.bidPrice = bid;
-                            botState.askPrice = ask;
-                            botState.spreadPoints = Math.round(Math.abs(ask - bid) * 100) || 26;
 
-                            // Direct Live Equity & Balance synchronization from MetaApi Quote
-                            if (typeof (quote as any).equity === 'number' && (quote as any).equity > 0) {
-                                botState.account.equity = Number((quote as any).equity);
-                                if (!botState.openTrades || botState.openTrades.length === 0) {
-                                    botState.account.balance = Number((quote as any).equity);
-                                    botState.account.freeMargin = Number((quote as any).equity);
+                    if (quote) {
+                        if (quote && (quote.bid || quote.ask || quote.price)) {
+                            const bid = Number(quote.bid || quote.price || quote.ask || 0);
+                            const ask = Number(quote.ask || quote.price || quote.bid || 0);
+                            if (bid > 0) {
+                                botState.goldPrice = bid;
+                                botState.activeGoldSymbol = primarySymbol;
+                                botState.bidPrice = bid;
+                                botState.askPrice = ask;
+                                // Automatically adapt point multiplier based on decimal places (2 for XAUUSDc standard, 3 for Pro)
+                                const bidStr = bid.toString();
+                                const decimals = (bidStr.includes('.') ? bidStr.split('.')[1].length : 2);
+                                // For Gold, typical point is 0.01 (2 decimals). If 3 decimals, point is 0.001.
+                                const pointMultiplier = 100;
+                                botState.spreadPoints = Math.round(Math.abs(ask - bid) * pointMultiplier);
+
+                                botState.lastPriceUpdate = new Date().toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                
+                                // FIX #1: Track actual local VPS arrival time of valid quote vs broker quote timestamp
+                                const brokerTickTime = quote.time ? new Date(quote.time).getTime() : Date.now();
+                                const tickTimeMs = brokerTickTime;
+                                const localArrivalTime = Date.now();
+                                botState.brokerQuoteTime = brokerTickTime;
+                                botState.lastFeedArrivalTime = localArrivalTime;
+                                botState.lastTickTime = localArrivalTime;
+                                global.lastSuccessfulPingTime = localArrivalTime;
+
+                                botState.marketDataStatus = '🟢 LIVE (MT5 FEED ACTIVE)';
+                                botState.account.isConnected = true;
+                                botState.account.serverConnected = true;
+                                botState.account.eaConnected = true;
+                                botState.account.vpsOnline = true;
+                                botState.account.marketDataReceiving = true;
+                                if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
+                                consecutivePollingFailures = 0;
+
+                                // --- INSTANT EXECUTION GATE SYNC (NO STALE FLAGS) ---
+                                if (botState.status !== 'running') {
+                                    } else if (!botState.account.isConnected || !botState.account.serverConnected) {
+                                    } else if (!isMarketOpen) {
+                                    } else if (!botState.isDailyPnLSynced) {
+                                    } else if (botState.dailyLossLimitHit) {
+                                    } else if (botState.marketSpeed === 'EXTREME') {
+                                    } else {
+                                    }
+                                // ----------------------------------------------------
+
+                                // Sync M1 Candles Buffer
+                                syncDaraM1CandlesBuffer(workingBaseUrl, accountId, token, primarySymbol).catch(() => {});
+                                feedLiveTickToCandlesBuffer(bid, tickTimeMs);
+
+                                // Forward live tick to DaRaM1Engine
+                                if (global.daraEngine && typeof global.daraEngine.onMarketUpdate === 'function') {
+                                    try {
+                                        global.daraEngine.onMarketUpdate({
+                                            symbol: primarySymbol,
+                                            bid,
+                                            ask,
+                                            time: tickTimeMs,
+                                            serverTime: tickTimeMs,
+                                            spreadPoints: botState.spreadPoints || 0,
+                                            openTradesCount: botState.openTrades ? botState.openTrades.length : 0,
+                                            m1Candles: daraM1CandlesBuffer
+                                        }).catch((err: any) => console.error('[DaRa M1 EA] Error in onMarketUpdate:', err));
+                                    } catch (e) {
+                                        console.error('[DaRa M1 EA] Error invoking onMarketUpdate:', e);
+                                    }
                                 }
+
+                                
+
+                                // Accumulate tick history for 1-minute analysis
+                                botState.tickHistory = botState.tickHistory || [];
+                                botState.tickHistory.push(bid);
+                                if (botState.tickHistory.length > 100) botState.tickHistory.shift();
                             }
-
-                            botState.lastPriceUpdate = new Date().toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                            lastMetaApiSuccessTime = Date.now();
-                            botState.lastTickTime = Date.now();
-                            botState.marketDataStatus = '🟢 LIVE (METAAPI CLOUD ACTIVE)';
-                            botState.account.isConnected = true;
-                            botState.account.serverConnected = true;
-                            botState.account.eaConnected = true;
-                            botState.account.vpsOnline = true;
-                            botState.account.marketDataReceiving = true;
-                            consecutivePollingFailures = 0;
-
-                            // Periodically ensure cached M1 candles are refreshed from MetaApi Cloud
-                            if (nowTime - lastM1CandleFetchTime >= 20000 || cachedM1Candles.length < 10) {
-                                lastM1CandleFetchTime = nowTime;
-                                fetchRealCandles(workingBaseUrl, accountId, token, primarySymbol, '1m', 100)
-                                    .then(candles => {
-                                        if (candles && candles.length >= 10) {
-                                            cachedM1Candles = candles;
-                                        }
-                                    })
-                                    .catch(() => {});
-                            }
-
-                            // Forward live tick to DaRa M1 Engine for real-time trailing SL and active position management
-                            if (global.daraEngine && cachedM1Candles.length >= 10) {
-                                try {
-                                    syncConfigToDaRaEngine(botState);
-                                    global.daraEngine.setNewsBlockedStatus(Boolean(global.isNewsBlockedNow || false));
-                                    global.daraEngine.setMt5ConnectionStatus(botState.account.serverConnected);
-                                    global.daraEngine.onMarketUpdate({
-                                        symbol: primarySymbol,
-                                        bid: bid,
-                                        ask: ask,
-                                        spreadPoints: botState.spreadPoints,
-                                        serverTime: Date.now(),
-                                        m1Candles: cachedM1Candles,
-                                        openTradesCount: botState.openTrades?.length || 0
-                                    }).catch(console.error);
-                                } catch (e) {
-                                    console.error('[DaRa M1 EA] Error forwarding live tick to engine:', e);
-                                }
-                            }
-
-                            // Accumulate tick history for 1-minute analysis
-                            botState.tickHistory = botState.tickHistory || [];
-                            botState.tickHistory.push(bid);
-                            if (botState.tickHistory.length > 100) botState.tickHistory.shift();
                         }
                     }
+                } catch (err: any) {
+                    // Transient network jitter is safe, keep status active
                 }
-            } catch (err: any) {
-                // Transient network jitter is safe, keep status active
             }
 
+            
+
             await new Promise(r => setTimeout(r, 1000));
-            // 2. Account Information Sync (safe 30s interval with 429 rate-limit backoff and disk persistence)
-            if (nowTime >= nextAccountInfoAllowedTime && (nowTime - lastAccountInfoTime >= 30000 || botState.account.balance === 0)) {
+            // 2. Account Information Sync (every 5 seconds or if balance missing)
+            if (nowTime - lastAccountInfoTime >= 5000 || botState.account.balance === 0) {
                 lastAccountInfoTime = nowTime;
                 try {
                     const accRes = await fetch(`${workingBaseUrl}/users/current/accounts/${accountId}/accountInformation`, {
                         headers: { 'auth-token': token },
-                        signal: AbortSignal.timeout(10000)
+                        signal: AbortSignal.timeout(2500)
                     });
                     if (accRes.ok) {
                         const info = await accRes.json();
@@ -2527,16 +1896,13 @@ setInterval(async () => {
                             if (info.currency) {
                                 botState.account.currency = String(info.currency).toUpperCase();
                             }
-                            if (info.server) {
-                                botState.account.server = String(info.server);
-                            }
-                            if (info.login) {
-                                botState.account.loginId = String(info.login);
-                            }
                             
                             botState.account.isConnected = true;
-                            botState.account.serverConnected = true;
-                            botState.account.eaConnected = true;
+                            const currentFeedAge = (botState.lastFeedArrivalTime || botState.lastTickTime) ? (Date.now() - (botState.lastFeedArrivalTime || botState.lastTickTime || 0)) : 999999;
+                            if (currentFeedAge < 60000) {
+                                botState.account.serverConnected = true;
+                                botState.account.eaConnected = true;
+                            }
                             botState.account.vpsOnline = true;
                             botState.account.tradingPermission = true;
                             botState.account.stages.mt5AccountConfigured = true;
@@ -2544,62 +1910,44 @@ setInterval(async () => {
                             botState.account.stages.tradingPermissionGranted = true;
                             botState.account.stages.eaLoadedAndReady = true;
                             consecutivePollingFailures = 0;
-
-                            // Persist verified real MT5 balance to disk every 60s or on initial sync
-                            if (nowTime - lastAccountInfoSaveTime >= 60000) {
-                                lastAccountInfoSaveTime = nowTime;
-                                saveBotConfig();
-                            }
-                        }
-                    } else if (accRes.status === 429) {
-                        try {
-                            const errBody = await accRes.json();
-                            const retryTimeStr = errBody?.metadata?.recommendedRetryTime;
-                            if (retryTimeStr) {
-                                nextAccountInfoAllowedTime = Math.max(Date.now() + 60000, new Date(retryTimeStr).getTime());
-                                console.log(`[MetaApi Quota Backoff] 429 TooManyRequests on /accountInformation. Pausing requests until ${new Date(nextAccountInfoAllowedTime).toISOString()}`);
-                            } else {
-                                nextAccountInfoAllowedTime = Date.now() + 120000;
-                            }
-                        } catch {
-                            nextAccountInfoAllowedTime = Date.now() + 120000;
                         }
                     }
                 } catch (_) {}
             }
 
-            // Freshness Check: If last tick is older than 60 seconds, mark STALE
-            const tickAgeMs = Date.now() - (botState.lastTickTime || 0);
-            if (tickAgeMs > 60000) {
-                const ageText = botState.lastTickTime ? `${Math.floor(tickAgeMs/1000)}s` : 'No Data';
-                botState.marketDataStatus = botState.lastTickTime ? `🔴 MARKET DATA STALE (Delay: ${ageText})` : `🔍 SCANNING FOR LIVE MARKET DATA...`;
-                console.log(`[MARKET_DATA] connection=${botState.account.isConnected ? 'CONNECTED' : 'DISCONNECTED'} lastTickTime=${botState.lastTickTime} tickAgeMs=${tickAgeMs} bid=${botState.bidPrice} ask=${botState.askPrice} dataFresh=false`);
-            } else if (botState.lastTickTime) {
-                botState.marketDataStatus = '🟢 LIVE (METAAPI CLOUD ACTIVE)';
+            // Freshness Check: Aligned with watchdog (60 seconds) using actual feed arrival time
+            const lastFeedSeen = Math.max(botState.lastFeedArrivalTime || 0, botState.lastTickTime || 0);
+            const feedAgeMs = lastFeedSeen > 0 ? nowTime - lastFeedSeen : 0;
+            const isDataFresh = Boolean(lastFeedSeen > 0 && feedAgeMs < 60000 && botState.bidPrice && botState.bidPrice > 0 && botState.askPrice && botState.askPrice > 0);
+            if (!isDataFresh) {
+                const ageText = lastFeedSeen > 0 ? `${Math.floor(feedAgeMs/1000)}s` : 'No Data';
+                botState.marketDataStatus = lastFeedSeen > 0 ? `🔴 MT5 DATA DISCONNECTED (Delay: ${ageText})` : (botState.account.isConnected ? 'WATCHING / WAITING FOR LIVE DATA...' : '🔴 MT5 DATA DISCONNECTED (Delay: No Data)');
+                if (nowTime - lastMarketDataLogTime >= 10000) {
+                    lastMarketDataLogTime = nowTime;
+                    console.log(`[MARKET_DATA] connection=${botState.account.isConnected ? 'CONNECTED' : 'DISCONNECTED'} lastFeedTime=${lastFeedSeen} feedAgeMs=${feedAgeMs} bid=${botState.bidPrice} ask=${botState.askPrice} dataFresh=false`);
+                }
+            } else {
+                botState.marketDataStatus = '🟢 LIVE (MT5 FEED ACTIVE)';
+                if (nowTime - lastMarketDataLogTime >= 10000) {
+                    lastMarketDataLogTime = nowTime;
+                    console.log(`[MARKET_DATA] connection=CONNECTED lastFeedTime=${new Date(lastFeedSeen).toISOString()} feedAgeMs=${feedAgeMs} bid=${botState.bidPrice} ask=${botState.askPrice} dataFresh=true symbol=${botState.activeGoldSymbol}`);
+                }
             }
 
             // Check Trading Session
             botState.isInsideTradingHours = checkInsideTradingHours();
 
-            // Fetch Open Positions (every 10 seconds with 429 backoff)
+            // Fetch Open Positions (every 3 seconds)
             let positions: any[] | null = null;
-            if (nowTime >= nextPositionsAllowedTime && (nowTime - lastPositionsTime >= 10000)) {
+            if (nowTime - lastPositionsTime >= 3000) {
                 lastPositionsTime = nowTime;
                 try {
                     const posRes = await fetch(`${baseUrl}/users/current/accounts/${accountId}/positions`, {
                         headers: { 'auth-token': token },
-                        signal: AbortSignal.timeout(6000)
+                        signal: AbortSignal.timeout(4000)
                     });
                     if (posRes.ok) {
                         positions = await posRes.json();
-                    } else if (posRes.status === 429) {
-                        try {
-                            const errBody = await posRes.json();
-                            const retryTimeStr = errBody?.metadata?.recommendedRetryTime;
-                            nextPositionsAllowedTime = retryTimeStr ? Math.max(Date.now() + 30000, new Date(retryTimeStr).getTime()) : Date.now() + 60000;
-                        } catch {
-                            nextPositionsAllowedTime = Date.now() + 60000;
-                        }
                     }
                 } catch (_) {}
             }
@@ -2614,97 +1962,55 @@ setInterval(async () => {
                     botState.openTrades.forEach((oldTrade: any) => {
                         if (!newTradeIds.includes(oldTrade.id)) {
                             tradeClosed = true;
-                            const closedPnL = Number(oldTrade.floatingProfit || 0) + Number(oldTrade.commission || 0) + Number(oldTrade.swap || 0);
                             
-                            // Real-time instantaneous update to today P/L and counters
-                            botState.realizedDailyPnL = Number(((botState.realizedDailyPnL || 0) + closedPnL).toFixed(2));
-                            botState.todayTradeCount = (botState.todayTradeCount || 0) + 1;
-                            if (closedPnL >= 0) {
-                                botState.todayWinCount = (botState.todayWinCount || 0) + 1;
-                            } else {
-                                botState.todayLossCount = (botState.todayLossCount || 0) + 1;
-                            }
-                            
-                            if (global.daraEngine) {
-                                (async () => {
-                                    try {
-                                        let realExitReason: any = undefined;
-                                        let realPrice: number | undefined = oldTrade.currentPrice;
-                                        let realPnl: number | undefined = closedPnL;
-
-                                        const dealInfo = await daraBroker.getClosedDeal(oldTrade.id);
-                                        if (dealInfo && dealInfo.found) {
-                                            if (dealInfo.price && dealInfo.price > 0) {
-                                                realPrice = dealInfo.price;
-                                            }
-                                            if (dealInfo.profit !== undefined) {
-                                                realPnl = dealInfo.profit;
-                                            }
-                                            const r = dealInfo.reason || '';
-                                            const c = (dealInfo.comment || '').toLowerCase();
-                                            if (r === 'DEAL_REASON_TP' || c.includes('[tp')) {
-                                                realExitReason = 'TP_HIT';
-                                            } else if (r === 'DEAL_REASON_SL' || c.includes('[sl')) {
-                                                realExitReason = oldTrade.trailingActivated ? 'TRAILING_SL_HIT' : 'SL_HIT';
-                                            } else if (r === 'DEAL_REASON_CLIENT' || r === 'DEAL_REASON_EXPERT' || c.includes('close by') || c.includes('close all')) {
-                                                realExitReason = c.includes('close all') ? 'CLOSE_ALL' : 'MANUAL_CLOSE';
-                                            }
-                                        }
-
-                                        global.daraEngine.handlePositionClosed(oldTrade.id, realExitReason, realPnl, realPrice);
-                                    } catch (_) {}
-                                })();
-                            } else {
-                                if (oldTrade.floatingProfit < 0) {
-                                    if (typeof eaState !== 'undefined') {
-                                       eaState.consecutiveLosses += 1;
-                                       console.log(`[DaRa M1 EA] Trade ${oldTrade.id} closed in LOSS. Consecutive Losses: ${eaState.consecutiveLosses}`);
-                                       if (eaState.consecutiveLosses === 3) {
-                                           sendTelegramAlert('3 CONSECUTIVE SL HIT', `Bot បានដល់កម្រិតខាត ៣ ដងជាប់គ្នា (${eaState.consecutiveLosses} Consecutive SLs)។\nប្រព័ន្ធការពារហានិភ័យត្រូវបានបើកដំណើរការ (Cooldown)។\nសូមពិនិត្យមើល Bot។`, '', 0);
-                                       }
-                                    }
-                                    sendStopLossAlert({
-                                        type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
-                                        lot: oldTrade.lot || (botState.riskConfig as any)?.lotSize || 0.01,
-                                        entry: oldTrade.entryPrice || 0,
-                                        exit: oldTrade.currentPrice || botState.goldPrice || 0,
-                                        sl: oldTrade.sl || 0,
-                                        loss: Math.abs(Number(oldTrade.floatingProfit || 0)).toFixed(2),
-                                        ticket: oldTrade.id,
-                                        time: formatICTTime()
-                                    }).catch(console.error);
+                            if (oldTrade.floatingProfit < 0) {
+                                if (global.daraEngine) {
+                                    global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
+                                    botState.consecutiveLosses = global.daraEngine.getTelemetry().consecutiveLossCount;
                                 } else {
-                                    if (typeof eaState !== 'undefined') {
-                                       eaState.consecutiveLosses = 0;
-                                       console.log(`[DaRa M1 EA] Trade ${oldTrade.id} closed in PROFIT. Consecutive Losses reset to 0.`);
-                                    }
-                                    sendTakeProfitAlert({
-                                        type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
-                                        lot: oldTrade.lot || (botState.riskConfig as any)?.lotSize || 0.01,
-                                        entry: oldTrade.entryPrice || 0,
-                                        exit: oldTrade.currentPrice || botState.goldPrice || 0,
-                                        tp: oldTrade.tp || 0,
-                                        profit: Number(oldTrade.floatingProfit || 0).toFixed(2),
-                                        ticket: oldTrade.id,
-                                        time: formatICTTime()
-                                    }).catch(console.error);
+                                    botState.consecutiveLosses = (botState.consecutiveLosses || 0) + 1;
                                 }
+                                sendStopLossAlert({
+                                    type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
+                                    lot: oldTrade.lot || botState.riskConfig?.lotSize || 0.01,
+                                    entry: oldTrade.entryPrice || 0,
+                                    exit: oldTrade.currentPrice || botState.goldPrice || 0,
+                                    sl: oldTrade.sl || 0,
+                                    loss: Math.abs(Number(oldTrade.floatingProfit || 0)).toFixed(2),
+                                    ticket: oldTrade.id,
+                                    time: formatLocalTime()
+                                }).catch(console.error);
+                            } else {
+                                if (global.daraEngine) {
+                                    global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
+                                    botState.consecutiveLosses = 0;
+                                } else {
+                                    botState.consecutiveLosses = 0;
+                                }
+                                sendTakeProfitAlert({
+                                    type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
+                                    lot: oldTrade.lot || botState.riskConfig?.lotSize || 0.01,
+                                    entry: oldTrade.entryPrice || 0,
+                                    exit: oldTrade.currentPrice || botState.goldPrice || 0,
+                                    tp: oldTrade.tp || 0,
+                                    profit: Number(oldTrade.floatingProfit || 0).toFixed(2),
+                                    ticket: oldTrade.id,
+                                    time: formatLocalTime()
+                                }).catch(console.error);
                             }
                         }
                     });
-                    if (tradeClosed) {
-                        lastPnLSyncTime = 0; // Force sync
-                        syncDailyRealizedPnL().catch(console.error);
-                    }
+                    if (tradeClosed) lastPnLSyncTime = 0; // Force sync
                 }
 
                 const existingTradesMap = new Map((botState.openTrades || []).map((t: any) => [String(t.id), t]));
-                botState.openTrades = positions.filter((p: any) => Number(p.magic) === botState.magicNumber || (typeof p.comment === 'string' && p.comment.includes('DaRa'))).map((botPos: any) => {
+                botState.openTrades = positions.map((botPos: any) => {
                     const prevT = existingTradesMap.get(String(botPos.id));
+                    const isBot = Number(botPos.magic || 0) === botState.magicNumber;
                     return {
                         id: botPos.id,
-                        magicNumber: botPos.magic || botState.magicNumber,
-                        isBotTrade: true,
+                        magicNumber: botPos.magic || 0,
+                        isBotTrade: isBot,
                         symbol: botPos.symbol,
                         side: botPos.type === 'POSITION_TYPE_BUY' ? 'BUY' : 'SELL',
                         lot: botPos.volume,
@@ -2720,7 +2026,6 @@ setInterval(async () => {
                     };
                 });
                 botState.currentTrade = botState.openTrades[0] || null;
-                manageTrailingSL().catch(console.error);
 
                 // Check for Auto-Cycle Restart when all trades close
                 if (prevOpenTradesCount > 0 && botState.openTrades.length === 0 && botState.status === 'running' && botState.isInsideTradingHours) {
@@ -2730,46 +2035,47 @@ setInterval(async () => {
             }
 
 
-            // ==== DAILY LOSS LIMIT EVALUATION & REAL-TIME TODAY P/L ====
-            let totalFloating = 0;
-            for (const pos of (botState.openTrades || [])) {
-                totalFloating += Number(pos.floatingProfit || 0) + Number(pos.commission || 0) + Number(pos.swap || 0);
-            }
-            const totalDailyPnL = (botState.realizedDailyPnL || 0) + totalFloating;
-            const maxLoss = Number((botState.riskConfig as any)?.maxDailyLossAmount || (botState.riskConfig as any)?.maxDailyLoss || 2000);
-            
+            // ==== DAILY LOSS LIMIT EVALUATION ====
             const currentMidnight = getCambodiaMidnightISO();
             if (botState.currentTradingDate && botState.currentTradingDate !== currentMidnight) {
                 // New trading day reset
-                botState.currentTradingDate = currentMidnight;
+                botState.currentTradingDate = "";
                 botState.isDailyPnLSynced = false;
                 botState.dailyLossLimitHit = false;
-                botState.todayProfitLoss = 0;
-                botState.todayTradeCount = 0;
-                botState.todayWinCount = 0;
-                botState.todayLossCount = 0;
-                botState.realizedDailyPnL = 0;
+                botState.dailyLossResetOffset = 0;
                 lastPnLSyncTime = 0;
-            } else if (botState.status === 'running' && maxLoss > 0 && totalDailyPnL <= -maxLoss) {
-                botState.dailyLossLimitHit = true;
-                if (!botState.statusMessageKhmer.includes('DAILY LOSS LIMIT HIT')) {
-                     botState.statusMessageKhmer = `🛑 DAILY LOSS LIMIT HIT / TRADING PAUSED (P/L: ${totalDailyPnL.toFixed(2)} ${botState.account.currency || 'USC'})`;
-                }
-            } else if (botState.status === 'running') {
-                botState.dailyLossLimitHit = false;
             }
-            
-            // Expose to UI so it's visible dynamically ALWAYS
-            botState.todayProfitLoss = Number(totalDailyPnL.toFixed(2));
+
+            if (botState.isDailyPnLSynced) {
+                let totalFloating = 0;
+                for (const pos of botState.openTrades) {
+                    totalFloating += pos.floatingProfit + (pos.commission || 0) + (pos.swap || 0);
+                }
+                const totalDailyPnL = botState.realizedDailyPnL + totalFloating;
+                const adjustedDailyPnL = (botState.realizedDailyPnL - (botState.dailyLossResetOffset || 0)) + totalFloating;
+                const maxLoss = botState.riskConfig?.maxDailyLossAmount || botState.riskConfig?.maxDailyLoss || 2000;
+                
+                if (botState.status === 'running' && maxLoss > 0 && adjustedDailyPnL <= -maxLoss) {
+                    botState.dailyLossLimitHit = true;
+                    if (!botState.statusMessageKhmer.includes('DAILY LOSS LIMIT HIT')) {
+                         botState.statusMessageKhmer = `🛑 DAILY LOSS LIMIT HIT / TRADING PAUSED (P/L: ${totalDailyPnL.toFixed(2)} ${botState.account.currency || 'USC'})`;
+                    }
+                } else if (totalDailyPnL > -maxLoss) {
+                    botState.dailyLossLimitHit = false;
+                }
+                
+                // Expose to UI so it's visible dynamically
+                botState.todayProfitLoss = Number(totalDailyPnL.toFixed(2));
+            }
             // =======================================
 
             // Check Risk Protection (Cooldown / Volatility)
-            if (botState.spreadPoints > ((botState.riskConfig as any)?.maxSpreadPoints || 27)) {
+            if (botState.spreadPoints > (botState.riskConfig?.maxSpreadPoints || 30)) {
                if (botState.status === 'running') {
                   botState.status = 'paused';
                   botState.statusMessageKhmer = '🟠 HIGH VOLATILITY — NEW TRADES PAUSED';
                }
-            } else if (botState.status === 'paused' && botState.desiredBotState === 'RUNNING' && botState.spreadPoints <= ((botState.riskConfig as any)?.maxSpreadPoints || 27)) {
+            } else if (botState.status === 'paused' && botState.spreadPoints <= (botState.riskConfig?.maxSpreadPoints || 30)) {
                botState.status = 'running';
                botState.statusMessageKhmer = '🟢 MARKET NORMAL — BOT RESUMED';
             }
@@ -2777,10 +2083,11 @@ setInterval(async () => {
         } catch (e: any) {
             console.error("Polling error:", e?.message);
             consecutivePollingFailures++;
-            const lSeen = Math.max(botState.lastTickTime || 0, lastSyncTimestamp || 0);
+            const lSeen = Math.max(botState.lastFeedArrivalTime || 0, botState.lastTickTime || 0);
             if (consecutivePollingFailures >= 20 && (Date.now() - lSeen > 120000)) {
                 botState.account.serverConnected = false;
                 botState.account.marketDataReceiving = false;
+        if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(false);
                 botState.statusMessageKhmer = '🔴 CONNECTION LOST - មិនអាចទាក់ទង MT5 Bridge Server បានទេ... កំពុងតភ្ជាប់ឡើងវិញ';
             }
         }
@@ -2837,6 +2144,7 @@ if (botState.account.loginId && botState.account.metaApiToken && botState.accoun
     botState.account.isConnected = true;
     botState.account.serverConnected = true;
     botState.account.marketDataReceiving = true;
+                                 if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
     botState.account.eaConnected = true;
     botState.account.tradingPermission = true;
     if (botState.status === 'running') {
@@ -2850,6 +2158,11 @@ const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Health check endpoint for Cloud Run and Platform Probes
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
 
   // Authentication Token Extractor Middleware
   const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -2869,7 +2182,7 @@ const app = express();
     const user = (req as any).user;
     if (!user || user.role !== 'admin') {
       return res.status(403).json({
-        error: '🔒 គ្មានសិទ្ធិ (Unauthorized) — មានតែគណនី Admin / Owner ប៉ុណ្ណោះ!'
+        error: '🔒 គ្មានសិទ្ធិ (Unauthorized) — មានតែគណនី Admin / Owner ប៉ុណ្ណោះដែលអាចបញ្ជា MT5 ឬកែប្រែប្រព័ន្ធនេះបាន!'
       });
     }
     next();
@@ -2964,6 +2277,7 @@ const app = express();
   app.get('/api/auth/verify', (req, res) => {
     const user = (req as any).user;
     if (!user) {
+      console.error('401 Unauthorized triggered! Auth Header:', req.headers.authorization, 'Payload:', (req as any).user);
       return res.status(401).json({ valid: false, error: 'Session អស់សុពលភាព' });
     }
     res.json({
@@ -2973,7 +2287,6 @@ const app = express();
       user: {
         username: user.role === 'admin' ? currentAdminAuth.username : user.username,
         role: user.role,
-        isCustomized: currentAdminAuth.isCustomized
       }
     });
   });
@@ -3094,29 +2407,20 @@ const app = express();
     const serverTimeStr = now.toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const isInsideHours = checkInsideTradingHours();
 
-    if (ictNewsProvider && typeof ictNewsProvider.getStatus === 'function') {
-        botState.newsProviderStatus = ictNewsProvider.getStatus();
-    }
+    
 
-    // telemetry removed
-
-    // Calculate live real-time Today P/L (realized today + open trades floating)
-    let liveFloating = 0;
-    for (const pos of (botState.openTrades || [])) {
-      liveFloating += Number(pos.floatingProfit || 0) + Number(pos.commission || 0) + Number(pos.swap || 0);
-    }
-    botState.todayProfitLoss = Number(((botState.realizedDailyPnL || 0) + liveFloating).toFixed(2));
+    
 
     // Advisory auto-calculated profile for reference ONLY (does NOT overwrite user settings)
     const balance = botState.account.balance || 0;
     const userRiskPercent = botState.riskConfig.riskPercent ?? 1;
     const maxLossPerTrade = (balance * userRiskPercent) / 100;
     const maxDailyLoss = (balance * 5) / 100;
-    const slDistance = Number(botState.riskConfig.slDistance ?? botState.riskConfig.stopLossPips ?? 10);
-    const tpDistance = Number(botState.riskConfig.tpDistance ?? botState.riskConfig.takeProfitPips ?? 8);
+    const slPips = botState.riskConfig.stopLossPips || 25;
+    const tpPips = botState.riskConfig.takeProfitPips || 35;
     
     let pipValuePerLot = 10; 
-    let calcLot = maxLossPerTrade / (slDistance * pipValuePerLot);
+    let calcLot = maxLossPerTrade / (slPips * pipValuePerLot);
     if (calcLot < 0.01 && balance > 0) calcLot = 0.01;
     if (balance === 0) calcLot = 0;
     
@@ -3127,18 +2431,11 @@ const app = express();
       riskPerTradePercent: userRiskPercent,
       maxLossPerTrade: Number(maxLossPerTrade.toFixed(2)),
       maxDailyLoss: calculatedMaxDailyLoss,
-      dailyLossCurrency: botState.account.currency || 'USC',
       maxDrawdownPercent: botState.riskConfig.maxDrawdownPercent || 5,
       lotSize: botState.riskConfig.lotSizeMode === 'risk_percent' ? calculatedLot : botState.riskConfig.lotSize,
       lotPerEntry: botState.riskConfig.lotSizeMode === 'risk_percent' ? calculatedLot : botState.riskConfig.lotSize,
-      slPriceDistance: slDistance,
-      tpPriceDistance: tpDistance,
-      slDistance,
-      tpDistance,
-      stopLossPriceDistance: slDistance,
-      takeProfitPriceDistance: tpDistance,
-      tpPips: tpDistance,
-      slPips: slDistance,
+      tpPips,
+      slPips,
       riskRewardRatio: '1:2'
     };
 
@@ -3190,46 +2487,44 @@ const app = express();
       startConfirmedTime: botState.startConfirmedTime || (isEaRunningConfirmed ? new Date().toISOString() : null),
       eaRunning: isEaRunningConfirmed,
       eaHeartbeatTime: botState.eaHeartbeatTime || nowMs,
-      lastAnalysisTime: botState.lastAnalysisLoopTime || botState.ictAnalysis?.lastAnalysisTime || nowMs,
-      lastMt5TickTime: botState.lastTickTime || nowMs,
+      lastAnalysisTime: botState.lastAnalysisLoopTime || nowMs,lastMt5TickTime: botState.lastTickTime || nowMs,
       lastBackendSyncTime: nowMs,
       runningDurationSeconds,
       connectionState,
-      currentAnalysisStage: botState.ictAnalysis?.status || (isDesiredRunning ? 'ANALYZING' : 'IDLE'),
-      currentWaitingReason: global.daraEngine ? (global.daraEngine.getCurrentSetup() ? '⏳ WAITING FOR M1 PULLBACK (2.0 raw)' : '⏳ SCANNING M1 FOR LIQUIDITY SWEEP') : '⏳ WAITING FOR M15 LIQUIDITY SWEEP',
-      isEntriesBlocked,
+      currentAnalysisStage: isDesiredRunning ? 'ANALYZING' : 'IDLE',currentWaitingReason: '⏳ WAITING FOR M15 LIQUIDITY SWEEP',isEntriesBlocked,
       blockedReason: blockedReason || undefined,
     };
 
+
+    if (global.daraEngine) {
+      botState.signalDetails = botState.signalDetails || {};
+      botState.signalDetails.daraSetup = global.daraEngine.getCurrentSetup();
+      botState.signalDetails.daraTelemetry = global.daraEngine.getTelemetry(
+        botState.goldPrice && botState.account.marketDataReceiving ? botState.spreadPoints : 0,
+        botState.openTrades ? botState.openTrades.length : 0
+      );
+      botState.signalDetails.daraSafety = global.daraEngine.evaluateSafety(
+        botState.goldPrice && botState.account.marketDataReceiving ? botState.spreadPoints : 0,
+        botState.openTrades ? botState.openTrades.length : 0
+      );
+    }
     res.json({
       serverId: SERVER_INSTANCE_ID,
       serverBootTime: SERVER_BOOT_TIME,
       ...botState,
-      account: {
-        ...botState.account,
-        metaApiToken: botState.account?.metaApiToken ? `${botState.account.metaApiToken.slice(0, 4)}••••••••${botState.account.metaApiToken.slice(-4)}` : undefined,
-      },
-      daraTelemetry: global.daraEngine ? global.daraEngine.getTelemetry(botState.spreadPoints, botState.openTrades?.length || 0) : botState.daraTelemetry,
       isMarketOpen,
       marketStatusReason,
       marketStatusText: isMarketOpen ? '🟢 MARKET OPEN / EA ACTIVE' : '⏸️ WAITING FOR MARKET OPEN',
       autoRiskProfile,
       startConfirmation,
-      serverTime: serverTimeStr,
+      serverTime: serverTimeStr, serverTimeMs: now.getTime(),
       isInsideTradingHours: true,
       lastSavedAt: botState.lastSavedAt || new Date().toISOString(),
       isAutoSaved: true,
       liveEaConfig: {
-        ...botState.riskConfig,
-        tradingSession: '24/7 AUTO',
-        marketStatus: isMarketOpen ? '🟢 MARKET OPEN / EA ACTIVE' : '⏸️ WAITING FOR MARKET OPEN',
-        LIVE_TRADING_ENABLED: global.daraEngine.getIsRunning(),
-        currentSetupStage: global.daraEngine.getCurrentSetup()?.status || 'SEARCHING',
-        currentSetupId: global.daraEngine.getCurrentSetup()?.id || null,
-        entryZone: global.daraEngine.getCurrentSetup() ? `[${(global.daraEngine.getCurrentSetup()?.sweepLevel ?? 0).toFixed(3)} - ${(global.daraEngine.getCurrentSetup()?.mssLevel ?? 0).toFixed(3)}]` : null,
-        actualEntryPrice: global.daraEngine.getCurrentSetup()?.lockedEntryPrice || null,
-        triggerStatus: global.daraEngine.getCurrentSetup()?.status === 'EXECUTED' ? 'ENTRY TRIGGERED' : (global.daraEngine.getCurrentSetup() ? 'WAITING' : 'SEARCHING')
-      }
+                tradingSession: '24/7 AUTO',
+        marketStatus: isMarketOpen ? '🟢 MARKET OPEN / EA ACTIVE' : '⏸️ WAITING FOR MARKET OPEN'
+                                                      }
     });
   });
 
@@ -3398,6 +2693,7 @@ const app = express();
       botState.account.serverConnected = true;
       botState.account.isRealAccount = true;
       botState.account.marketDataReceiving = true;
+                                 if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
       botState.account.tradingPermission = Boolean(tradingPermission);
       botState.account.eaConnected = true;
       botState.account.loginId = String(loginId);
@@ -3603,7 +2899,7 @@ const app = express();
 
         const now = Date.now();
         lastSyncTimestamp = now;
-        botState.lastTickTime = now;
+        botState.lastTickTime = now; global.lastSuccessfulPingTime = Date.now();
         consecutivePollingFailures = 0;
         botState.marketDataStatus = '🟢 LIVE (MT5 SYNCED)';
         botState.statusMessageKhmer = `🟢 បានភ្ជាប់ Exness Real Server (${cleanServer} | ID: ${cleanLoginId}) ដោយជោគជ័យ`;
@@ -3724,7 +3020,7 @@ const app = express();
 
       const now = Date.now();
       lastSyncTimestamp = now;
-      botState.lastTickTime = now;
+      botState.lastTickTime = now; global.lastSuccessfulPingTime = Date.now();
       consecutivePollingFailures = 0;
       botState.marketDataStatus = '🟢 LIVE (MT5 SYNCED)';
       botState.statusMessageKhmer = `🟢 បានភ្ជាប់ Exness Real Server (${cleanServer} | ID: ${cleanLoginId}) ដោយជោគជ័យ — រួចរាល់សម្រាប់ Trade`;
@@ -3966,38 +3262,39 @@ app.post('/api/bot/action', async (req, res) => {
       botState.status = 'running';
       botState.isStartRequested = true;
       botState.startRequestedTime = new Date().toISOString();
+      if (typeof daraEngine !== 'undefined') {
+        daraEngine.start();
+      }
       botState.currentCycle = botState.currentCycle || 1;
       sendTelegramAlert('BOT STATUS', 'Bot ត្រូវបាន Start', 'ប្រព័ន្ធ Trading កំពុងដំណើរការ (Engine Active)', 0);
-      if (!global.daraEngine.getCurrentSetup() || global.daraEngine.getCurrentSetup().stage === 'INVALIDATED') { botState.signals = { gold: 'WAIT' };
-      botState.signalDetails = undefined; }
+      botState.signals = { gold: 'WAIT' };
+      botState.signalDetails = undefined;
       botState.tickHistory = [];
-      const volume = Number(((botState.riskConfig as any)?.lotSize || 0.01).toFixed(2));
+      const volume = Number((botState.riskConfig?.lotSize || 0.01).toFixed(2));
       const nextNum = (botState.openTrades || []).length + 1;
       botState.statusMessageKhmer = `🟢 EA RUNNING (24/7 AUTO) — កំពុងវិភាគ [${curAssetLabel}] (${volume} Lot) — ដំណើរការស្វ័យប្រវត្តិ`;
       saveBotConfig();
       
       // Synchronously set LIVE_TRADING_ENABLED to prevent immediate tick blocking
       const isMarketSafe = botState.account.isConnected && botState.account.serverConnected && botState.isDailyPnLSynced && !botState.dailyLossLimitHit;
-      if (global.daraEngine) {
-        global.daraEngine.start();
-      }
+      if (isMarketSafe) {
+          }
       
-      executeAIAnalysis().then(() => {
-        botState.startConfirmedTime = new Date().toISOString();
-      }).catch(console.error);
+      botState.startConfirmedTime = new Date().toISOString();
     } else if (action === 'pause') {
-      if (global.daraEngine) global.daraEngine.stop();
       botState.status = 'paused';
       botState.isStartRequested = false;
       botState.statusMessageKhmer = '⏸️ Bot ត្រូវបានផ្អាក (Paused) — មិនបើក Order ថ្មីឡើយ';
       sendTelegramAlert('BOT STATUS', 'Bot ត្រូវបានផ្អាក (Paused)', 'ប្រព័ន្ធ Trading ផ្អាកបណ្តោះអាសន្ន', 0);
       saveBotConfig();
     } else if (action === 'stop') {
-      if (global.daraEngine) global.daraEngine.stop();
       botState.desiredBotState = 'STOPPED';
       botState.status = 'stopped';
       botState.isStartRequested = false;
       botState.startConfirmedTime = null;
+      if (typeof daraEngine !== 'undefined') {
+        daraEngine.stop();
+      }
       botState.signals = { gold: 'WAIT' };
       sendTelegramAlert('BOT STATUS', 'Bot ត្រូវបានបញ្ឈប់ (Stopped)', 'ប្រព័ន្ធ Trading ឈប់ដំណើរការ', 0);
       botState.signalDetails = undefined;
@@ -4071,6 +3368,7 @@ app.post('/api/bot/action', async (req, res) => {
         botState.account.isConnected = true;
         botState.account.serverConnected = true;
         botState.account.marketDataReceiving = true;
+                                 if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
         botState.account.tradingPermission = true;
         botState.account.eaConnected = true;
         botState.account.vpsOnline = true;
@@ -4088,40 +3386,11 @@ app.post('/api/bot/action', async (req, res) => {
         saveBotConfig();
       } catch (err: any) {
          botState.account.isConnected = false;
-         botState.desiredBotState = 'STOPPED';
          botState.status = 'stopped';
          saveBotConfig();
          return res.status(400).json({ error: '🔴 Auto-Reconnect បរាជ័យ: ' + (err.message || 'Unknown error') });
       }
-    } else if (action === 'sync_account' || action === 'refresh_account') {
-      const accountId = botState.account.metaApiAccountId;
-      const token = botState.account.metaApiToken;
-      const baseUrl = botState.account.metaApiUrl || 'https://mt-client-api-v1.backup-new-york.agiliumtrade.ai';
-
-      if (accountId && token) {
-        try {
-          const accRes = await fetch(`${baseUrl}/users/current/accounts/${accountId}/accountInformation`, {
-            headers: { 'auth-token': token },
-            signal: AbortSignal.timeout(10000)
-          });
-          if (accRes.ok) {
-            const info = await accRes.json();
-            if (info) {
-              if (info.balance !== undefined) botState.account.balance = Number(info.balance);
-              if (info.equity !== undefined) botState.account.equity = Number(info.equity);
-              if (info.freeMargin !== undefined) botState.account.freeMargin = Number(info.freeMargin);
-              if (info.marginLevel !== undefined) botState.account.marginLevel = Number(info.marginLevel);
-              if (info.currency) botState.account.currency = String(info.currency).toUpperCase();
-              saveBotConfig();
-            }
-          }
-        } catch (_) {}
-      }
-      return res.json({ success: true, account: botState.account });
     } else if (action === 'close_all') {
-      if (global.daraEngine) {
-        global.daraEngine.forceCloseAllAndStop();
-      }
       const botTradesToClose = (botState.openTrades || []).filter(t => t.magicNumber === botState.magicNumber || t.isBotTrade);
       let totalClosedProfit = 0;
       let closedCount = 0;
@@ -4155,14 +3424,11 @@ app.post('/api/bot/action', async (req, res) => {
         }
 
         botState.todayProfitLoss = Number((botState.todayProfitLoss + totalClosedProfit).toFixed(2));
-        botState.realizedDailyPnL = Number(((botState.realizedDailyPnL || 0) + totalClosedProfit).toFixed(2));
         botState.account.balance = Number((botState.account.balance + totalClosedProfit).toFixed(2));
         botState.account.equity = botState.account.balance;
         botState.todayTradeCount += closedCount;
         if (totalClosedProfit >= 0) botState.todayWinCount += closedCount;
         else botState.todayLossCount += closedCount;
-        lastPnLSyncTime = 0;
-        syncDailyRealizedPnL().catch(console.error);
       }
 
       // Always block new entries and transition state to stopped after Close All
@@ -4174,7 +3440,7 @@ app.post('/api/bot/action', async (req, res) => {
       botState.signals = { gold: 'WAIT' };
       botState.signalDetails = undefined;
       
-      // Reset any active DaRa M1 EA setups
+      
       
 
       // Keep ONLY manual trades (Magic Number != 778899)
@@ -4186,6 +3452,9 @@ app.post('/api/bot/action', async (req, res) => {
         botState.statusMessageKhmer = `🔴 ALL TRADES CLOSED — គ្មាន Position របស់ Bot នៅសល់ទេ — ផ្អាកបើក Trade ថ្មីរហូតដល់ចុច START ឡើងវិញ`;
       }
 
+      if (typeof daraEngine !== 'undefined') {
+        daraEngine.forceCloseAllAndStop();
+      }
       sendTelegramAlert('BOT STATUS', 'ALL BOT TRADES CLOSED', `បានបិទរាល់ Position របស់ Bot (${closedCount} Trades) — 🚫 Block New Entries រួចរាល់`, 0);
       saveBotConfig();
       return res.json({
@@ -4225,14 +3494,11 @@ app.post('/api/bot/action', async (req, res) => {
       }
 
       botState.todayProfitLoss = Number((botState.todayProfitLoss + closedProfit).toFixed(2));
-      botState.realizedDailyPnL = Number(((botState.realizedDailyPnL || 0) + closedProfit).toFixed(2));
       botState.account.balance = Number((botState.account.balance + closedProfit).toFixed(2));
       botState.account.equity = botState.account.balance;
       botState.todayTradeCount += 1;
       if (closedProfit >= 0) botState.todayWinCount += 1;
       else botState.todayLossCount += 1;
-      lastPnLSyncTime = 0;
-      syncDailyRealizedPnL().catch(console.error);
 
       // Remove only this specific trade from openTrades
       botState.openTrades = (botState.openTrades || []).filter(t => String(t.id) !== String(tradeId));
@@ -4263,17 +3529,8 @@ app.post('/api/bot/action', async (req, res) => {
       }
 
     } else if (action === 'reset_daily_limit') {
-      botState.dailyLossLimitHit = false;
-      botState.todayProfitLoss = 0;
-      botState.realizedDailyPnL = 0;
-      botState.currentTradingDate = "";
-                    botState.isDailyPnLSynced = false;
-      // Use current time as the new start time to ignore past losses for today
-      botState.currentTradingDate = new Date().toISOString(); 
-      botState.desiredBotState = 'STOPPED';
-      botState.status = 'stopped';
-      botState.statusMessageKhmer = 'បានកំណត់កម្រិតខាតប្រចាំថ្ងៃឡើងវិញ (Reset Daily Loss)';
-      saveBotConfig();
+      // Handled by /api/bot/reset-daily-loss instead to preserve history
+      return res.status(400).json({ error: 'Deprecated endpoint. Use /api/bot/reset-daily-loss instead.' });
     }
 
 
@@ -4303,80 +3560,185 @@ app.post('/api/bot/action', async (req, res) => {
       serverBootTime: SERVER_BOOT_TIME, success: true, tradingHours: botState.tradingHours });
   });
 
+  
+  app.post('/api/bot/reset-cooldown', requireAdminAuth, (req, res) => {
+    if (global.daraEngine) {
+      global.daraEngine.clearCooldown();
+    }
+    // Resume scanning if paused by this
+    if (botState.status === 'paused' || botState.statusMessageKhmer?.includes('Cooldown')) {
+        botState.status = 'running';
+        botState.statusMessageKhmer = 'បានដកការការពារ Cooldown រួចរាល់។ (Bot Resumed)';
+    }
+    console.log('[LIVE_BACKEND] [AUDIT] Cooldown explicitly reset by authorized user/admin.');
+    res.json({ success: true, message: 'Cooldown cleared. Bot is resuming scanning.' });
+  });
+
+  app.post('/api/bot/reset-consecutive-sl', requireAdminAuth, (req, res) => {
+    if (global.daraEngine) {
+      global.daraEngine.clearConsecutiveSL();
+    }
+    botState.consecutiveLosses = 0;
+    if (botState.status === 'paused' || botState.statusMessageKhmer?.includes('Max Consecutive')) {
+        botState.status = 'running';
+        botState.statusMessageKhmer = 'បានដកការការពារ Max Consecutive SL រួចរាល់។ (Bot Resumed)';
+    }
+    console.log('[LIVE_BACKEND] [AUDIT] Consecutive SL explicitly reset by authorized user/admin.');
+    res.json({ success: true, message: 'Consecutive SL counter reset to 0. Bot is resuming scanning.' });
+  });
+
+  app.post('/api/bot/reset-daily-loss', requireAdminAuth, (req, res) => {
+    if (global.daraEngine) {
+      global.daraEngine.clearDailyLossLimit();
+    }
+    
+    botState.dailyLossLimitHit = false;
+    // CRITICAL: We do NOT set realizedDailyPnL or todayProfitLoss to 0. 
+    // We keep the history, but we add an offset to the evaluation threshold so it allows new trades.
+    botState.dailyLossResetOffset = botState.realizedDailyPnL;
+    
+    if (botState.status === 'paused' || botState.statusMessageKhmer?.includes('DAILY LOSS LIMIT')) {
+        botState.status = 'running';
+        botState.statusMessageKhmer = 'បានដកការការពារ Daily Loss Limit រួចរាល់។ (Bot Resumed)';
+    }
+    
+    saveBotConfig();
+    console.log('[LIVE_BACKEND] [AUDIT] Daily Loss Limit explicitly reset by authorized user/admin. Offset applied: ' + botState.dailyLossResetOffset);
+    res.json({ success: true, message: 'Daily Loss Limit cleared. Bot is resuming scanning.' });
+  });
+
+  
+
   app.post('/api/bot/update-risk-config', requireAdminAuth, (req, res) => {
-    const { riskConfig } = req.body || {};
+    const body = req.body || {};
+    const riskConfig = body.riskConfig || body;
+    console.log('[LIVE_BACKEND] update-risk-config received', {
+      bodyKeys: Object.keys(body),
+      liveTradingEnabled: body.liveTradingEnabled,
+      riskConfigLive: body.riskConfig?.liveTradingEnabled
+    });
+
+    const liveTradingRequested = body.liveTradingEnabled !== undefined 
+      ? body.liveTradingEnabled 
+      : riskConfig?.liveTradingEnabled;
+
+    if (liveTradingRequested !== undefined) {
+      console.log('[LIVE_BACKEND] liveTradingEnabled requested:', liveTradingRequested);
+    }
+
     if (riskConfig) {
+      // Strict Validation: Turning ON Live Trading requires Engine RUNNING, MT5 CONNECTED, and Safety Guards PASSING
+      if (liveTradingRequested === true) {
+        // 1. Check DaRa Engine is RUNNING
+        const isEngineActive = (botState.status === 'running' || botState.desiredBotState === 'RUNNING');
+        if (isEngineActive && typeof daraEngine !== 'undefined' && !daraEngine.getIsRunning()) {
+          console.log('[LIVE_BACKEND] Engine was flagged running in botState, auto-starting daraEngine instance');
+          daraEngine.start();
+        }
+
+        const isEngineRunning = isEngineActive || (typeof daraEngine !== 'undefined' && daraEngine.getIsRunning());
+        if (!isEngineRunning) {
+          console.warn('[LIVE_BACKEND] Live Trading turn-on denied: DaRa Engine not running');
+          return res.status(400).json({
+            success: false,
+            error: '❌ បដិសេធ (DENIED): DaRa Engine មិនទាន់ RUNNING នៅឡើយទេ។ សូមចុច START BOT ជាមុនសិន។',
+            reason: 'ENGINE_NOT_RUNNING',
+            state: botState,
+          });
+        }
+
+        // 2. Check MT5 is CONNECTED
+        const isMt5Connected = Boolean(botState.account?.serverConnected && botState.account?.isConnected);
+        if (!isMt5Connected) {
+          console.warn('[LIVE_BACKEND] Live Trading turn-on denied: MT5 not connected');
+          return res.status(400).json({
+            success: false,
+            error: '❌ បដិសេធ (DENIED): គណនី MT5 មិនទាន់ CONNECTED នៅឡើយទេ។',
+            reason: 'MT5_DISCONNECTED',
+            state: botState,
+          });
+        }
+
+        // 3. Check Safety Guards PASS
+        if (typeof daraEngine !== 'undefined') {
+          const safety = daraEngine.evaluateSafety(
+            botState.goldPrice && botState.account?.marketDataReceiving ? botState.spreadPoints : 0,
+            botState.openTrades ? botState.openTrades.length : 0
+          );
+          if (!safety.isSafeToTrade) {
+            console.warn('[LIVE_BACKEND] Live Trading turn-on denied: Safety guards blocked', safety.blockedReason);
+            return res.status(400).json({
+              success: false,
+              error: `❌ បដិសេធ (DENIED): ប្រព័ន្ធសុវត្ថិភាព (Safety Guard) កំពុងរាំង (${safety.blockedReason || 'Safety Guard Blocked'})។ មិនអាចបើក Live Trading បានទេ។`,
+              reason: 'SAFETY_GUARD_BLOCKED',
+              blockedReason: safety.blockedReason,
+              state: botState,
+            });
+          }
+        }
+      }
+
+      if (liveTradingRequested !== undefined) {
+        botState.riskConfig.liveTradingEnabled = Boolean(liveTradingRequested);
+      }
+
       if (riskConfig.lotSizeMode !== undefined) botState.riskConfig.lotSizeMode = riskConfig.lotSizeMode === 'risk_percent' ? 'risk_percent' : 'fixed';
       if (riskConfig.lotSize !== undefined && !isNaN(Number(riskConfig.lotSize))) botState.riskConfig.lotSize = Number(riskConfig.lotSize);
       if (riskConfig.riskPercent !== undefined && !isNaN(Number(riskConfig.riskPercent))) botState.riskConfig.riskPercent = Number(riskConfig.riskPercent);
       if (riskConfig.maxDailyLoss !== undefined) botState.riskConfig.maxDailyLoss = Number(riskConfig.maxDailyLoss);
       if (riskConfig.maxDrawdownPercent !== undefined) botState.riskConfig.maxDrawdownPercent = Number(riskConfig.maxDrawdownPercent);
       if (riskConfig.maxSpreadPoints !== undefined) botState.riskConfig.maxSpreadPoints = Number(riskConfig.maxSpreadPoints);
-      if (riskConfig.entryDistance !== undefined && !isNaN(Number(riskConfig.entryDistance))) {
-        botState.riskConfig.entryDistance = Number(riskConfig.entryDistance);
-      }
-      if (riskConfig.slDistance !== undefined && !isNaN(Number(riskConfig.slDistance))) {
-        botState.riskConfig.slDistance = Number(riskConfig.slDistance);
-        botState.riskConfig.stopLossPips = Number(riskConfig.slDistance);
-        botState.riskConfig.slPriceDistance = Number(riskConfig.slDistance);
-      } else if (riskConfig.stopLossPips !== undefined && !isNaN(Number(riskConfig.stopLossPips))) {
-        botState.riskConfig.stopLossPips = Number(riskConfig.stopLossPips);
-        botState.riskConfig.slDistance = Number(riskConfig.stopLossPips);
-        botState.riskConfig.slPriceDistance = Number(riskConfig.stopLossPips);
-      }
-      if (riskConfig.tpDistance !== undefined && !isNaN(Number(riskConfig.tpDistance))) {
-        botState.riskConfig.tpDistance = Number(riskConfig.tpDistance);
-        botState.riskConfig.takeProfitPips = Number(riskConfig.tpDistance);
-        botState.riskConfig.tpPriceDistance = Number(riskConfig.tpDistance);
-      } else if (riskConfig.takeProfitPips !== undefined && !isNaN(Number(riskConfig.takeProfitPips))) {
-        botState.riskConfig.takeProfitPips = Number(riskConfig.takeProfitPips);
-        botState.riskConfig.tpDistance = Number(riskConfig.takeProfitPips);
-        botState.riskConfig.tpPriceDistance = Number(riskConfig.takeProfitPips);
-      }
+      if (riskConfig.stopLossPips !== undefined) botState.riskConfig.stopLossPips = Number(riskConfig.stopLossPips);
+      if (riskConfig.takeProfitPips !== undefined) botState.riskConfig.takeProfitPips = Number(riskConfig.takeProfitPips);
       if (riskConfig.trailingStopEnabled !== undefined) botState.riskConfig.trailingStopEnabled = Boolean(riskConfig.trailingStopEnabled);
-      if (riskConfig.trailingDistance !== undefined && !isNaN(Number(riskConfig.trailingDistance))) {
-        botState.riskConfig.trailingDistance = Number(riskConfig.trailingDistance);
-      }
-      if (riskConfig.trailingRule !== undefined) {
-        botState.riskConfig.trailingRule = String(riskConfig.trailingRule);
-      }
-      if (riskConfig.trailingStopActivationPoints !== undefined && !isNaN(Number(riskConfig.trailingStopActivationPoints))) {
-        botState.riskConfig.trailingStopActivationPoints = Number(riskConfig.trailingStopActivationPoints);
-      }
-      if (riskConfig.trailingStopDistancePoints !== undefined && !isNaN(Number(riskConfig.trailingStopDistancePoints))) {
-        botState.riskConfig.trailingStopDistancePoints = Number(riskConfig.trailingStopDistancePoints);
-      }
-      if (riskConfig.newsFilterEnabled !== undefined) {
-        botState.riskConfig.newsFilterEnabled = Boolean(riskConfig.newsFilterEnabled);
-      }
-      if (riskConfig.minutesBeforeNewsBlock !== undefined && !isNaN(Number(riskConfig.minutesBeforeNewsBlock))) {
-        botState.riskConfig.minutesBeforeNewsBlock = Number(riskConfig.minutesBeforeNewsBlock);
-      }
-      if (riskConfig.minutesAfterNewsBlock !== undefined && !isNaN(Number(riskConfig.minutesAfterNewsBlock))) {
-        botState.riskConfig.minutesAfterNewsBlock = Number(riskConfig.minutesAfterNewsBlock);
-      }
-      if (riskConfig.maxOpenTrades !== undefined && !isNaN(Number(riskConfig.maxOpenTrades))) {
-        botState.riskConfig.maxOpenTrades = Number(riskConfig.maxOpenTrades);
-      }
-      if (riskConfig.entriesPerSignal !== undefined && !isNaN(Number(riskConfig.entriesPerSignal))) {
-        botState.riskConfig.entriesPerSignal = Number(riskConfig.entriesPerSignal);
-      }
-      if (riskConfig.maxConsecutiveLosses !== undefined && !isNaN(Number(riskConfig.maxConsecutiveLosses))) botState.riskConfig.maxConsecutiveLosses = Number(riskConfig.maxConsecutiveLosses);
-      if (riskConfig.cooldownMinutes !== undefined && !isNaN(Number(riskConfig.cooldownMinutes))) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
-      if (riskConfig.maxDailyLossPercent !== undefined && !isNaN(Number(riskConfig.maxDailyLossPercent))) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
-      if (riskConfig.maxDailyLossAmount !== undefined && !isNaN(Number(riskConfig.maxDailyLossAmount))) botState.riskConfig.maxDailyLossAmount = Number(riskConfig.maxDailyLossAmount);
+      if (riskConfig.entryDistance !== undefined) botState.riskConfig.entryDistance = Number(riskConfig.entryDistance);
+      if (riskConfig.trailingDistance !== undefined) botState.riskConfig.trailingDistance = Number(riskConfig.trailingDistance);
+      if (riskConfig.maxOpenTrades !== undefined) botState.riskConfig.maxOpenTrades = Number(riskConfig.maxOpenTrades);
+      if (riskConfig.entriesPerSignal !== undefined) botState.riskConfig.entriesPerSignal = Number(riskConfig.entriesPerSignal);
+      if (riskConfig.maxConsecutiveLosses !== undefined) botState.riskConfig.maxConsecutiveLosses = Number(riskConfig.maxConsecutiveLosses);
+      if (riskConfig.cooldownMinutes !== undefined) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
+      if (riskConfig.maxDailyLossPercent !== undefined) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
+      if (riskConfig.maxDailyLossAmount !== undefined) botState.riskConfig.maxDailyLossAmount = Number(riskConfig.maxDailyLossAmount);
       
-      // CRITICAL: Sync new config into the running EA Engine instance (Single Source of Truth)
-      syncConfigToDaRaEngine(botState, true);
+      // CRITICAL FIX: Sync new config into the running EA Engine instance
+            
+      // CRITICAL FIX: Sync new config into the DaRa M1 Engine instance
+      if (typeof daraEngine !== 'undefined') {
+          console.log('[LIVE_ENGINE] updateUserSettings called');
+          daraEngine.updateUserSettings({
+              lotSize: botState.riskConfig.lotSize,
+              slDistance: botState.riskConfig.stopLossPips,
+              tpDistance: botState.riskConfig.takeProfitPips,
+              dailyLossLimit: botState.riskConfig.maxDailyLossAmount,
+              maxOpenTrades: botState.riskConfig.maxOpenTrades,
+              maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses,
+              cooldownMinutes: botState.riskConfig.cooldownMinutes,
+              maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
+              newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
+              trailingEnabled: botState.riskConfig.trailingStopEnabled,
+              trailingDistance: botState.riskConfig.trailingDistance,
+              entryDistance: botState.riskConfig.entryDistance,
+              liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
+          });
+          const engineSettings = daraEngine.getUserSettings();
+          console.log('[LIVE_ENGINE] liveTradingEnabled:', engineSettings.liveTradingEnabled);
+      }
       
       saveBotConfig();
     }
+
+    const confirmedLiveTrading = typeof daraEngine !== 'undefined'
+      ? daraEngine.getUserSettings().liveTradingEnabled
+      : botState.riskConfig.liveTradingEnabled;
 
     res.json({
       serverId: SERVER_INSTANCE_ID,
       serverBootTime: SERVER_BOOT_TIME,
       success: true,
-      message: '💾 បាន Save Risk Settings ដោយជោគជ័យ!',
+      confirmedLiveTrading,
+      message: confirmedLiveTrading 
+        ? '🟢 LIVE TRADING បានបើកដោយជោគជ័យ!' 
+        : '⚪ LIVE TRADING បានបិទដោយជោគជ័យ (Safe Monitor Mode)',
       state: botState,
     });
   });
@@ -4389,6 +3751,24 @@ app.post('/api/bot/action', async (req, res) => {
     }
     if (riskConfig) {
       botState.riskConfig = { ...botState.riskConfig, ...riskConfig };
+      
+      if (typeof daraEngine !== 'undefined') {
+          daraEngine.updateUserSettings({
+              lotSize: botState.riskConfig.lotSize,
+              slDistance: botState.riskConfig.stopLossPips,
+              tpDistance: botState.riskConfig.takeProfitPips,
+              dailyLossLimit: botState.riskConfig.maxDailyLossAmount,
+              maxOpenTrades: botState.riskConfig.maxOpenTrades,
+              maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses,
+              cooldownMinutes: botState.riskConfig.cooldownMinutes,
+              maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
+              newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
+              trailingEnabled: botState.riskConfig.trailingStopEnabled,
+              trailingDistance: botState.riskConfig.trailingDistance,
+              entryDistance: botState.riskConfig.entryDistance,
+              liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
+          });
+      }
     }
     if (tradingHours) {
       botState.tradingHours = { ...botState.tradingHours, ...tradingHours };
@@ -4396,10 +3776,6 @@ app.post('/api/bot/action', async (req, res) => {
     if (userPreferences) {
       botState.userPreferences = { ...botState.userPreferences, ...userPreferences };
     }
-    
-    // Update DaRa M1 EA Engine settings
-    syncConfigToDaRaEngine(botState, true);
-
     saveBotConfig();
 
     res.json({
@@ -4443,7 +3819,6 @@ app.post('/api/bot/action', async (req, res) => {
       },
     };
     if (botState.status === 'running') {
-      botState.desiredBotState = 'STOPPED';
       botState.status = 'stopped';
     }
     botState.statusMessageKhmer = '🔴 គណនី Exness ត្រូវបានលុបចេញពីប្រព័ន្ធ — សូមភ្ជាប់គណនីថ្មី';
@@ -4460,7 +3835,6 @@ app.post('/api/bot/action', async (req, res) => {
 
   // 8. Reset Settings to Factory Defaults
   app.post('/api/bot/reset-settings', requireAdminAuth, (req, res) => {
-    botState.desiredBotState = 'STOPPED';
     botState.status = 'stopped';
     botState.account = { ...DEFAULT_BOT_CONFIG.account };
     botState.tradingHours = { ...DEFAULT_BOT_CONFIG.tradingHours };
@@ -4511,6 +3885,21 @@ app.post('/api/bot/action', async (req, res) => {
     });
   });
 
+  // 9.5 Patch Download Endpoint
+  app.get('/download-patch', (req, res) => {
+    const patchPath = path.join(process.cwd(), 'dara-m1-ea-patch.tar.gz');
+    res.download(patchPath, 'dara-m1-ea-patch.tar.gz', {
+      headers: {
+        'Content-Type': 'application/gzip',
+        'Content-Disposition': 'attachment; filename="dara-m1-ea-patch.tar.gz"'
+      }
+    }, (err) => {
+      if (err) {
+        console.error("Error sending patch file:", err);
+      }
+    });
+  });
+
   // 10. Direct WebRequest Sync Gateway from MQL5 EA / Python Bridge
   app.post('/api/mt5/sync', (req, res) => {
     const {
@@ -4530,8 +3919,13 @@ app.post('/api/bot/action', async (req, res) => {
 
     const now = Date.now();
     lastSyncTimestamp = now;
-    botState.lastTickTime = now;
+    botState.lastTickTime = now; global.lastSuccessfulPingTime = Date.now();
     consecutivePollingFailures = 0;
+
+    // Debug EA heartbeat
+    if (!goldBid) {
+      console.log(`[EA SYNC] Received sync without goldBid. Data: ${JSON.stringify(req.body)}`);
+    }
 
     if (accountLogin) botState.account.loginId = String(accountLogin);
     if (server) botState.account.server = String(server);
@@ -4547,11 +3941,42 @@ app.post('/api/bot/action', async (req, res) => {
     if (goldAsk !== undefined) {
       botState.askPrice = Number(goldAsk);
     } else if (goldBid !== undefined && spread !== undefined) {
-      botState.askPrice = Number((Number(goldBid) + Number(spread) / 100).toFixed(2));
+      
+      const bidStr = goldBid.toString();
+      const decimals = (bidStr.includes('.') ? bidStr.split('.')[1].length : 2);
+      // STRICT Gold point convention: 0.01 = 1 point, therefore always use 100 multiplier
+      const pointMultiplier = 100;
+      botState.askPrice = Number((Number(goldBid) + (Number(spread) / pointMultiplier)).toFixed(decimals));
+
     }
     if (spread !== undefined) botState.spreadPoints = Number(spread);
 
-
+    // Forward live tick to DaRaM1Engine
+    if (global.daraEngine && typeof global.daraEngine.onMarketUpdate === 'function' && botState.bidPrice > 0) {
+      try {
+        const primarySymbol = botState.activeGoldSymbol || 'XAUUSDc';
+        const accountId = botState.account.metaApiAccountId;
+        const token = botState.account.metaApiToken;
+        let workingBaseUrl = botState.account.metaApiUrl || 'https://mt-client-api-v1.backup-new-york.agiliumtrade.ai';
+        if (accountId && token) {
+             syncDaraM1CandlesBuffer(workingBaseUrl, accountId, token, primarySymbol).catch(() => {});
+        }
+        feedLiveTickToCandlesBuffer(botState.bidPrice, now);
+        
+        global.daraEngine.onMarketUpdate({
+          symbol: primarySymbol,
+          bid: botState.bidPrice,
+          ask: botState.askPrice || botState.bidPrice,
+          time: now,
+          serverTime: now,
+          spreadPoints: botState.spreadPoints || 0,
+          openTradesCount: botState.openTrades ? botState.openTrades.length : 0,
+          m1Candles: daraM1CandlesBuffer
+        }).catch((err: any) => console.error('[DaRa M1 EA] Error in onMarketUpdate from sync:', err));
+      } catch (e) {
+        console.error('[DaRa M1 EA] Error invoking onMarketUpdate from sync:', e);
+      }
+    }
 
     // Push tick to tickHistory for 1-minute AI Analysis on Gold
     botState.tickHistory = botState.tickHistory || [];
@@ -4563,14 +3988,14 @@ app.post('/api/bot/action', async (req, res) => {
 
     // Check if 1-minute analysis interval has elapsed
     if (botState.status === 'running' && Date.now() - lastAnalysisTimestamp >= AI_ANALYSIS_INTERVAL_MS) {
-      executeAIAnalysis().catch(console.error);
-    }
+      }
 
     botState.lastPriceUpdate = new Date().toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     botState.marketDataStatus = '🟢 LIVE (MT5 SYNCED)';
     botState.account.isConnected = true;
     botState.account.serverConnected = true;
     botState.account.marketDataReceiving = true;
+                                 if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
     botState.account.eaConnected = true;
     botState.account.vpsOnline = true;
     botState.account.stages.exnessServerConnected = true;
@@ -4592,74 +4017,57 @@ app.post('/api/bot/action', async (req, res) => {
           botState.openTrades.forEach((oldTrade: any) => {
               if (!newTradeIds.includes(oldTrade.id)) {
                   tradeClosed2 = true;
-                  const closedPnL = Number(oldTrade.floatingProfit || 0) + Number(oldTrade.commission || 0) + Number(oldTrade.swap || 0);
-                  botState.realizedDailyPnL = Number(((botState.realizedDailyPnL || 0) + closedPnL).toFixed(2));
-                  botState.todayTradeCount = (botState.todayTradeCount || 0) + 1;
-                  if (closedPnL >= 0) {
-                      botState.todayWinCount = (botState.todayWinCount || 0) + 1;
-                  } else {
-                      botState.todayLossCount = (botState.todayLossCount || 0) + 1;
-                  }
-
-                  if (global.daraEngine) {
-                      try {
-                          const exitReason = oldTrade.trailingActivated ? 'TRAILING_SL_HIT' : (closedPnL >= 0 ? 'TP_HIT' : 'SL_HIT');
-                          global.daraEngine.handlePositionClosed(oldTrade.id, exitReason, closedPnL, oldTrade.currentPrice);
-                      } catch (_) {}
-                  } else {
-                      if (oldTrade.floatingProfit < 0) {
-                          if (typeof eaState !== 'undefined') {
-                             eaState.consecutiveLosses += 1;
-                             console.log(`[DaRa M1 EA] Trade ${oldTrade.id} closed in LOSS. Consecutive Losses: ${eaState.consecutiveLosses}`);
-                             if (eaState.consecutiveLosses === 3) {
-                                 sendTelegramAlert('3 CONSECUTIVE SL HIT', `Bot បានដល់កម្រិតខាត ៣ ដងជាប់គ្នា (${eaState.consecutiveLosses} Consecutive SLs)។\nប្រព័ន្ធការពារហានិភ័យត្រូវបានបើកដំណើរការ (Cooldown)។\nសូមពិនិត្យមើល Bot។`, '', 0);
-                             }
-                          }
-                          sendStopLossAlert({
-                              type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
-                              lot: oldTrade.lot || (botState.riskConfig as any)?.lotSize || 0.01,
-                              entry: oldTrade.entryPrice || 0,
-                              exit: oldTrade.currentPrice || botState.goldPrice || 0,
-                              sl: oldTrade.sl || 0,
-                              loss: Math.abs(Number(oldTrade.floatingProfit || 0)).toFixed(2),
-                              ticket: oldTrade.id,
-                              time: formatICTTime()
-                          }).catch(console.error);
+                  if (oldTrade.floatingProfit < 0) {
+                      if (global.daraEngine) {
+                          global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
+                          botState.consecutiveLosses = global.daraEngine.getTelemetry().consecutiveLossCount;
                       } else {
-                          if (typeof eaState !== 'undefined') {
-                             eaState.consecutiveLosses = 0;
-                             console.log(`[DaRa M1 EA] Trade ${oldTrade.id} closed in PROFIT. Consecutive Losses reset to 0.`);
-                          }
-                          sendTakeProfitAlert({
-                              type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
-                              lot: oldTrade.lot || (botState.riskConfig as any)?.lotSize || 0.01,
-                              entry: oldTrade.entryPrice || 0,
-                              exit: oldTrade.currentPrice || botState.goldPrice || 0,
-                              tp: oldTrade.tp || 0,
-                              profit: Number(oldTrade.floatingProfit || 0).toFixed(2),
-                              ticket: oldTrade.id,
-                              time: formatICTTime()
-                          }).catch(console.error);
+                          botState.consecutiveLosses = (botState.consecutiveLosses || 0) + 1;
                       }
+                      sendStopLossAlert({
+                          type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
+                          lot: oldTrade.lot || botState.riskConfig?.lotSize || 0.01,
+                          entry: oldTrade.entryPrice || 0,
+                          exit: oldTrade.currentPrice || botState.goldPrice || 0,
+                          sl: oldTrade.sl || 0,
+                          loss: Math.abs(Number(oldTrade.floatingProfit || 0)).toFixed(2),
+                          ticket: oldTrade.id,
+                          time: formatLocalTime()
+                      }).catch(console.error);
+                  } else {
+                      if (global.daraEngine) {
+                          global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
+                          botState.consecutiveLosses = 0;
+                      } else {
+                          botState.consecutiveLosses = 0;
+                      }
+                      sendTakeProfitAlert({
+                          type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
+                          lot: oldTrade.lot || botState.riskConfig?.lotSize || 0.01,
+                          entry: oldTrade.entryPrice || 0,
+                          exit: oldTrade.currentPrice || botState.goldPrice || 0,
+                          tp: oldTrade.tp || 0,
+                          profit: Number(oldTrade.floatingProfit || 0).toFixed(2),
+                          ticket: oldTrade.id,
+                          time: formatLocalTime()
+                      }).catch(console.error);
                   }
               }
           });
-          if (tradeClosed2) {
-              lastPnLSyncTime = 0;
-              syncDailyRealizedPnL().catch(console.error);
-          }
+          if (tradeClosed2) lastPnLSyncTime = 0;
       }
 
-      // Look for Bot Positions by Magic Number or DaRa comment
-      const botPositions = positions.filter((p: any) => Number(p.magic) === (magicNumber || botState.magicNumber) || (typeof p.comment === 'string' && p.comment.includes('DaRa')));
+      // Parse all positions instead of filtering by Magic Number only
+      const allPositions = positions;
       const existingVpsTradesMap = new Map((botState.openTrades || []).map((t: any) => [String(t.id), t]));
-      botState.openTrades = botPositions.map((botPos: any) => {
+      botState.openTrades = allPositions.map((botPos: any) => {
         const ticketId = String(botPos.ticket || `MT5-${Date.now()}`);
         const prevT = existingVpsTradesMap.get(ticketId);
+        const isBot = Number(botPos.magic || 0) === (magicNumber || botState.magicNumber);
         return {
           id: ticketId,
-          magicNumber: Number(botPos.magic || botState.magicNumber),
-          isBotTrade: true,
+          magicNumber: Number(botPos.magic || 0),
+          isBotTrade: isBot,
           symbol: 'XAUUSD',
           side: (botPos.type === 0 || botPos.type === 'BUY' || botPos.type === 'POSITION_TYPE_BUY') ? 'BUY' : 'SELL',
           lot: Number(botPos.volume || botState.riskConfig.lotSize),
@@ -4667,10 +4075,7 @@ app.post('/api/bot/action', async (req, res) => {
           currentPrice: Number(botPos.currentPrice || botState.goldPrice),
           sl: Number(botPos.sl || 0),
           tp: Number(botPos.tp || 0),
-          originalTp: prevT?.originalTp || (Number(botPos.tp || 0) > 0 ? Number(botPos.tp) : (prevT?.tp || 0)),
-          trailingActivated: prevT?.trailingActivated || false,
-          highestPriceSinceOpen: prevT?.highestPriceSinceOpen || 0,
-          lowestPriceSinceOpen: prevT?.lowestPriceSinceOpen || 0,
+          originalTp: prevT?.originalTp || Number(botPos.tp || 0),
           floatingProfit: Number(botPos.profit || 0),
           commission: Number(botPos.commission || 0),
           swap: Number(botPos.swap || 0),
@@ -4679,18 +4084,10 @@ app.post('/api/bot/action', async (req, res) => {
       });
       botState.currentTrade = botState.openTrades[0] || null;
 
-      // Immediately calculate dynamic live todayProfitLoss
-      let totalFloating = 0;
-      for (const pos of (botState.openTrades || [])) {
-        totalFloating += Number(pos.floatingProfit || 0) + Number(pos.commission || 0) + Number(pos.swap || 0);
-      }
-      botState.todayProfitLoss = Number(((botState.realizedDailyPnL || 0) + totalFloating).toFixed(2));
-      manageTrailingSL().catch(console.error);
-
       // Auto New Cycle if all trades close
       if (prevBotCount > 0 && botState.openTrades.length === 0 && botState.status === 'running' && botState.isInsideTradingHours) {
         botState.currentCycle = (botState.currentCycle || 1) + 1;
-        const volume = Number(((botState.riskConfig as any)?.lotSize || 0.01).toFixed(2));
+        const volume = Number((botState.riskConfig?.lotSize || 0.01).toFixed(2));
         botState.statusMessageKhmer = `🔄 NEW CYCLE #${botState.currentCycle} — 🔍 ANALYZING… AI វិភាគទីផ្សាររក Entry #1 (${volume} Lot)`;
       }
     }
@@ -4715,6 +4112,118 @@ app.post('/api/bot/action', async (req, res) => {
       closeAllBot: shouldCloseAllBot,
     });
   });
+
+  // Direct Download for Final Production Package
+  app.get('/download/dara_m1_v1_0_final_package.tar.gz', (req, res) => {
+    const pkgPath = path.join(process.cwd(), 'dara_m1_v1_0_final_package.tar.gz');
+    if (fs.existsSync(pkgPath)) {
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_v1_0_final_package.tar.gz"');
+      fs.createReadStream(pkgPath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Package file not found' });
+    }
+  });
+
+  // Direct Download for DaRa M1 EA v2.0 Login Session Resilience Package
+  const handleV2Download = (req: express.Request, res: express.Response) => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz'),
+      path.join(process.cwd(), 'public', 'dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz'),
+      path.join(process.cwd(), 'dist', 'dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz')
+    ];
+    let finalPath = '';
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        finalPath = p;
+        break;
+      }
+    }
+
+    if (finalPath) {
+      const stat = fs.statSync(finalPath);
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz"');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      fs.createReadStream(finalPath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Package file dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz not found' });
+    }
+  };
+
+  app.get('/dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz', handleV2Download);
+  app.get('/download/dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz', handleV2Download);
+  app.get('/api/download/dara_m1_ea_v2.0_LOGIN_SESSION_RESILIENCE_FINAL.tar.gz', handleV2Download);
+
+  // Direct Download for DaRa M1 EA v2.1 Login False Success Fix Package
+  const handleV21Download = (req: express.Request, res: express.Response) => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz'),
+      path.join(process.cwd(), 'public', 'dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz'),
+      path.join(process.cwd(), 'dist', 'dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz')
+    ];
+    let finalPath = '';
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        finalPath = p;
+        break;
+      }
+    }
+
+    if (finalPath) {
+      const stat = fs.statSync(finalPath);
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz"');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      fs.createReadStream(finalPath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Package file dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz not found' });
+    }
+  };
+
+  app.get('/dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz', handleV21Download);
+  app.get('/download/dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz', handleV21Download);
+  app.get('/api/download/dara_m1_ea_v2.1_LOGIN_FALSE_SUCCESS_FIX_FINAL.tar.gz', handleV21Download);
+
+  // Direct Download for DaRa M1 EA v2.2 Session Drift Fix Package
+  const handleV22Download = (req: express.Request, res: express.Response) => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz'),
+      path.join(process.cwd(), 'public', 'dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz'),
+      path.join(process.cwd(), 'dist', 'dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz')
+    ];
+    let finalPath = '';
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        finalPath = p;
+        break;
+      }
+    }
+
+    if (finalPath) {
+      const stat = fs.statSync(finalPath);
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz"');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      fs.createReadStream(finalPath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Package file dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz not found' });
+    }
+  };
+
+  app.get('/dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz', handleV22Download);
+  app.get('/download/dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz', handleV22Download);
+  app.get('/api/download/dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz', handleV22Download);
+
 
   // Direct Downloads for .mq5 and .set files with Auto-Configured Server URL
   app.get('/api/bot/download/ea', (req, res) => {
@@ -4747,7 +4256,7 @@ input int      InpMaxOpenTrades     = 4;                        // Max Open Bot 
 input int      InpStopLossPips      = 25;                       // Mandatory Stop Loss (Pips)
 input int      InpTakeProfitPips    = 35;                       // Take Profit (Pips)
 input double   InpMaxDailyLoss   = 50.0;                     // Max Daily Loss Limit ($ / USC)
-input int      InpMaxSpread         = 27;                       // Max Spread Allowed (Points)
+input int      InpMaxSpread         = 25;                       // Max Spread Allowed (Points)
 
 input group "=== [3] TRADING HOURS FILTER ==="
 input bool     InpUseTradingHours   = true;                     // Enable Trading Hours
@@ -4914,7 +4423,7 @@ void SyncWithBackend()
    if(sym == "") sym = "XAUUSD";
    string xauBid = DoubleToString(SymbolInfoDouble(sym, SYMBOL_BID), 2);
    string xauAsk = DoubleToString(SymbolInfoDouble(sym, SYMBOL_ASK), 2);
-   string spread = IntegerToString(SymbolInfoInteger(sym, SYMBOL_SPREAD));
+   string spread = DoubleToString(MathRound(MathAbs(SymbolInfoDouble(sym, SYMBOL_ASK) - SymbolInfoDouble(sym, SYMBOL_BID)) * 100), 0);
    
    // Collect Positions Array JSON
    string posJson = "[";
@@ -5055,7 +4564,7 @@ InpMaxOpenTrades=4
 InpStopLossPips=25
 InpTakeProfitPips=35
 InpMaxDailyLoss=50.0
-InpMaxSpread=27
+InpMaxSpread=25
 InpUseTradingHours=true
 InpStartHour=8
 InpStopHour=22
@@ -5106,59 +4615,49 @@ Categories=Finance;Trading;
     res.send(desktopContent);
   });
 
-  // DaRa M1 EA Complete Package Archive for VPS Deploy
-  app.get('/api/bot/download/dara-package', (req, res) => {
-    const pkgPath = path.join(process.cwd(), 'public', 'dara-files.tar.gz');
-    res.download(pkgPath, 'dara-files.tar.gz');
-  });
+  // Vite middleware setup vs Production Static Serving
+  const isProduction = process.env.NODE_ENV === 'production' || 
+    (typeof __filename !== 'undefined' && __filename.includes('dist')) ||
+    (typeof process.argv[1] === 'string' && process.argv[1].includes('dist'));
 
-  // Direct download route for CHECKPOINT-DARA-M1-FINAL-FULL-AUDIT-v1.0 package
-  app.get('/dara_m1_update.tar.gz', (req, res) => {
-    const pkgPath = path.join(process.cwd(), 'dara_m1_update.tar.gz');
-    res.download(pkgPath, 'dara_m1_update.tar.gz');
-  });
-
-  app.get('/download/dara_m1_update.tar.gz', (req, res) => {
-    const pkgPath = path.join(process.cwd(), 'dara_m1_update.tar.gz');
-    res.download(pkgPath, 'dara_m1_update.tar.gz');
-  });
-
-  app.get('/api/bot/download/dara_m1_update.tar.gz', (req, res) => {
-    const pkgPath = path.join(process.cwd(), 'dara_m1_update.tar.gz');
-    res.download(pkgPath, 'dara_m1_update.tar.gz');
-  });
-
-  // Vite middleware setup (with headless / production fallback)
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-      });
-      app.use(vite.middlewares);
-    } catch (viteErr: any) {
-      console.log('[Server] Running in Headless/API Mode (Vite skipped):', viteErr?.message || viteErr);
-      const distPath = path.join(process.cwd(), 'dist');
-      app.use(express.static(distPath));
-      app.use(express.static(path.join(process.cwd(), 'public')));
-      app.get('*', (req, res) => {
-        const fallbackIndex = path.join(distPath, 'index.html');
-        if (fs.existsSync(fallbackIndex)) {
-          res.sendFile(fallbackIndex);
-        } else {
-          res.send('<h1>DaRa M1 EA Server is Online</h1><p>Status: Active | Port: 3000</p>');
-        }
-      });
-    }
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      const fallbackIndex = path.join(distPath, 'index.html');
-      if (fs.existsSync(fallbackIndex)) {
-        res.sendFile(fallbackIndex);
+  if (!isProduction) {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    
+    // --- DIRECT FILE DELIVERY MECHANISM ---
+    app.get('/dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz', (req, res) => {
+      const filePath = path.join(process.cwd(), 'dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz');
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz"');
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
       } else {
-        res.send('<h1>DaRa M1 EA Server is Online</h1><p>Status: Active | Port: 3000</p>');
+        res.status(404).send('Frozen package not found');
+      }
+    });
+
+    app.use(vite.middlewares);
+  } else {
+    const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
+      ? path.join(process.cwd(), 'dist')
+      : (typeof __dirname !== 'undefined' ? __dirname : path.join(process.cwd(), 'dist'));
+
+    app.use(express.static(distPath));
+
+    // Bypass SPA routing for direct file downloads in public directory
+    app.get('/download-v2.4', (req, res) => {
+      res.download(path.join(process.cwd(), 'public', 'dara_m1_ea_v2.4_DEPLOY.tar.gz'));
+    });
+    app.get('*', (req, res) => {
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send('Not Found');
       }
     });
   }
@@ -5166,99 +4665,50 @@ Categories=Finance;Trading;
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[XAUUSD AI Scalping Bot Server] running on http://0.0.0.0:${PORT}`);
     setTimeout(() => {
-        const lastHealth = getHealthState();
-        if (lastHealth.cleanShutdown) {
-            sendTelegramRaw('🟢 DaRa M1 EA — BOT ONLINE\nBot កំពុងដំណើរការ 24/7', 'BOT_ONLINE', 0);
-        } else {
-            sendTelegramRaw('🟢 DaRa M1 EA — BOT RESTORED\nBot បានដំណើរការឡើងវិញ។', 'BOT_RESTORED', 0);
-        }
-        setHealthState(false); // Mark dirty, will be set to true on clean exit
+        sendTelegramAlert('BOT STATUS', 'ប្រព័ន្ធត្រូវបាន Restart/Boot', 'សេវាកម្មដំណើរការឡើងវិញដោយជោគជ័យ', 0);
     }, 10000);
   });
 }
 
-
-// ==========================================
-// 🛡️ DARA M1 EA - BOT HEALTH MONITORING
-// ==========================================
-const HEALTH_STATE_FILE = path.join(DATA_DIR, 'bot_health.json');
-let botHealthShuttingDown = false;
-let currentMt5State = 'UNKNOWN'; // 'CONNECTED' | 'LOST' | 'UNKNOWN'
-
-function getHealthState() {
-    try {
-        if (fs.existsSync(HEALTH_STATE_FILE)) return JSON.parse(fs.readFileSync(HEALTH_STATE_FILE, 'utf8'));
-    } catch(e) {}
-    return { cleanShutdown: true };
-}
-function setHealthState(clean) {
-    try { fs.writeFileSync(HEALTH_STATE_FILE, JSON.stringify({ cleanShutdown: clean })); } catch(e) {}
-}
-
-async function handleBotOffline(reason) {
-    if (botHealthShuttingDown) return;
-    botHealthShuttingDown = true;
-    setHealthState(reason === 'CLEAN');
-    const msg = reason === 'CLEAN' 
-        ? '🔴 DaRa M1 EA — BOT OFFLINE\nBot បានឈប់ដំណើរការ។ សូមពិនិត្យ VPS/PM2។'
-        : '🔴 DaRa M1 EA — BOT OFFLINE (CRASH)\nBot បានឈប់ដំណើរការដោយសារ Error។ សូមពិនិត្យ VPS/PM2 ជាបន្ទាន់។';
-    try {
-        await sendTelegramRaw(msg, 'BOT_OFFLINE', 0);
-        // Add a small delay to ensure network request finishes before process exit
-        await new Promise(res => setTimeout(res, 2000));
-    } catch(e) {}
-}
-
-process.on('SIGINT', async () => { await handleBotOffline('CLEAN'); process.exit(0); });
-process.on('SIGTERM', async () => { await handleBotOffline('CLEAN'); process.exit(0); });
-process.on('uncaughtException', async (err) => { 
-    console.error('UNCAUGHT EXCEPTION:', err);
-    await handleBotOffline('CRASH'); 
-    process.exit(1); 
-});
-
 startServer();
 
 setInterval(() => {
-    const lastSeen = Math.max(botState.lastTickTime || 0, lastSyncTimestamp || 0, lastMetaApiSuccessTime || 0);
-    const isRecentlyActive = lastSeen > 0 && (Date.now() - lastSeen < 60000);
-
-    if (isRecentlyActive) {
-        // Healthy heartbeat received within last 60s -> Keep all connection lights 100% stable GREEN
-        botState.account.isConnected = true;
+    const lastSeen = Math.max(botState.lastFeedArrivalTime || 0, botState.lastTickTime || 0);
+    const feedAgeMs = lastSeen > 0 ? Date.now() - lastSeen : 0;
+    const isRecentlyActive = lastSeen > 0 && (feedAgeMs < 60000);
+    
+    if (isRecentlyActive && botState.account.isConnected) {
+        // Healthy heartbeat and valid feed received within last 60s
         botState.account.serverConnected = true;
         botState.account.eaConnected = true;
         botState.account.vpsOnline = true;
         botState.account.marketDataReceiving = true;
-        if (currentMt5State === 'LOST') {
-            currentMt5State = 'CONNECTED';
-            sendTelegramRaw('🟢 DaRa M1 — CONNECTION RESTORED\nEA កំពុងភ្ជាប់ទិន្នន័យ MetaApi Cloud ឡើងវិញ។', 'MT5_CONN_RESTORED', 0);
-        } else if (currentMt5State === 'UNKNOWN') {
-            currentMt5State = 'CONNECTED';
+        if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(true);
+        if (!botState.marketDataStatus || botState.marketDataStatus.includes('🔴') || botState.marketDataStatus.includes('WAITING') || botState.marketDataStatus.includes('DISCONNECTED')) {
+            botState.marketDataStatus = '🟢 LIVE (MT5 FEED ACTIVE)';
         }
-        if (!botState.marketDataStatus || botState.marketDataStatus.includes('🔴')) {
-            botState.marketDataStatus = '🟢 LIVE (METAAPI CLOUD ACTIVE)';
-        }
-    } else if (lastSeen > 0 && Date.now() - lastSeen >= 60000) {
-        // True silence timeout (no data from MetaApi Cloud or MT5 for >60s)
-        if (consecutivePollingFailures > 0 || !botState.account.loginId) {
+    } else {
+        // Market Data is stale, non-existent, or account is disconnected
+        botState.account.marketDataReceiving = false;
+        if (global.daraEngine) global.daraEngine.setMt5ConnectionStatus(false);
+        
+        if (lastSeen > 0 && botState.account.isConnected) {
+            if (feedAgeMs >= 60000) {
+                botState.account.serverConnected = false;
+                botState.account.eaConnected = false;
+            }
+            const ageText = `${Math.floor(feedAgeMs/1000)}s`;
+            botState.marketDataStatus = `🔴 MT5 DATA DISCONNECTED (Delay: ${ageText})`;
+            if (Math.floor(feedAgeMs / 1000) % 60 === 0) {
+                console.log(`[MARKET_DATA] connection=STALE lastFeedTime=${lastSeen} feedAgeMs=${feedAgeMs}`);
+            }
+        } else {
             botState.account.serverConnected = false;
             botState.account.eaConnected = false;
+            botState.marketDataStatus = botState.account.isConnected ? 'WATCHING / WAITING FOR LIVE DATA...' : '🔴 MT5 DATA DISCONNECTED (Delay: No Data)';
         }
-        botState.account.marketDataReceiving = false;
-        if (currentMt5State !== 'LOST') {
-            currentMt5State = 'LOST';
-            sendTelegramRaw('🔴 DaRa M1 — MARKET DATA DISCONNECTED\nបាត់ការតភ្ជាប់ទិន្នន័យផ្សារលើសពី 60s។', 'MT5_CONN_LOST', 0);
-        }
-        const tickAgeMs = Date.now() - (botState.lastTickTime || 0);
-        const ageText = botState.lastTickTime ? `${Math.floor(tickAgeMs/1000)}s` : 'No Data';
-        botState.marketDataStatus = `🔴 MARKET DATA DISCONNECTED (Delay: ${ageText})`;
-        console.log(`[MARKET_DATA] connection=DISCONNECTED lastTickTime=${botState.lastTickTime} tickAgeMs=${tickAgeMs} bid=${botState.bidPrice} ask=${botState.askPrice} dataFresh=false`);
-    } else if (!botState.account.isConnected) {
-        botState.marketDataStatus = 'WATCHING / WAITING FOR DATA';
     }
-    
+        
     // Auto-Recovery Tracking
     SelfHealingEngine.checkConnectionState(botState.account.serverConnected);
-
-}, 3000);
+}, 1000);

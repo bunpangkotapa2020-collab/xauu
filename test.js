@@ -1,1 +1,1 @@
-console.log("Checking output");
+console.log("Testing process");
