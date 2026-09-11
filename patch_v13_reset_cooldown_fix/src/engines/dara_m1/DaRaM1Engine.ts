@@ -281,101 +281,6 @@ export class DaRaM1Engine {
     }
 
     // 1. Manage Profit Trailing & Monitor Protection for all active positions
-    const activePositions = this.stateMachine.getActivePositions();
-    const setupForTrailing = this.stateMachine.getSetup();
-    if (activePositions.length > 0 && setupForTrailing) {
-      // 1.a. Update position authoritative data from broker if available
-      try {
-        const brokerPositions = await this.broker.getOpenPositions(feed.symbol);
-        for (const pos of activePositions) {
-          const bp = brokerPositions.find(p => String(p.ticket) === String(pos.ticket));
-          if (bp) {
-            if (bp.unrealizedProfit !== undefined) pos.unrealizedProfit = bp.unrealizedProfit;
-            if (bp.commission !== undefined) pos.commission = bp.commission;
-            if (bp.swap !== undefined) pos.swap = bp.swap;
-          }
-        }
-      } catch (_) {}
-
-      // 1.b. Calculate TRUE TOTAL NET BASKET PROFIT (Profit + Commission + Swap)
-      let basketNetProfit = 0;
-      for (const pos of activePositions) {
-        let posGross: number;
-        if (pos.unrealizedProfit !== undefined) {
-          posGross = pos.unrealizedProfit;
-        } else {
-          const pDiff = pos.type === 'BUY' ? (currentBid - pos.openPrice) : (pos.openPrice - currentAsk);
-          posGross = pDiff * pos.lot * 100;
-        }
-        const posNet = posGross + (pos.commission || 0) + (pos.swap || 0);
-        basketNetProfit += posNet;
-      }
-      basketNetProfit = Number(basketNetProfit.toFixed(2));
-
-      if (!setupForTrailing.trailingState) {
-        setupForTrailing.trailingState = { activated: false };
-      }
-
-      const PROFIT_LOCK_THRESHOLD = 50; // +50 USC
-
-      // Phase 1: Activate Profit Lock when TRUE Net Profit reaches >= +50 USC
-      if (!setupForTrailing.trailingState.profitLockActivated && basketNetProfit >= PROFIT_LOCK_THRESHOLD) {
-        setupForTrailing.trailingState.profitLockActivated = true;
-        setupForTrailing.trailingState.highestBasketNetProfit = basketNetProfit;
-        console.log(`[DaRa M1 EA v1.0] 🔒 BASKET PROFIT LOCK ACTIVATED at +${basketNetProfit.toFixed(2)} USC (Threshold: +${PROFIT_LOCK_THRESHOLD} USC)`);
-        if (this.telegram) {
-          const title = `🔒 DaRa M1 - PROFIT LOCK ACTIVATED`;
-          const msg = [
-            `${setupForTrailing.direction} Basket | ${feed.symbol}`,
-            `Locked Profit: +${PROFIT_LOCK_THRESHOLD} USC`,
-            `Current Net Profit: +${basketNetProfit.toFixed(2)} USC`,
-            `Active Positions: ${activePositions.length}`
-          ].join('\n');
-          this.telegram.notify(title, msg, `PROFIT_LOCK_${setupForTrailing.id}`).catch(() => {});
-        }
-      }
-
-      // Track highest profit achieved after activation
-      if (setupForTrailing.trailingState.profitLockActivated) {
-        setupForTrailing.trailingState.highestBasketNetProfit = Math.max(
-          setupForTrailing.trailingState.highestBasketNetProfit || basketNetProfit,
-          basketNetProfit
-        );
-
-        // Phase 2: If profit was running above threshold and returns to <= +50 USC, close the ENTIRE Basket
-        if (basketNetProfit <= PROFIT_LOCK_THRESHOLD) {
-          console.log(`[DaRa M1 EA v1.0] 🛡️ BASKET PROFIT LOCK HIT! Net profit returned to +${basketNetProfit.toFixed(2)} USC (Peak: +${(setupForTrailing.trailingState.highestBasketNetProfit || PROFIT_LOCK_THRESHOLD).toFixed(2)} USC, Locked at +${PROFIT_LOCK_THRESHOLD} USC). Closing entire Basket!`);
-          await this.closeBasket('PROFIT_LOCK_HIT', `Basket Net Profit returned to +${basketNetProfit.toFixed(2)} USC`, currentBid, currentAsk);
-          return;
-        }
-      }
-
-      // 1.c. Evaluate standard setup trailing
-      const trailingResult = this.trailing.evaluateSetupTrailing(
-        setupForTrailing,
-        activePositions,
-        currentBid,
-        currentAsk,
-        this.userSettings
-      );
-      if (trailingResult.shouldCloseBasket) {
-        await this.closeBasket('TRAILING_SL_HIT', trailingResult.reason || 'Trailing SL Hit', currentBid, currentAsk);
-        return;
-      }
-      if (trailingResult.activatedThisTick) {
-        if (this.telegram) {
-          const msg = `Initial Hidden SL: ${trailingResult.newHiddenSL?.toFixed(3)}`;
-          this.telegram.notify(`🛡️ DaRa M1 - TRAILING ACTIVATED`, msg).catch(() => {});
-        }
-        for (const pos of activePositions) {
-          if (pos.tp !== 0) {
-            await this.broker.modifyPosition(pos.ticket, pos.sl, 0);
-            pos.tp = 0;
-          }
-        }
-      }
-    }
-
     for (const pos of this.stateMachine.getActivePositions()) {
       await this.manageActivePosition(pos, currentBid, currentAsk);
     }
@@ -484,73 +389,6 @@ export class DaRaM1Engine {
   }
 
   /**
-   * Closes all active positions in the current basket simultaneously.
-   */
-  public async closeBasket(
-    exitReason: DaRaExitReason,
-    reasonText: string,
-    currentBid: number,
-    currentAsk: number
-  ): Promise<void> {
-    const activePositions = [...this.stateMachine.getActivePositions()];
-    if (activePositions.length === 0) {
-      return;
-    }
-
-    console.log(`[DaRa M1 EA v1.0] 🛑 Closing entire Basket (${activePositions.length} positions) - Reason: ${exitReason} (${reasonText})`);
-
-    // 1. Close all active positions via broker
-    for (const pos of activePositions) {
-      if (this.broker.closePosition) {
-        try {
-          await this.broker.closePosition(pos.ticket);
-        } catch (err) {
-          console.error(`[DaRa M1 EA] Failed to close position #${pos.ticket} via broker:`, err);
-        }
-      }
-    }
-
-    // 2. Finalize and record each closed trade
-    for (const pos of activePositions) {
-      const closePrice = pos.type === 'BUY' ? currentBid : currentAsk;
-      let finalPnl: number;
-      if (pos.unrealizedProfit !== undefined) {
-        finalPnl = Number((pos.unrealizedProfit + (pos.commission || 0) + (pos.swap || 0)).toFixed(2));
-      } else {
-        const pDiff = pos.type === 'BUY' ? (closePrice - pos.openPrice) : (pos.openPrice - closePrice);
-        finalPnl = Number(((pDiff * pos.lot * 100) + (pos.commission || 0) + (pos.swap || 0)).toFixed(2));
-      }
-
-      const closedTrade: DaRaClosedTrade = {
-        ticket: pos.ticket,
-        symbol: pos.symbol,
-        type: pos.type,
-        lot: pos.lot,
-        openPrice: pos.openPrice,
-        closePrice,
-        sl: pos.sl,
-        tp: pos.tp,
-        originalTp: pos.originalTp,
-        trailingActivated: pos.trailingActivated,
-        pnl: finalPnl,
-        exitReason,
-        closedAt: Date.now()
-      };
-
-      this.stateMachine.clearPosition(closedTrade.ticket);
-      await this.finalizeTradeClose(closedTrade);
-    }
-
-    // 3. Clear setup and return state machine to SCANNING
-    if (this.isRunning) {
-      this.stateMachine.resetToScanning('Basket closed. Returned to SCANNING.');
-    } else {
-      this.stateMachine.reset();
-    }
-    console.log(`[DaRa M1 EA v1.0] 🔄 Entire Basket closed. Setup cleared. Returned to SCANNING.`);
-  }
-
-  /**
    * Manages Profit Trailing on active position and detects Real Broker Position Closure.
    * Monotonicity guaranteed: SL only moves upward for BUY, downward for SELL.
    */
@@ -582,20 +420,7 @@ export class DaRaM1Engine {
 
     try {
       const openPositions = await this.broker.getOpenPositions(position.symbol);
-      const brokerPos = openPositions.find(p => String(p.ticket) === ticketKey);
-      stillOpen = !!brokerPos;
-
-      if (brokerPos) {
-        if (brokerPos.unrealizedProfit !== undefined) {
-          position.unrealizedProfit = brokerPos.unrealizedProfit;
-        }
-        if (brokerPos.commission !== undefined) {
-          position.commission = brokerPos.commission;
-        }
-        if (brokerPos.swap !== undefined) {
-          position.swap = brokerPos.swap;
-        }
-      }
+      stillOpen = openPositions.some(p => String(p.ticket) === ticketKey);
 
       if (!stillOpen && this.broker.getClosedDeal) {
         try {
@@ -710,7 +535,7 @@ export class DaRaM1Engine {
       finalPnl = Number(closedDealInfo.profit.toFixed(2));
     } else {
       const pDiff = position.type === 'BUY' ? (closePrice - position.openPrice) : (position.openPrice - closePrice);
-      finalPnl = Number(((pDiff * position.lot * 100) + (position.commission || 0) + (position.swap || 0)).toFixed(2));
+      finalPnl = Number((pDiff * position.lot * 100).toFixed(2));
     }
 
     const closedTrade: DaRaClosedTrade = {
@@ -786,7 +611,7 @@ export class DaRaM1Engine {
     let finalPnl = overrideProfit;
     if (finalPnl === undefined) {
       const pDiff = targetPos.type === 'BUY' ? (closePrice - targetPos.openPrice) : (targetPos.openPrice - closePrice);
-      finalPnl = Number(((pDiff * targetPos.lot * 100) + (targetPos.commission || 0) + (targetPos.swap || 0)).toFixed(2));
+      finalPnl = Number((pDiff * targetPos.lot * 100).toFixed(2));
     }
 
     const closedTrade: DaRaClosedTrade = {
@@ -870,15 +695,6 @@ export class DaRaM1Engine {
         isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_TRAILING_SL_${trade.ticket}`).catch(() => {});
-    } else if (trade.exitReason === 'PROFIT_LOCK_HIT') {
-      const isProfit = trade.pnl >= 0;
-      const title = `🔒 បិទ ${trade.type} — Profit Lock (+50 USC)`;
-      const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
-        isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
-      ].join('\n');
-      await this.telegram.notify(title, msg, `TRADE_PROFIT_LOCK_${trade.ticket}`).catch(() => {});
     } else if (trade.exitReason === 'CLOSE_ALL') {
       const isProfit = trade.pnl >= 0;
       const title = `🛑 បិទ ${trade.type} — CLOSE ALL`;

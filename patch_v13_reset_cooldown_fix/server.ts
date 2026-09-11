@@ -171,15 +171,12 @@ class DaRaServerBroker implements DaRaBrokerInterface {
             ticket: String(t.id),
             symbol: t.symbol,
             type: t.side,
-            lot: t.lot || t.volume || 0.01,
+            lot: t.volume,
             openPrice: t.entryPrice,
             currentPrice: t.currentPrice,
-            sl: t.stopLoss || t.sl || 0,
-            tp: t.takeProfit || t.tp || 0,
-            openTime: t.openTime ? new Date(t.openTime).getTime() : Date.now(),
-            unrealizedProfit: t.floatingProfit !== undefined ? Number(t.floatingProfit) : undefined,
-            commission: t.commission !== undefined ? Number(t.commission) : 0,
-            swap: t.swap !== undefined ? Number(t.swap) : 0
+            sl: t.stopLoss || 0,
+            tp: t.takeProfit || 0,
+            openTime: new Date(t.openTime).getTime()
         }));
     }
 

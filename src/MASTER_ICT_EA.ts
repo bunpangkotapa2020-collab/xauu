@@ -99,6 +99,8 @@ export interface EAPosition {
     tp: number;
     magic: number;
     setupId: string;
+    commission?: number;
+    swap?: number;
 }
 
 export interface ICTTelemetry {
@@ -158,6 +160,8 @@ export interface ICTTelemetry {
         tp: number;
         rr: number;
         setupId: string;
+    commission?: number;
+    swap?: number;
         stage: string;
         executionState?: string;
         obHigh: number;
@@ -198,6 +202,8 @@ export class IctXauusdEA {
     }) => void;
     public onExecutionSuccess?: (data: {
         setupId: string;
+    commission?: number;
+    swap?: number;
         symbol: string;
         direction: 'BUY' | 'SELL';
         entry: number;
@@ -208,6 +214,8 @@ export class IctXauusdEA {
     }) => void;
     public onExecutionFailed?: (data: {
         setupId: string;
+    commission?: number;
+    swap?: number;
         reason: string;
     }) => void;
     public onSetupConfirmed?: (data: {

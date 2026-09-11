@@ -19,7 +19,8 @@ export type DaRaDirection = 'BUY' | 'SELL';
 export type DaRaExitReason =
   | 'TP_HIT'
   | 'SL_HIT'
-  | 'TRAILING_SL_HIT'
+  | 'TRAILING_SL_HIT' |
+  'PROFIT_LOCK_HIT'
   | 'MANUAL_CLOSE'
   | 'CLOSE_ALL'
   | 'BROKER_REJECTION'
@@ -55,6 +56,8 @@ export type DaRaState =
 
 export interface DaRaSetupTrailingState {
   activated: boolean;
+  profitLockActivated?: boolean;
+  highestBasketNetProfit?: number;
   activatedAt?: number;
   activationPrice?: number;
   initialHiddenSL?: number;
@@ -128,6 +131,8 @@ export interface DaRaPosition {
   lowestPriceSinceOpen?: number;
   lastTrailingSl?: number;
   unrealizedProfit?: number;
+  commission?: number;
+  swap?: number;
 }
 
 export interface DaRaMarketFeed {
