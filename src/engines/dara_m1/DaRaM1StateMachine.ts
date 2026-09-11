@@ -194,9 +194,17 @@ export class DaRaM1StateMachine {
     return false;
   }
 
-  public getNextPendingLevel(): { levelIndex: number; targetPrice: number } | null {
+  public getNextPendingLevel(maxAllowedPositions: number = 5): { levelIndex: number; targetPrice: number } | null {
     if (!this.currentSetup || !this.currentSetup.entryLevels) return null;
-    for (let i = 0; i < this.currentSetup.entryLevels.length; i++) {
+    const rawLimit = Number(maxAllowedPositions);
+    const limit = isNaN(rawLimit) ? 5 : Math.max(1, Math.min(5, Math.floor(rawLimit)));
+
+    // Stop if we have already opened the maximum allowed positions for this setup
+    if ((this.currentSetup.positionsOpened || 0) >= limit) {
+      return null;
+    }
+
+    for (let i = 0; i < Math.min(this.currentSetup.entryLevels.length, limit); i++) {
       if (!this.currentSetup.entryLevels[i].executed) {
         return { levelIndex: i, targetPrice: this.currentSetup.entryLevels[i].targetPrice };
       }
@@ -204,11 +212,11 @@ export class DaRaM1StateMachine {
     return null;
   }
 
-  public isEntryPriceReached(currentPrice: number, candleLow?: number, candleHigh?: number): boolean {
+  public isEntryPriceReached(currentPrice: number, candleLow?: number, candleHigh?: number, maxAllowedPositions: number = 5): boolean {
     if (!this.currentSetup || (this.currentState !== 'WAIT_FOR_LOCKED_ENTRY' && this.currentState !== 'MSS_CONFIRMED' && this.currentState !== 'TRADE_ACTIVE')) {
       return false;
     }
-    const nextLevel = this.getNextPendingLevel();
+    const nextLevel = this.getNextPendingLevel(maxAllowedPositions);
     if (!nextLevel) return false;
 
     const setup = this.currentSetup;

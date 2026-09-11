@@ -1009,6 +1009,7 @@ interface BotServerState {
     cooldownMinutes: number;
     maxDailyLossPercent: number;
     maxDailyLossAmount: number;
+    profitLockTarget?: number;
     noMartingale: boolean;
     noGrid: boolean;
   };
@@ -1099,6 +1100,7 @@ const DEFAULT_BOT_CONFIG = {
     cooldownMinutes: 15,
     maxDailyLossPercent: 5,
     maxDailyLossAmount: 50,
+    profitLockTarget: 50,
     noMartingale: true,
     noGrid: true,
     liveTradingEnabled: false,
@@ -1222,6 +1224,7 @@ if (global.daraEngine) {
         trailingEnabled: botState.riskConfig.trailingStopEnabled !== false,
         trailingDistance: botState.riskConfig.trailingDistance,
         entryDistance: botState.riskConfig.entryDistance || 2.0,
+        profitLockTarget: botState.riskConfig.profitLockTarget || 50,
         liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
     });
     if (botState.status === 'running' || botState.desiredBotState === 'RUNNING') {
@@ -2500,15 +2503,17 @@ const app = express();
 
 
     if (global.daraEngine) {
+      const daraBasketPositions = typeof global.daraEngine.getActivePositions === 'function' ? global.daraEngine.getActivePositions() : [];
+      const daraBasketCount = daraBasketPositions.length;
       botState.signalDetails = botState.signalDetails || {};
       botState.signalDetails.daraSetup = global.daraEngine.getCurrentSetup();
       botState.signalDetails.daraTelemetry = global.daraEngine.getTelemetry(
         botState.goldPrice && botState.account.marketDataReceiving ? botState.spreadPoints : 0,
-        botState.openTrades ? botState.openTrades.length : 0
+        daraBasketCount
       );
       botState.signalDetails.daraSafety = global.daraEngine.evaluateSafety(
         botState.goldPrice && botState.account.marketDataReceiving ? botState.spreadPoints : 0,
-        botState.openTrades ? botState.openTrades.length : 0
+        daraBasketCount
       );
     }
     res.json({
@@ -3664,9 +3669,10 @@ app.post('/api/bot/action', async (req, res) => {
 
         // 3. Check Safety Guards PASS
         if (typeof daraEngine !== 'undefined') {
+          const daraBasketPositions = typeof daraEngine.getActivePositions === 'function' ? daraEngine.getActivePositions() : [];
           const safety = daraEngine.evaluateSafety(
             botState.goldPrice && botState.account?.marketDataReceiving ? botState.spreadPoints : 0,
-            botState.openTrades ? botState.openTrades.length : 0
+            daraBasketPositions.length
           );
           if (!safety.isSafeToTrade) {
             console.warn('[LIVE_BACKEND] Live Trading turn-on denied: Safety guards blocked', safety.blockedReason);
@@ -3696,12 +3702,15 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.trailingStopEnabled !== undefined) botState.riskConfig.trailingStopEnabled = Boolean(riskConfig.trailingStopEnabled);
       if (riskConfig.entryDistance !== undefined) botState.riskConfig.entryDistance = Number(riskConfig.entryDistance);
       if (riskConfig.trailingDistance !== undefined) botState.riskConfig.trailingDistance = Number(riskConfig.trailingDistance);
-      if (riskConfig.maxOpenTrades !== undefined) botState.riskConfig.maxOpenTrades = Number(riskConfig.maxOpenTrades);
+      if (riskConfig.maxOpenTrades !== undefined) {
+        botState.riskConfig.maxOpenTrades = Math.max(1, Math.min(5, Math.floor(Number(riskConfig.maxOpenTrades) || 5)));
+      }
       if (riskConfig.entriesPerSignal !== undefined) botState.riskConfig.entriesPerSignal = Number(riskConfig.entriesPerSignal);
       if (riskConfig.maxConsecutiveLosses !== undefined) botState.riskConfig.maxConsecutiveLosses = Number(riskConfig.maxConsecutiveLosses);
       if (riskConfig.cooldownMinutes !== undefined) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
       if (riskConfig.maxDailyLossPercent !== undefined) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
       if (riskConfig.maxDailyLossAmount !== undefined) botState.riskConfig.maxDailyLossAmount = Number(riskConfig.maxDailyLossAmount);
+      if (riskConfig.profitLockTarget !== undefined) botState.riskConfig.profitLockTarget = Number(riskConfig.profitLockTarget);
       
       // CRITICAL FIX: Sync new config into the running EA Engine instance
             
@@ -3721,6 +3730,7 @@ app.post('/api/bot/action', async (req, res) => {
               trailingEnabled: botState.riskConfig.trailingStopEnabled,
               trailingDistance: botState.riskConfig.trailingDistance,
               entryDistance: botState.riskConfig.entryDistance,
+              profitLockTarget: botState.riskConfig.profitLockTarget || 50,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
           const engineSettings = daraEngine.getUserSettings();
@@ -3753,6 +3763,9 @@ app.post('/api/bot/action', async (req, res) => {
       botState.account = { ...botState.account, ...account };
     }
     if (riskConfig) {
+      if (riskConfig.maxOpenTrades !== undefined) {
+        riskConfig.maxOpenTrades = Math.max(1, Math.min(5, Math.floor(Number(riskConfig.maxOpenTrades) || 5)));
+      }
       botState.riskConfig = { ...botState.riskConfig, ...riskConfig };
       
       if (typeof daraEngine !== 'undefined') {
@@ -3769,6 +3782,7 @@ app.post('/api/bot/action', async (req, res) => {
               trailingEnabled: botState.riskConfig.trailingStopEnabled,
               trailingDistance: botState.riskConfig.trailingDistance,
               entryDistance: botState.riskConfig.entryDistance,
+              profitLockTarget: botState.riskConfig.profitLockTarget || 50,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
       }

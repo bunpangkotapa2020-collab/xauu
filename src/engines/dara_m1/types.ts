@@ -107,6 +107,7 @@ export interface DaRaUserSettings {
   newsMinsBefore: number;      // Mins before high impact news
   newsMinsAfter: number;       // Mins after high impact news
   trailingEnabled: boolean;
+  profitLockTarget?: number;   // Profit Lock Target (USC) - User controlled threshold (e.g. 50 USC default)
   entryDistance?: number;              // Pullback Entry Distance Pos #1 (e.g. 2.0 raw price)
   trailingDistance?: number;   // Auto fixed 1.5 Price Distance (dynamic)
   trailingRule?: string;       // Rule description: Auto at Original TP (1.5 Price Distance)

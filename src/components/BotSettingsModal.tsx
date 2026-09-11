@@ -39,6 +39,7 @@ export function BotSettingsModal({
   const [slDist, setSlDist] = useState('10');
   const [tpDist, setTpDist] = useState('8');
   const [dailyLoss, setDailyLoss] = useState('2000');
+  const [profitLockTarget, setProfitLockTarget] = useState('50');
   const [maxTrades, setMaxTrades] = useState('5');
   const [entryDistance, setEntryDistance] = useState('2.0');
   const [trailingStopEnabled, setTrailingStopEnabled] = useState(true);
@@ -114,6 +115,7 @@ export function BotSettingsModal({
         else if (botState.riskConfig.takeProfitPips !== undefined) setTpDist(String(botState.riskConfig.takeProfitPips));
         if (botState.riskConfig.maxDailyLossAmount !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLossAmount));
         else if (botState.riskConfig.maxDailyLoss !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLoss));
+        if (botState.riskConfig.profitLockTarget !== undefined) setProfitLockTarget(String(botState.riskConfig.profitLockTarget));
         if (botState.riskConfig.maxOpenTrades !== undefined) setMaxTrades(String(botState.riskConfig.maxOpenTrades));
         if ((botState.riskConfig as any).entryDistance !== undefined) setEntryDistance(String((botState.riskConfig as any).entryDistance));
         if (botState.riskConfig.trailingStopEnabled !== undefined) setTrailingStopEnabled(Boolean(botState.riskConfig.trailingStopEnabled));
@@ -145,7 +147,8 @@ export function BotSettingsModal({
       const parsedSl = Number(slDist);
       const parsedTp = Number(tpDist);
       const parsedDailyLoss = Number(dailyLoss);
-      const parsedTrades = Number(maxTrades);
+      const parsedProfitLock = Math.max(1, Number(profitLockTarget) || 50);
+      const parsedTrades = Math.max(1, Math.min(5, Math.floor(Number(maxTrades) || 5)));
       const parsedEntryDist = Number(entryDistance);
       const parsedTrailDist = Number(trailingDistance);
       const parsedConsSl = Number(maxConsSL);
@@ -166,6 +169,7 @@ export function BotSettingsModal({
         takeProfitPips: parsedTp,
         maxDailyLossAmount: parsedDailyLoss,
         maxDailyLoss: parsedDailyLoss,
+        profitLockTarget: parsedProfitLock,
         maxOpenTrades: parsedTrades,
         entryDistance: isNaN(parsedEntryDist) || parsedEntryDist <= 0 ? 2.0 : parsedEntryDist,
         trailingStopEnabled: Boolean(trailingStopEnabled),
@@ -275,11 +279,11 @@ export function BotSettingsModal({
               />
             </div>
 
-            {/* MAX OPEN TRADES */}
+            {/* POSITIONS PER SETUP (1-5) */}
             <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
-              <label className="block text-xs text-slate-400 mb-1">Max Open Trades / ចំនួន Trade អតិបរមា</label>
+              <label className="block text-xs text-slate-400 mb-1">Positions Per Setup (1–5) / ចំនួន Position ក្នុងមួយ Setup (1–5)</label>
               <input 
-                type="number" step="1" min="1"
+                type="number" step="1" min="1" max="5"
                 value={maxTrades} onChange={(e) => setMaxTrades(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
               />
@@ -320,6 +324,18 @@ export function BotSettingsModal({
                 placeholder="8"
                 className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
               />
+            </div>
+
+            {/* PROFIT LOCK TARGET */}
+            <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
+              <label className="block text-xs text-slate-400 mb-1">Profit Lock Target (USC) / គោលដៅចាក់សោចំណេញ</label>
+              <input 
+                type="number" step="5" min="1"
+                value={profitLockTarget} onChange={(e) => setProfitLockTarget(e.target.value)}
+                placeholder="50"
+                className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">ចាក់សោចំណេញពេល Basket កើនដល់ +{profitLockTarget || '50'} USC (True Net Profit)</p>
             </div>
 
             {/* DAILY LOSS LIMIT */}

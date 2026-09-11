@@ -105,7 +105,7 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
   const parsedSlPips = parseFloat(slPips) || 10;
   const parsedTpPips = parseFloat(tpPips) || 10;
   const parsedEntries = Math.max(1, parseInt(entriesPerSignal) || 1);
-  const parsedMaxOpen = Math.max(1, parseInt(maxOpenTrades) || 4);
+  const parsedMaxOpen = Math.max(1, Math.min(5, parseInt(maxOpenTrades) || 5));
 
   // Calculate lot based on active mode
   let effectiveLotSize = 0.01;
@@ -401,19 +401,20 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
                 />
               </div>
 
-              {/* Maximum Open Trades */}
+              {/* Maximum Open Trades / Positions Per Setup */}
               <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3.5 flex justify-between items-center">
                 <div>
                   <div className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
-                    Max Open Trades
-                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GLOBAL MAX</span>
+                    Positions Per Setup (1–5)
+                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">L1–L5</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">ចំនួន Trade បើកអតិបរមា (Global Max)</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">ចំនួន Position ក្នុងមួយ Setup (1–5)</div>
                 </div>
                 <input
                   type="number"
                   min="1"
-                  max="20"
+                  max="5"
+                  step="1"
                   value={maxOpenTrades}
                   onChange={(e) => setMaxOpenTrades(e.target.value)}
                   className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-center font-mono font-bold focus:border-amber-500 focus:outline-none"

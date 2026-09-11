@@ -49,7 +49,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
   const maxSpread = userSettings.maxSpreadPoints || 27;
   const dailyLossLimit = userSettings.dailyLossLimit || 50;
   const dailyLossCurrent = telemetry?.dailyLossAccumulated ?? ((state as any).dailyLoss || 0);
-  const maxTrades = userSettings.maxOpenTrades || 1;
+  const maxTrades = Math.max(1, Math.min(5, Math.floor(userSettings.maxOpenTrades || 5)));
   const openTradesCount = state.openTrades?.length || 0;
   const maxConsecutiveSL = userSettings.maxConsecutiveSL || 3;
   const consecutiveLosses = telemetry?.consecutiveLossCount ?? state.consecutiveLosses ?? 0;
@@ -155,7 +155,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
     else if (!isMt5Connected) blockedReason = 'ដាច់ការភ្ជាប់ MT5 Server • MT5 Server Disconnected';
     else if (currentSpread > maxSpread) blockedReason = `Spread លើសកំណត់ ({currentSpread} > {maxSpread} pts) • Spread Exceeds Limit`;
     else if (dailyLossCurrent >= dailyLossLimit) blockedReason = `ដល់កំណត់ខាតប្រចាំថ្ងៃ ({dailyLossCurrent.toFixed(2)} >= {dailyLossLimit.toFixed(2)}) • Daily Loss Hit`;
-    else if (openTradesCount >= maxTrades) blockedReason = `ដល់កំណត់ចំនួន Trade អតិបរមា ({openTradesCount}/{maxTrades}) • Max Open Trades Reached`;
+    else if (openTradesCount >= maxTrades) blockedReason = `ដល់កំណត់ចំនួន Position ក្នុងមួយ Setup ({openTradesCount}/{maxTrades}) • Max Positions Per Setup Reached`;
     else if (consecutiveLosses >= maxConsecutiveSL) blockedReason = `ដល់កំណត់ SL ជាប់គ្នា ({consecutiveLosses}/{maxConsecutiveSL}) • Max Consecutive SL Reached`;
     else if (isCooldown) blockedReason = 'កំពុងសម្រាកក្រោយ SL (Loss Cooldown Active) • Loss Cooldown in Effect';
     else if (isNewsBlocked) blockedReason = 'ស្ថិតក្នុងម៉ោងព័ត៌មានសេដ្ឋកិច្ចធំ (High Impact News Window Active)';

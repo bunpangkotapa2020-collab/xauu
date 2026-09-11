@@ -48,6 +48,7 @@ export interface RiskConfig {
   entryDistance?: number; // Pullback entry distance Pos #1 (raw price)
   dailyLossCurrency?: string; // Account currency (USC for Cent account)
   trailingStopEnabled: boolean;
+  profitLockTarget?: number; // Profit Lock Target (USC) - User controlled threshold
   trailingDistance?: number;
   trailingRule?: string;
   trailingStopActivationPoints?: number; // legacy points

@@ -67,7 +67,7 @@ export class DaRaM1Engine {
     telegram?: DaRaTelegramInterface
   ) {
     this.broker = broker;
-    this.userSettings = { ...initialSettings };
+    this.userSettings = { liveTradingEnabled: false, ...initialSettings };
     this.telegram = telegram;
 
     this.strategy = new DaRaM1Strategy();
@@ -147,9 +147,13 @@ export class DaRaM1Engine {
     return this.stateMachine.getActivePosition();
   }
 
+  public getActivePositions(): DaRaPosition[] {
+    return this.stateMachine.getActivePositions();
+  }
 
-  public getTelemetry(currentSpreadPoints: number = 0, currentOpenTradesCount: number = 0): DaRaTelemetry {
-    const safety = this.evaluateSafety(currentSpreadPoints, currentOpenTradesCount);
+  public getTelemetry(currentSpreadPoints: number = 0, currentBasketPositionsCount?: number): DaRaTelemetry {
+    const basketCount = currentBasketPositionsCount !== undefined ? currentBasketPositionsCount : this.stateMachine.getActivePositions().length;
+    const safety = this.evaluateSafety(currentSpreadPoints, basketCount);
     return {
       isRunning: this.isRunning,
       state: this.stateMachine.getState(),
@@ -170,7 +174,7 @@ export class DaRaM1Engine {
   // SAFETY EVALUATION PIPELINE
   // ==========================================
 
-  public evaluateSafety(currentSpreadPoints: number, currentOpenTradesCount: number): DaRaSafetyStatus {
+  public evaluateSafety(currentSpreadPoints: number, currentBasketPositionsCount?: number): DaRaSafetyStatus {
     const s = this.userSettings;
     const now = Date.now();
 
@@ -183,7 +187,15 @@ export class DaRaM1Engine {
 
     const isSpreadTooHigh = currentSpreadPoints > s.maxSpreadPoints;
     const isNewsBlocked = s.newsFilterEnabled && this.isNewsBlockedNow;
-    const isMaxTradesReached = currentOpenTradesCount >= s.maxOpenTrades;
+    const rawMax = Number(s.maxOpenTrades);
+    const maxPositions = isNaN(rawMax) ? 5 : Math.max(1, Math.min(5, Math.floor(rawMax)));
+
+    // STRICT REQUIREMENT B: Max Positions Per Setup isolates ONLY active DaRa Basket positions.
+    // Unrelated/global broker positions NEVER block DaRa levels.
+    const basketPositionsCount = currentBasketPositionsCount !== undefined 
+      ? currentBasketPositionsCount 
+      : this.stateMachine.getActivePositions().length;
+    const isMaxTradesReached = basketPositionsCount >= maxPositions;
     const isMt5Disconnected = !this.isMt5ConnectedNow;
 
     let blockedReason: string | undefined;
@@ -193,7 +205,7 @@ export class DaRaM1Engine {
     else if (isInCooldown) blockedReason = `Loss Cooldown Active (${Math.ceil((cooldownMs - (now - this.lastLossTime)) / 60000)}m remaining)`;
     else if (isSpreadTooHigh) blockedReason = `Spread too high (${currentSpreadPoints} > ${s.maxSpreadPoints})`;
     else if (isNewsBlocked) blockedReason = `High Impact News Filter Active`;
-    else if (isMaxTradesReached) blockedReason = `Max Open Trades reached (${currentOpenTradesCount} >= ${s.maxOpenTrades})`;
+    else if (isMaxTradesReached) blockedReason = `Max Positions reached (${basketPositionsCount} >= ${maxPositions})`;
 
     const isSafeToTrade = !blockedReason;
 
@@ -316,12 +328,15 @@ export class DaRaM1Engine {
         setupForTrailing.trailingState = { activated: false };
       }
 
-      const PROFIT_LOCK_THRESHOLD = 50; // +50 USC
+      const rawLockTarget = Number(this.userSettings?.profitLockTarget);
+      const PROFIT_LOCK_THRESHOLD = (!isNaN(rawLockTarget) && rawLockTarget > 0) ? rawLockTarget : 50; // User-controlled Profit Lock Target (USC), default 50 USC
 
-      // Phase 1: Activate Profit Lock when TRUE Net Profit reaches >= +50 USC
+      // Phase 1: Activate Profit Lock when TRUE Net Profit reaches >= configured threshold
+      let justActivatedLock = false;
       if (!setupForTrailing.trailingState.profitLockActivated && basketNetProfit >= PROFIT_LOCK_THRESHOLD) {
         setupForTrailing.trailingState.profitLockActivated = true;
         setupForTrailing.trailingState.highestBasketNetProfit = basketNetProfit;
+        justActivatedLock = true;
         console.log(`[DaRa M1 EA v1.0] 🔒 BASKET PROFIT LOCK ACTIVATED at +${basketNetProfit.toFixed(2)} USC (Threshold: +${PROFIT_LOCK_THRESHOLD} USC)`);
         if (this.telegram) {
           const title = `🔒 DaRa M1 - PROFIT LOCK ACTIVATED`;
@@ -342,8 +357,8 @@ export class DaRaM1Engine {
           basketNetProfit
         );
 
-        // Phase 2: If profit was running above threshold and returns to <= +50 USC, close the ENTIRE Basket
-        if (basketNetProfit <= PROFIT_LOCK_THRESHOLD) {
+        // Phase 2: If profit was running above threshold and returns to <= configured threshold, close the ENTIRE Basket
+        if (!justActivatedLock && basketNetProfit <= PROFIT_LOCK_THRESHOLD) {
           console.log(`[DaRa M1 EA v1.0] 🛡️ BASKET PROFIT LOCK HIT! Net profit returned to +${basketNetProfit.toFixed(2)} USC (Peak: +${(setupForTrailing.trailingState.highestBasketNetProfit || PROFIT_LOCK_THRESHOLD).toFixed(2)} USC, Locked at +${PROFIT_LOCK_THRESHOLD} USC). Closing entire Basket!`);
           await this.closeBasket('PROFIT_LOCK_HIT', `Basket Net Profit returned to +${basketNetProfit.toFixed(2)} USC`, currentBid, currentAsk);
           return;
@@ -390,7 +405,8 @@ export class DaRaM1Engine {
 
     // 2. State: SCANNING — Scan for Liquidity Sweep -> Displacement -> MSS
     if (state === 'SCANNING' && !this.stateMachine.hasOpenPositions()) {
-      const initialSafety = this.evaluateSafety(feed.spreadPoints, feed.openTradesCount);
+      const currentBasketCount = this.stateMachine.getActivePositions().length;
+      const initialSafety = this.evaluateSafety(feed.spreadPoints, currentBasketCount);
       if (!initialSafety.isSafeToTrade) {
         return;
       }
@@ -428,14 +444,18 @@ export class DaRaM1Engine {
       }
 
       // Step B: Check if Price hit the next Pending Level
-      const nextLevel = this.stateMachine.getNextPendingLevel();
+      const rawUserMax = Number(this.userSettings.maxOpenTrades);
+      const maxAllowedPositions = isNaN(rawUserMax) ? 5 : Math.max(1, Math.min(5, Math.floor(rawUserMax)));
+      const nextLevel = this.stateMachine.getNextPendingLevel(maxAllowedPositions);
       const latestCandle = feed.m1Candles && feed.m1Candles.length > 0 ? feed.m1Candles[feed.m1Candles.length - 1] : undefined;
       
-      if (nextLevel && this.stateMachine.isEntryPriceReached(currentPrice, latestCandle?.low, latestCandle?.high)) {
+      if (nextLevel && this.stateMachine.isEntryPriceReached(currentPrice, latestCandle?.low, latestCandle?.high, maxAllowedPositions)) {
         const positionNumber = nextLevel.levelIndex + 1;
         
         // Safety verification immediately before sending broker order
-        const safety = this.evaluateSafety(feed.spreadPoints, feed.openTradesCount);
+        // STRICT REQUIREMENT B: Evaluate against current active DaRa basket count only!
+        const currentBasketCount = this.stateMachine.getActivePositions().length;
+        const safety = this.evaluateSafety(feed.spreadPoints, currentBasketCount);
         if (!safety.isSafeToTrade) {
           console.warn(`[DaRa M1 EA v1.0] ⚠️ Entry hit but Safety Guard blocked execution: ${safety.blockedReason}`);
           if (this.telegram) {
@@ -467,8 +487,8 @@ export class DaRaM1Engine {
           this.stateMachine.onPositionOpened(execResult.position, nextLevel.levelIndex);
           console.log(`[DaRa M1 EA v1.0] 🚀 Position #${positionNumber} Filled! Ticket #${execResult.position.ticket}.`);
           
-          if (positionNumber === 5) {
-             console.log(`[DaRa M1 EA v1.0] 5/5 POSITIONS OPENED. 1 Confirmed Signal = 5 Positions MAX. STOPPING further entries.`);
+          if (positionNumber >= maxAllowedPositions) {
+             console.log(`[DaRa M1 EA v1.0] ${positionNumber}/${maxAllowedPositions} POSITIONS OPENED. Max Positions Per Setup (${maxAllowedPositions}) reached. STOPPING further entries.`);
           }
         } else {
           console.error(`[DaRa M1 EA v1.0] Execution rejected: ${execResult.error}`);
@@ -872,7 +892,9 @@ export class DaRaM1Engine {
       await this.telegram.notify(title, msg, `TRADE_TRAILING_SL_${trade.ticket}`).catch(() => {});
     } else if (trade.exitReason === 'PROFIT_LOCK_HIT') {
       const isProfit = trade.pnl >= 0;
-      const title = `🔒 បិទ ${trade.type} — Profit Lock (+50 USC)`;
+      const rawLockTarget = Number(this.userSettings?.profitLockTarget);
+      const lockTargetUsc = (!isNaN(rawLockTarget) && rawLockTarget > 0) ? rawLockTarget : 50;
+      const title = `🔒 បិទ ${trade.type} — Profit Lock (+${lockTargetUsc} USC)`;
       const msg = [
         `ចូល: ${trade.openPrice.toFixed(3)}`,
         `ចេញ: ${trade.closePrice.toFixed(3)}`,
