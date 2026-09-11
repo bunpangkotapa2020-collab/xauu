@@ -139,7 +139,7 @@ export class DaRaOrderExecution {
       
       if (settings.liveTradingEnabled !== true) {
         console.log(`[DaRa M1 EA] ℹ️ LIVE TRADING IS OFF (Monitor Mode). Execution aborted.`);
-        return { success: false, error: 'MONITOR_MODE' };
+        return { success: false, error: 'LIVE TRADING IS OFF (Monitor Mode)' };
       }
       
       if (!this.broker) {
@@ -158,22 +158,13 @@ export class DaRaOrderExecution {
       });
 
       if (!brokerResponse.success || !brokerResponse.ticket) {
-        console.error(`[DaRa M1 EA v1.0] ❌ Broker Rejection: ${brokerResponse.error || 'Unknown broker error'}`);
-        if (this.telegram) {
-          const rejMsg = [
-            `Reason: ${brokerResponse.error || 'Execution failed'}`,
-            `Direction: ${setup.direction}`,
-            `Position: #${positionNumber}`,
-            `Symbol: ${symbol}`,
-            `Lot: ${lot}`,
-            `Attempted Entry: ${openPrice}`,
-            `Time: ${new Date().toISOString()}`
-          ].join('\n');
-          this.telegram.notify('⚠️ DaRa M1 EA v1.0 — BROKER REJECTION', rejMsg).catch(() => {});
-        }
+        const brokerErrMsg = brokerResponse.error 
+          ? (typeof brokerResponse.error === 'object' ? JSON.stringify(brokerResponse.error) : String(brokerResponse.error))
+          : 'Broker rejected order without ticket';
+        console.error(`[DaRa M1 EA v1.0] ❌ Broker Rejection: ${brokerErrMsg}`);
         return {
           success: false,
-          error: `Broker Rejection: ${typeof brokerResponse.error === 'object' ? JSON.stringify(brokerResponse.error) : brokerResponse.error || 'Execution failed'}`
+          error: `Broker Rejection: ${brokerErrMsg}`
         };
       }
 

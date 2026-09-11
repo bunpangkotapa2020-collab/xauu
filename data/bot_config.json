@@ -1,8 +1,8 @@
 {
-  "desiredBotState": "RUNNING",
-  "status": "running",
+  "desiredBotState": "STOPPED",
+  "status": "stopped",
   "selectedAsset": "XAUUSD",
-  "currentTradingDate": "2026-09-09T17:00:00.000Z",
+  "currentTradingDate": "2026-09-10T17:00:00.000Z",
   "dailyLossLimitHit": false,
   "account": {
     "accountType": "cent",
@@ -18,10 +18,10 @@
     "pingMs": 15,
     "connectionMethod": "rest_bridge",
     "vpsOnline": true,
-    "balance": 10069.37,
-    "equity": 10131.17,
-    "freeMargin": 10113.63,
-    "marginLevel": 57760.376282782214,
+    "balance": 8400.37,
+    "equity": 8400.37,
+    "freeMargin": 8400.37,
+    "marginLevel": 38697.19411223551,
     "currency": "USC",
     "stages": {
       "appLoggedIn": true,
@@ -42,20 +42,21 @@
   },
   "riskConfig": {
     "lotSizeMode": "fixed",
-    "lotSize": 0.08,
+    "lotSize": 0.05,
     "riskPercent": 1,
-    "maxDailyLoss": 3000,
+    "maxDailyLoss": 4000,
     "maxDrawdownPercent": 5,
     "maxSpreadPoints": 27,
-    "stopLossPips": 30,
-    "takeProfitPips": 8,
+    "stopLossPips": 8,
+    "takeProfitPips": 5,
     "trailingStopEnabled": true,
-    "maxOpenTrades": 5,
+    "maxOpenTrades": 2,
     "entriesPerSignal": 1,
-    "maxConsecutiveLosses": 70,
-    "cooldownMinutes": 15,
+    "maxConsecutiveLosses": 90,
+    "cooldownMinutes": 0,
     "maxDailyLossPercent": 5,
-    "maxDailyLossAmount": 3000,
+    "maxDailyLossAmount": 4000,
+    "profitLockTarget": 10,
     "noMartingale": true,
     "noGrid": true,
     "liveTradingEnabled": false,
@@ -67,5 +68,5 @@
     "soundEnabled": true,
     "theme": "dark"
   },
-  "lastSavedAt": "2026-09-10T11:48:13.860Z"
+  "lastSavedAt": "2026-09-11T09:12:42.767Z"
 }

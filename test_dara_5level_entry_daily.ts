@@ -65,14 +65,14 @@ async function run5LevelDailyCheck() {
   markPass(1, 'Max 5 Positions Per Signal', `Setup contains exactly ${buySetup.entryLevels?.length} levels`);
 
   // 3 & 4. BUY Levels computed from Locked Entry = 100
-  assert(buySetup.entryLevels![0].targetPrice === 99, `L1 should be 99, got ${buySetup.entryLevels![0].targetPrice}`);
-  assert(buySetup.entryLevels![1].targetPrice === 98, `L2 should be 98, got ${buySetup.entryLevels![1].targetPrice}`);
-  assert(buySetup.entryLevels![2].targetPrice === 97, `L3 should be 97, got ${buySetup.entryLevels![2].targetPrice}`);
-  assert(buySetup.entryLevels![3].targetPrice === 96, `L4 should be 96, got ${buySetup.entryLevels![3].targetPrice}`);
-  assert(buySetup.entryLevels![4].targetPrice === 95, `L5 should be 95, got ${buySetup.entryLevels![4].targetPrice}`);
+  assert(buySetup.entryLevels![0].targetPrice === 100, `L1 should be 100, got ${buySetup.entryLevels![0].targetPrice}`);
+  assert(buySetup.entryLevels![1].targetPrice === 99, `L2 should be 99, got ${buySetup.entryLevels![1].targetPrice}`);
+  assert(buySetup.entryLevels![2].targetPrice === 98, `L3 should be 98, got ${buySetup.entryLevels![2].targetPrice}`);
+  assert(buySetup.entryLevels![3].targetPrice === 97, `L4 should be 97, got ${buySetup.entryLevels![3].targetPrice}`);
+  assert(buySetup.entryLevels![4].targetPrice === 96, `L5 should be 96, got ${buySetup.entryLevels![4].targetPrice}`);
 
   // ----------------------------------------------------
-  // TEST B: SELL EXACT USER SCENARIO (Locked = 100 -> 101, 102, 103, 104, 105)
+  // TEST B: SELL EXACT USER SCENARIO (Locked = 100 -> 100, 101, 102, 103, 104)
   // ----------------------------------------------------
   const smSell = new DaRaM1StateMachine();
   smSell.onUserStart();
@@ -93,13 +93,13 @@ async function run5LevelDailyCheck() {
   }, settings);
 
   const sellSetup = smSell.getSetup()!;
-  assert(sellSetup.entryLevels![0].targetPrice === 101, `SELL L1 should be 101, got ${sellSetup.entryLevels![0].targetPrice}`);
-  assert(sellSetup.entryLevels![1].targetPrice === 102, `SELL L2 should be 102, got ${sellSetup.entryLevels![1].targetPrice}`);
-  assert(sellSetup.entryLevels![2].targetPrice === 103, `SELL L3 should be 103, got ${sellSetup.entryLevels![2].targetPrice}`);
-  assert(sellSetup.entryLevels![3].targetPrice === 104, `SELL L4 should be 104, got ${sellSetup.entryLevels![3].targetPrice}`);
-  assert(sellSetup.entryLevels![4].targetPrice === 105, `SELL L5 should be 105, got ${sellSetup.entryLevels![4].targetPrice}`);
+  assert(sellSetup.entryLevels![0].targetPrice === 100, `SELL L1 should be 100, got ${sellSetup.entryLevels![0].targetPrice}`);
+  assert(sellSetup.entryLevels![1].targetPrice === 101, `SELL L2 should be 101, got ${sellSetup.entryLevels![1].targetPrice}`);
+  assert(sellSetup.entryLevels![2].targetPrice === 102, `SELL L3 should be 102, got ${sellSetup.entryLevels![2].targetPrice}`);
+  assert(sellSetup.entryLevels![3].targetPrice === 103, `SELL L4 should be 103, got ${sellSetup.entryLevels![3].targetPrice}`);
+  assert(sellSetup.entryLevels![4].targetPrice === 104, `SELL L5 should be 104, got ${sellSetup.entryLevels![4].targetPrice}`);
 
-  markPass(3, 'Entry Levels from Locked Entry', 'BUY: 100 -> 99, 98, 97, 96, 95 | SELL: 100 -> 101, 102, 103, 104, 105');
+  markPass(3, 'Entry Levels from Locked Entry', 'BUY: 100 -> 100, 99, 98, 97, 96 | SELL: 100 -> 100, 101, 102, 103, 104');
   markPass(4, 'BUY & SELL Direction Accuracy', 'BUY steps downward (pullback), SELL steps upward (pullback)');
 
   // ----------------------------------------------------
@@ -147,40 +147,40 @@ async function run5LevelDailyCheck() {
   }, engine.getUserSettings());
 
   // Check 2: Sequential Progression
-  // Tick 1: Price touches 99 (L1)
+  // Tick 1: Price touches 100 (L1)
   await engine.onMarketUpdate({
     symbol: 'XAUUSD',
-    bid: 99,
-    ask: 99.2,
+    bid: 100,
+    ask: 100.2,
     time: 2000,
     serverTime: 2000,
     spreadPoints: 20,
     openTradesCount: 0,
     m1Candles: []
   });
-  assert(executedOrders.length === 1, 'Pos #1 executed at 99');
-  assert(executedOrders[0].openPrice === 99.2, 'Pos #1 price recorded');
+  assert(executedOrders.length === 1, 'Pos #1 executed at 100');
+  assert(executedOrders[0].openPrice === 100.2, 'Pos #1 price recorded');
 
-  // Attempt duplicate tick at 99 -> Must NOT re-trigger
+  // Attempt duplicate tick at 100 -> Must NOT re-trigger
   await engine.onMarketUpdate({
     symbol: 'XAUUSD',
-    bid: 99,
-    ask: 99.2,
+    bid: 100,
+    ask: 100.2,
     time: 2010,
     serverTime: 2010,
     spreadPoints: 20,
     openTradesCount: 1,
     m1Candles: []
   });
-  assert(executedOrders.length === 1, 'Duplicate tick at 99 rejected');
-  markPass(8, 'Duplicate Entry Protection', 'Pos #1 not re-executed on repeated ticks at 99');
+  assert(executedOrders.length === 1, 'Duplicate tick at 100 rejected');
+  markPass(8, 'Duplicate Entry Protection', 'Pos #1 not re-executed on repeated ticks at 100');
 
-  // Next level must be L2 (98). If price touches 97 before 98, it triggers sequential next level.
-  // Tick 2: Price touches 98 (L2)
+  // Next level must be L2 (99).
+  // Tick 2: Price touches 99 (L2)
   await engine.onMarketUpdate({
     symbol: 'XAUUSD',
-    bid: 98,
-    ask: 98.2,
+    bid: 99,
+    ask: 99.2,
     time: 2020,
     serverTime: 2020,
     spreadPoints: 20,
@@ -189,11 +189,11 @@ async function run5LevelDailyCheck() {
   });
   assert(executedOrders.length === 2, 'Pos #2 executed sequentially after Pos #1');
 
-  // Tick 3: Price touches 97 (L3)
+  // Tick 3: Price touches 98 (L3)
   await engine.onMarketUpdate({
     symbol: 'XAUUSD',
-    bid: 97,
-    ask: 97.2,
+    bid: 98,
+    ask: 98.2,
     time: 2030,
     serverTime: 2030,
     spreadPoints: 20,
@@ -202,11 +202,11 @@ async function run5LevelDailyCheck() {
   });
   assert(executedOrders.length === 3, 'Pos #3 executed sequentially after Pos #2');
 
-  // Tick 4: Price touches 96 (L4)
+  // Tick 4: Price touches 97 (L4)
   await engine.onMarketUpdate({
     symbol: 'XAUUSD',
-    bid: 96,
-    ask: 96.2,
+    bid: 97,
+    ask: 97.2,
     time: 2040,
     serverTime: 2040,
     spreadPoints: 20,
@@ -215,11 +215,11 @@ async function run5LevelDailyCheck() {
   });
   assert(executedOrders.length === 4, 'Pos #4 executed sequentially after Pos #3');
 
-  // Tick 5: Price touches 95 (L5)
+  // Tick 5: Price touches 96 (L5)
   await engine.onMarketUpdate({
     symbol: 'XAUUSD',
-    bid: 95,
-    ask: 95.2,
+    bid: 96,
+    ask: 96.2,
     time: 2050,
     serverTime: 2050,
     spreadPoints: 20,
@@ -227,7 +227,7 @@ async function run5LevelDailyCheck() {
     m1Candles: []
   });
   assert(executedOrders.length === 5, 'Pos #5 executed sequentially after Pos #4');
-  markPass(2, 'Positions #1 -> #5 Sequential Execution', 'Executed strictly in sequence: L1 (99) -> L2 (98) -> L3 (97) -> L4 (96) -> L5 (95)');
+  markPass(2, 'Positions #1 -> #5 Sequential Execution', 'Executed strictly in sequence: L1 (100) -> L2 (99) -> L3 (98) -> L4 (97) -> L5 (96)');
 
   // Check 5: All 5 belong to the exact same Setup/Signal
   assert(engineSm.getSetup()?.id === 'SETUP_UNIFIED_BASKET', 'Setup ID is identical across all positions');

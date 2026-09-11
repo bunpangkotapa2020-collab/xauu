@@ -80,6 +80,8 @@ export interface DaRaSetup {
   // 5-Level Entry System
   entryLevels?: { targetPrice: number; executed: boolean; ticket?: string | number }[];
   positionsOpened?: number;
+  lastExecutedPrice?: number;
+  lastExecutedLevel?: number;
   sharedSL?: number;
   sharedTP?: number;
   trailingState?: DaRaSetupTrailingState;

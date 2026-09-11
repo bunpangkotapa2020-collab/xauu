@@ -60,6 +60,9 @@ export class DaRaM1Engine {
   private cachedPointSize: number = 0;
   private lastAnalysis: DaRaAnalysisDetails | null = null;
   private closedTicketsSet: Set<string> = new Set<string>();
+  private lastFeedTime: number = 0;
+  private isOrderInFlight: boolean = false;
+  private lastFeedPrice: number = 0;
 
   constructor(
     broker: DaRaBrokerInterface,
@@ -149,6 +152,10 @@ export class DaRaM1Engine {
 
   public getActivePositions(): DaRaPosition[] {
     return this.stateMachine.getActivePositions();
+  }
+
+  public getScanBaselineTime(): number {
+    return this.strategy.getScanBaselineTime();
   }
 
   public getTelemetry(currentSpreadPoints: number = 0, currentBasketPositionsCount?: number): DaRaTelemetry {
@@ -270,6 +277,7 @@ export class DaRaM1Engine {
   // ==========================================
 
   public async onMarketUpdate(feed: DaRaMarketFeed): Promise<void> {
+    this.lastFeedTime = feed.serverTime || feed.time || Date.now();
     if (this.cachedPointSize === 0) {
       try {
         const symbolInfo = await this.broker.getSymbolInfo(feed.symbol);
@@ -286,6 +294,8 @@ export class DaRaM1Engine {
     const currentPrice = feed.bid; // Mid/Bid reference
     const currentAsk = feed.ask;
     const currentBid = feed.bid;
+    const prevFeedPrice = this.lastFeedPrice > 0 ? this.lastFeedPrice : undefined;
+    this.lastFeedPrice = currentPrice;
 
     // Continuously update live analysis details for transparency
     if (feed.m1Candles && feed.m1Candles.length >= 10) {
@@ -383,7 +393,7 @@ export class DaRaM1Engine {
           this.telegram.notify(`🛡️ DaRa M1 - TRAILING ACTIVATED`, msg).catch(() => {});
         }
         for (const pos of activePositions) {
-          if (pos.tp !== 0) {
+          if (pos.tp !== 0 && typeof this.broker?.modifyPosition === 'function') {
             await this.broker.modifyPosition(pos.ticket, pos.sl, 0);
             pos.tp = 0;
           }
@@ -431,6 +441,10 @@ export class DaRaM1Engine {
 
     // 3. Check for Entry Levels if we have a setup
     if ((state === 'WAIT_FOR_LOCKED_ENTRY' || state === 'TRADE_ACTIVE') && currentSetup) {
+      if (this.isOrderInFlight) {
+        return;
+      }
+
       // Step A: Check Pending Setup Cancellation (Virtual TP or SL touched before any entry)
       if (!this.stateMachine.hasOpenPositions()) {
         const wasCanceled = this.stateMachine.checkPendingSetupCancellation(currentPrice);
@@ -447,9 +461,15 @@ export class DaRaM1Engine {
       const rawUserMax = Number(this.userSettings.maxOpenTrades);
       const maxAllowedPositions = isNaN(rawUserMax) ? 5 : Math.max(1, Math.min(5, Math.floor(rawUserMax)));
       const nextLevel = this.stateMachine.getNextPendingLevel(maxAllowedPositions);
-      const latestCandle = feed.m1Candles && feed.m1Candles.length > 0 ? feed.m1Candles[feed.m1Candles.length - 1] : undefined;
       
-      if (nextLevel && this.stateMachine.isEntryPriceReached(currentPrice, latestCandle?.low, latestCandle?.high, maxAllowedPositions)) {
+      const isReached = this.stateMachine.isEntryPriceReached(
+        currentPrice,
+        maxAllowedPositions,
+        prevFeedPrice,
+        this.userSettings.entryDistance
+      );
+
+      if (nextLevel && isReached) {
         const positionNumber = nextLevel.levelIndex + 1;
         
         // Safety verification immediately before sending broker order
@@ -468,37 +488,72 @@ export class DaRaM1Engine {
           this.stateMachine.onEntryTriggered();
         }
 
+        // ==========================================
+        // SAFE MONITOR MODE (Live Trading is OFF)
+        // ==========================================
+        if (this.userSettings.liveTradingEnabled !== true) {
+          console.log(`[DaRa M1 EA v1.0] ℹ️ Level ${positionNumber} Target reached (${currentPrice} - target: ${nextLevel.targetPrice}). Safe Monitor Mode active (Live Trading is OFF) — Paper simulation position recorded.`);
+          const simTicket = `SIM_${Date.now()}_L${positionNumber}`;
+          const simOpenPrice = currentSetup.direction === 'BUY' ? currentAsk : currentBid;
+          const simPosition: DaRaPosition = {
+            ticket: simTicket,
+            symbol: feed.symbol,
+            type: currentSetup.direction,
+            lot: this.userSettings.lotSize,
+            openPrice: simOpenPrice,
+            currentPrice: simOpenPrice,
+            sl: currentSetup.sharedSL ?? currentSetup.virtualSLPrice,
+            tp: currentSetup.sharedTP ?? currentSetup.virtualTPPrice,
+            originalTp: currentSetup.sharedTP ?? currentSetup.virtualTPPrice,
+            originalSl: currentSetup.sharedSL ?? currentSetup.virtualSLPrice,
+            openTime: Date.now()
+          };
+          this.stateMachine.onPositionOpened(simPosition, nextLevel.levelIndex);
+          console.log(`[DaRa M1 EA v1.0] 🚀 Position #${positionNumber} Filled! Ticket #${simTicket} (Monitor Mode).`);
+          if (positionNumber >= maxAllowedPositions) {
+            console.log(`[DaRa M1 EA v1.0] ${positionNumber}/${maxAllowedPositions} POSITIONS OPENED (Monitor Mode). Max Positions reached.`);
+          }
+          return; // ONE MARKET UPDATE = MAXIMUM ONE NEW LEVEL EXECUTION
+        }
+
         console.log(`[DaRa M1 EA v1.0] ⚡ Level ${positionNumber} Target reached (${currentPrice} - target: ${nextLevel.targetPrice}). Executing Position #${positionNumber} ${currentSetup.direction}...`);
         if (this.telegram) {
           this.telegram.notify(`⚡ DaRa M1 EA - POS #${positionNumber} TARGET REACHED`, `Price reached Level ${positionNumber} target (${currentPrice}).\nExecuting Position #${positionNumber} ${currentSetup.direction}...`).catch(() => {});
         }
 
-        const execResult = await this.execution.executeOrder(
-          currentSetup,
-          feed.symbol,
-          currentAsk,
-          currentBid,
-          this.userSettings,
-          nextLevel.levelIndex,
-          this.isRunning
-        );
+        this.isOrderInFlight = true;
+        try {
+          const execResult = await this.execution.executeOrder(
+            currentSetup,
+            feed.symbol,
+            currentAsk,
+            currentBid,
+            this.userSettings,
+            nextLevel.levelIndex,
+            this.isRunning
+          );
 
-        if (execResult.success && execResult.position) {
-          this.stateMachine.onPositionOpened(execResult.position, nextLevel.levelIndex);
-          console.log(`[DaRa M1 EA v1.0] 🚀 Position #${positionNumber} Filled! Ticket #${execResult.position.ticket}.`);
-          
-          if (positionNumber >= maxAllowedPositions) {
-             console.log(`[DaRa M1 EA v1.0] ${positionNumber}/${maxAllowedPositions} POSITIONS OPENED. Max Positions Per Setup (${maxAllowedPositions}) reached. STOPPING further entries.`);
+          if (execResult.success && execResult.position) {
+            this.stateMachine.onPositionOpened(execResult.position, nextLevel.levelIndex);
+            console.log(`[DaRa M1 EA v1.0] 🚀 Position #${positionNumber} Filled! Ticket #${execResult.position.ticket}.`);
+            
+            if (positionNumber >= maxAllowedPositions) {
+               console.log(`[DaRa M1 EA v1.0] ${positionNumber}/${maxAllowedPositions} POSITIONS OPENED. Max Positions Per Setup (${maxAllowedPositions}) reached. STOPPING further entries.`);
+            }
+          } else {
+            const rawError = execResult.error || 'Broker rejected order or no confirmation received';
+            console.error(`[DaRa M1 EA v1.0] Execution rejected: ${rawError}`);
+            if (positionNumber === 1) {
+               this.stateMachine.cancelSetup('EXPIRED', `Execution error: ${rawError}`);
+            }
+            if (this.telegram) {
+              this.telegram.notify('🔴 DaRa M1 EA - ORDER REJECTED', `Broker execution failed for Level ${positionNumber}:\n${rawError}`).catch(() => {});
+            }
           }
-        } else {
-          console.error(`[DaRa M1 EA v1.0] Execution rejected: ${execResult.error}`);
-          if (positionNumber === 1) {
-             this.stateMachine.cancelSetup('EXPIRED', `Execution error: ${execResult.error}`);
-          }
-          if (this.telegram) {
-            this.telegram.notify('🔴 DaRa M1 EA - ORDER REJECTED', `Broker execution failed for Level ${positionNumber}:\n${execResult.error}`).catch(() => {});
-          }
+        } finally {
+          this.isOrderInFlight = false;
         }
+        return; // ONE MARKET UPDATE = MAXIMUM ONE NEW LEVEL EXECUTION
       }
     }
   }
@@ -554,7 +609,7 @@ export class DaRaM1Engine {
         trailingActivated: pos.trailingActivated,
         pnl: finalPnl,
         exitReason,
-        closedAt: Date.now()
+        closedAt: this.lastFeedTime || Date.now()
       };
 
       this.stateMachine.clearPosition(closedTrade.ticket);
@@ -567,6 +622,8 @@ export class DaRaM1Engine {
     } else {
       this.stateMachine.reset();
     }
+    const baselineTime = this.lastFeedTime || Date.now();
+    this.strategy.setScanBaselineTime(baselineTime, true);
     console.log(`[DaRa M1 EA v1.0] 🔄 Entire Basket closed. Setup cleared. Returned to SCANNING.`);
   }
 
@@ -668,8 +725,16 @@ export class DaRaM1Engine {
         this.telegram.notify(title, msg, `TRAILING_SL_${position.ticket}_${trailingCheck.newSl}`).catch(() => {});
       }
       const targetTp = trailingCheck.newTp !== undefined ? trailingCheck.newTp : position.tp;
-      const modResult = await this.broker.modifyPosition(position.ticket, trailingCheck.newSl, targetTp);
-      if (modResult.success) {
+      if (typeof this.broker?.modifyPosition === 'function') {
+        const modResult = await this.broker.modifyPosition(position.ticket, trailingCheck.newSl, targetTp);
+        if (modResult && modResult.success) {
+          position.sl = trailingCheck.newSl;
+          position.lastTrailingSl = trailingCheck.newSl;
+          if (trailingCheck.newTp !== undefined) {
+            position.tp = trailingCheck.newTp;
+          }
+        }
+      } else {
         position.sl = trailingCheck.newSl;
         position.lastTrailingSl = trailingCheck.newSl;
         if (trailingCheck.newTp !== undefined) {
@@ -746,7 +811,7 @@ export class DaRaM1Engine {
       trailingActivated: position.trailingActivated,
       pnl: finalPnl,
       exitReason,
-      closedAt: Date.now()
+      closedAt: this.lastFeedTime || Date.now()
     };
 
     this.stateMachine.clearPosition(closedTrade.ticket);
@@ -761,7 +826,8 @@ export class DaRaM1Engine {
     ticket: string | number,
     overrideExitReason?: DaRaExitReason,
     overrideProfit?: number,
-    overridePrice?: number
+    overridePrice?: number,
+    overrideClosedAt?: number
   ): Promise<void> {
     const ticketKey = String(ticket);
     if (this.closedTicketsSet.has(ticketKey)) {
@@ -822,7 +888,7 @@ export class DaRaM1Engine {
       trailingActivated: targetPos.trailingActivated,
       pnl: finalPnl,
       exitReason,
-      closedAt: Date.now()
+      closedAt: overrideClosedAt || this.lastFeedTime || Date.now()
     };
 
     this.stateMachine.clearPosition(closedTrade.ticket);
@@ -848,6 +914,8 @@ export class DaRaM1Engine {
     // 3. State Machine Transition: Only clear setup & return to SCANNING if no positions remain active
     if (!this.stateMachine.hasOpenPositions()) {
       this.stateMachine.onPositionClosed(closedTrade);
+      const baseline = closedTrade.closedAt || this.lastFeedTime || Date.now();
+      this.strategy.setScanBaselineTime(baseline, true);
       console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | All positions closed. Resuming SCANNING.`);
     } else {
       console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | 1 position still active.`);

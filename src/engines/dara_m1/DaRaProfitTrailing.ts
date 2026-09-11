@@ -68,8 +68,8 @@ export class DaRaProfitTrailing {
       if (setup.direction === 'BUY') {
         const activationPrice = Number((targetTp - trailDistance).toFixed(3));
         if (currentBid >= activationPrice) {
-          // ACTIVATE ONCE
-          const hiddenSl = Number((activationPrice - trailDistance).toFixed(3));
+          // ACTIVATE ONCE: Initial Hidden SL is set at activation price (TP - trailDistance)
+          const hiddenSl = activationPrice;
           setup.trailingState.activated = true;
           setup.trailingState.activatedAt = Date.now();
           setup.trailingState.activationPrice = activationPrice;
@@ -94,8 +94,8 @@ export class DaRaProfitTrailing {
       } else { // SELL
         const activationPrice = Number((targetTp + trailDistance).toFixed(3));
         if (currentAsk <= activationPrice) {
-          // ACTIVATE ONCE
-          const hiddenSl = Number((activationPrice + trailDistance).toFixed(3));
+          // ACTIVATE ONCE: Initial Hidden SL is set at activation price (TP + trailDistance)
+          const hiddenSl = activationPrice;
           setup.trailingState.activated = true;
           setup.trailingState.activatedAt = Date.now();
           setup.trailingState.activationPrice = activationPrice;

@@ -66,13 +66,13 @@ async function testSetting(maxPositionsSetting: number, expectedExecutions: numb
     sharedTP: lockedEntry + 30
   }, engine.getUserSettings());
 
-  // Deep pullback that crosses all 5 levels (1998, 1996, 1994, 1992, 1990, down to 1980)
+  // Deep pullback that crosses all 5 levels (2000, 1998, 1996, 1994, 1992, down to 1980)
   const priceSequence = [
-    1998, // L1
-    1996, // L2
-    1994, // L3
-    1992, // L4
-    1990, // L5
+    2000, // L1
+    1998, // L2
+    1996, // L3
+    1994, // L4
+    1992, // L5
     1985, // Below L5
     1980  // Way below L5
   ];
@@ -163,47 +163,47 @@ async function runAllTests() {
     });
     if (broker.orders.length !== 0) throw new Error("Should not execute above L1");
 
-    // Send tick touching L1 (1998) -> only L1 executes
+    // Send tick touching L1 (2000) -> only L1 executes
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
-      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 2000, ask: 2000, spreadPoints: 5,
+      m1Candles: [{ open: 2000, high: 2000, low: 2000, close: 2000, time: Date.now() }],
       openTradesCount: 0
     });
     if (broker.orders.length !== 1) throw new Error("Should execute only L1 on first reach");
 
-    // Price bounces back up to 1999 -> no duplicate L1
+    // Price bounces back up to 2001 -> no duplicate L1
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1999, ask: 1999, spreadPoints: 5,
-      m1Candles: [{ open: 1999, high: 1999, low: 1999, close: 1999, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 2001, ask: 2001, spreadPoints: 5,
+      m1Candles: [{ open: 2001, high: 2001, low: 2001, close: 2001, time: Date.now() }],
       openTradesCount: 1
     });
     if (broker.orders.length !== 1) throw new Error("No duplicate on bounce");
 
-    // Price drops to 1996 -> L2 executes
+    // Price drops to 1998 -> L2 executes
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
-      m1Candles: [{ open: 1996, high: 1996, low: 1996, close: 1996, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
+      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
       openTradesCount: 1
     });
     if (broker.orders.length !== 2) throw new Error("Should execute L2");
 
-    // Price drops to 1994 -> L3 executes
+    // Price drops to 1996 -> L3 executes
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1994, ask: 1994, spreadPoints: 5,
-      m1Candles: [{ open: 1994, high: 1994, low: 1994, close: 1994, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
+      m1Candles: [{ open: 1996, high: 1996, low: 1996, close: 1996, time: Date.now() }],
       openTradesCount: 2
     });
     if (broker.orders.length !== 3) throw new Error("Should execute L3");
 
-    // Price drops to 1992 (L4) and 1990 (L5) -> blocked by maxOpenTrades = 3
+    // Price drops to 1994 (L4) and 1992 (L5) -> blocked by maxOpenTrades = 3
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1992, ask: 1992, spreadPoints: 5,
-      m1Candles: [{ open: 1992, high: 1992, low: 1992, close: 1992, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1994, ask: 1994, spreadPoints: 5,
+      m1Candles: [{ open: 1994, high: 1994, low: 1994, close: 1994, time: Date.now() }],
       openTradesCount: 3
     });
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1990, ask: 1990, spreadPoints: 5,
-      m1Candles: [{ open: 1990, high: 1990, low: 1990, close: 1990, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1992, ask: 1992, spreadPoints: 5,
+      m1Candles: [{ open: 1992, high: 1992, low: 1992, close: 1992, time: Date.now() }],
       openTradesCount: 3
     });
     if (broker.orders.length !== 3) throw new Error("L4 and L5 MUST be blocked when maxOpenTrades = 3");
@@ -235,39 +235,39 @@ async function runAllTests() {
     }, engine.getUserSettings());
 
     // External account has 10 manual/other trades open: openTradesCount = 10!
-    // Trigger L1 (target 1998)
+    // Trigger L1 (target 2000)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
-      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 2000, ask: 2000, spreadPoints: 5,
+      m1Candles: [{ open: 2000, high: 2000, low: 2000, close: 2000, time: Date.now() }],
       openTradesCount: 10
     });
     if (broker.orders.length !== 1) throw new Error("L1 should execute even if account has 10 external trades");
 
-    // Price drops to 1996 (L2) with external openTradesCount = 11
+    // Price drops to 1998 (L2) with external openTradesCount = 11
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
-      m1Candles: [{ open: 1996, high: 1996, low: 1996, close: 1996, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
+      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
       openTradesCount: 11
     });
     if (broker.orders.length !== 2) throw new Error("L2 MUST NOT be blocked by external global trades count");
 
-    // Price drops to 1994 (L3) with external openTradesCount = 12
+    // Price drops to 1996 (L3) with external openTradesCount = 12
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1994, ask: 1994, spreadPoints: 5,
-      m1Candles: [{ open: 1994, high: 1994, low: 1994, close: 1994, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
+      m1Candles: [{ open: 1996, high: 1996, low: 1996, close: 1996, time: Date.now() }],
       openTradesCount: 12
     });
     if (broker.orders.length !== 3) throw new Error("L3 MUST NOT be blocked by external global trades count");
 
-    // Price drops to 1992 (L4) and 1990 (L5) -> now blocked because DaRa Basket has 3 positions (= maxAllowedPositions 3)
+    // Price drops to 1994 (L4) and 1992 (L5) -> now blocked because DaRa Basket has 3 positions (= maxAllowedPositions 3)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1992, ask: 1992, spreadPoints: 5,
-      m1Candles: [{ open: 1992, high: 1992, low: 1992, close: 1992, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1994, ask: 1994, spreadPoints: 5,
+      m1Candles: [{ open: 1994, high: 1994, low: 1994, close: 1994, time: Date.now() }],
       openTradesCount: 13
     });
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1990, ask: 1990, spreadPoints: 5,
-      m1Candles: [{ open: 1990, high: 1990, low: 1990, close: 1990, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1992, ask: 1992, spreadPoints: 5,
+      m1Candles: [{ open: 1992, high: 1992, low: 1992, close: 1992, time: Date.now() }],
       openTradesCount: 13
     });
     if (broker.orders.length !== 3) throw new Error("L4/L5 must be blocked because DaRa Basket reached 3 positions");
@@ -298,8 +298,8 @@ async function runAllTests() {
 
     // Execute L1
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
-      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 2000, ask: 2000, spreadPoints: 5,
+      m1Candles: [{ open: 2000, high: 2000, low: 2000, close: 2000, time: Date.now() }],
       openTradesCount: 0
     });
     if (!sm.hasOpenPositions()) throw new Error("Expected active position in basket");
@@ -352,13 +352,13 @@ async function runAllTests() {
 
     // Trigger L1 & L2
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
-      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 2000, ask: 2000, spreadPoints: 5,
+      m1Candles: [{ open: 2000, high: 2000, low: 2000, close: 2000, time: Date.now() }],
       openTradesCount: 0
     });
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
-      m1Candles: [{ open: 1996, high: 1996, low: 1996, close: 1996, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
+      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
       openTradesCount: 1
     });
 
@@ -401,10 +401,10 @@ async function runAllTests() {
       sharedTP: 2030
     }, engine.getUserSettings());
 
-    // Trigger L1 (openPrice 1998)
+    // Trigger L1 (openPrice 2000)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
-      m1Candles: [{ open: 1998, high: 1998, low: 1998, close: 1998, time: Date.now() }],
+      symbol: 'XAUUSD', bid: 2000, ask: 2000, spreadPoints: 5,
+      m1Candles: [{ open: 2000, high: 2000, low: 2000, close: 2000, time: Date.now() }],
       openTradesCount: 0
     });
 
