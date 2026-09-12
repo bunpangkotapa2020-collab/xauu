@@ -1009,7 +1009,6 @@ interface BotServerState {
     cooldownMinutes: number;
     maxDailyLossPercent: number;
     maxDailyLossAmount: number;
-    profitLockTarget?: number;
     noMartingale: boolean;
     noGrid: boolean;
   };
@@ -1100,7 +1099,6 @@ const DEFAULT_BOT_CONFIG = {
     cooldownMinutes: 15,
     maxDailyLossPercent: 5,
     maxDailyLossAmount: 50,
-    profitLockTarget: 50,
     noMartingale: true,
     noGrid: true,
     liveTradingEnabled: false,
@@ -1224,7 +1222,6 @@ if (global.daraEngine) {
         trailingEnabled: botState.riskConfig.trailingStopEnabled !== false,
         trailingDistance: botState.riskConfig.trailingDistance,
         entryDistance: botState.riskConfig.entryDistance || 2.0,
-        profitLockTarget: botState.riskConfig.profitLockTarget || 50,
         liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
     });
     if (botState.status === 'running' || botState.desiredBotState === 'RUNNING') {
@@ -3710,7 +3707,6 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.cooldownMinutes !== undefined) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
       if (riskConfig.maxDailyLossPercent !== undefined) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
       if (riskConfig.maxDailyLossAmount !== undefined) botState.riskConfig.maxDailyLossAmount = Number(riskConfig.maxDailyLossAmount);
-      if (riskConfig.profitLockTarget !== undefined) botState.riskConfig.profitLockTarget = Number(riskConfig.profitLockTarget);
       
       // CRITICAL FIX: Sync new config into the running EA Engine instance
             
@@ -3730,7 +3726,6 @@ app.post('/api/bot/action', async (req, res) => {
               trailingEnabled: botState.riskConfig.trailingStopEnabled,
               trailingDistance: botState.riskConfig.trailingDistance,
               entryDistance: botState.riskConfig.entryDistance,
-              profitLockTarget: botState.riskConfig.profitLockTarget || 50,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
           const engineSettings = daraEngine.getUserSettings();
@@ -3782,7 +3777,6 @@ app.post('/api/bot/action', async (req, res) => {
               trailingEnabled: botState.riskConfig.trailingStopEnabled,
               trailingDistance: botState.riskConfig.trailingDistance,
               entryDistance: botState.riskConfig.entryDistance,
-              profitLockTarget: botState.riskConfig.profitLockTarget || 50,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
       }
@@ -4656,18 +4650,41 @@ Categories=Finance;Trading;
         res.status(404).send('Frozen package not found');
       }
     });
+    
+    app.get('/dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz', (req, res) => {
+      const filePath = path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz');
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz"');
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+      } else {
+        res.status(404).send('Frozen package not found');
+      }
+    });
 
     app.use(vite.middlewares);
   } else {
     const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
       ? path.join(process.cwd(), 'dist')
       : (typeof __dirname !== 'undefined' ? __dirname : path.join(process.cwd(), 'dist'));
-
     app.use(express.static(distPath));
 
     // Bypass SPA routing for direct file downloads in public directory
     app.get('/download-v2.4', (req, res) => {
       res.download(path.join(process.cwd(), 'public', 'dara_m1_ea_v2.4_DEPLOY.tar.gz'));
+    });
+    
+    app.get('/dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz', (req, res) => {
+      const filePath = path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz');
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz"');
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+      } else {
+        res.status(404).send('Frozen package not found');
+      }
     });
     app.get('*', (req, res) => {
       const indexPath = path.join(distPath, 'index.html');

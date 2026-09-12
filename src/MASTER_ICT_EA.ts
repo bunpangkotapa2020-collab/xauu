@@ -1186,19 +1186,6 @@ Status: NO TRADE EXECUTED | NOT A WIN/LOSS | NO COOLDOWN
         this.log(`========================================\n`);
     }
 
-    public tradeProfitLockState: Map<string, {
-        profitLockActive: boolean;
-        originalTp: number;
-        peakPrice: number;
-        troughPrice: number;
-        lastProtectedSl: number;
-        activatedAt: number;
-    }> = new Map();
-
-    public isProfitLockActive(tradeId: string): boolean {
-        return this.tradeProfitLockState.get(tradeId)?.profitLockActive ?? false;
-    }
-
     public calculateAdaptiveBuffer(
         spread: number,
         m1Candles: Candle[],
@@ -1238,126 +1225,6 @@ Status: NO TRADE EXECUTED | NOT A WIN/LOSS | NO COOLDOWN
         return { buffer, volatility, spreadPts: spreadRounded };
     }
 
-    public evaluateProfitLockTrailing(
-        tradeId: string,
-        side: 'BUY' | 'SELL',
-        entryPrice: number,
-        currentSl: number,
-        currentPrice: number,
-        originalTp: number,
-        spread: number = 0.3,
-        m1Candles: Candle[] = []
-    ): { newSl: number | null; isProfitLock: boolean; buffer: number; volatility: number; spread: number } {
-        const pslDistance = 1.5;
-        const defaultRes = { newSl: null, isProfitLock: false, buffer: pslDistance, volatility: 0, spread: spread };
-
-        let pState = this.tradeProfitLockState.get(tradeId);
-        const effectiveOriginalTp = (pState && pState.originalTp > 0)
-            ? pState.originalTp
-            : (originalTp && originalTp > 0 ? originalTp : 0);
-
-        if (!effectiveOriginalTp || effectiveOriginalTp <= 0) return defaultRes;
-
-        // 1. PSL only triggers when Market Price reaches or passes original TP
-        const isTriggeredNow = side === 'BUY' ? (currentPrice >= effectiveOriginalTp) : (currentPrice <= effectiveOriginalTp);
-        const isAlreadyActive = pState?.profitLockActive ?? false;
-
-        if (!isTriggeredNow && !isAlreadyActive) {
-            return defaultRes;
-        }
-
-        // 2. Initialize or update state when TP is reached
-        if (!pState) {
-            pState = {
-                profitLockActive: true,
-                originalTp: effectiveOriginalTp,
-                peakPrice: currentPrice,
-                troughPrice: currentPrice,
-                lastProtectedSl: currentSl,
-                activatedAt: Date.now()
-            };
-            this.tradeProfitLockState.set(tradeId, pState);
-        } else {
-            pState.profitLockActive = true;
-            if (!pState.originalTp || pState.originalTp <= 0) {
-                pState.originalTp = effectiveOriginalTp;
-            }
-            if (side === 'BUY') {
-                pState.peakPrice = Math.max(pState.peakPrice || currentPrice, currentPrice);
-            } else {
-                pState.troughPrice = Math.min(pState.troughPrice || currentPrice, currentPrice);
-            }
-        }
-
-        if (side === 'BUY') {
-            // BUY: PSL = Original TP - 1.5
-            const initialProtectedSl = Number((effectiveOriginalTp - pslDistance).toFixed(3));
-            // When price continues in profit, trail behind peak by 1.5
-            const trailingFromPeak = Number((pState.peakPrice - pslDistance).toFixed(3));
-
-            const candidateSl = Math.max(initialProtectedSl, trailingFromPeak);
-
-            // Strict monotonic check: SL can only move UP, never DOWN, and must be below current price
-            if (candidateSl > currentSl && candidateSl < currentPrice) {
-                pState.lastProtectedSl = candidateSl;
-                
-                const logMsg = 
-`[PROFIT LOCK]
-Direction: BUY
-Entry: ${entryPrice.toFixed(3)}
-Original TP: ${effectiveOriginalTp.toFixed(3)}
-Current Price: ${currentPrice.toFixed(3)}
-PSL Distance: ${pslDistance.toFixed(3)}
-New Protected SL: ${candidateSl.toFixed(3)}`;
-
-                this.log(logMsg);
-                this.addAnalysisLog(`🔒 [PROFIT LOCK] BUY TP Reached (${effectiveOriginalTp.toFixed(3)}) -> Protected SL Locked at ${candidateSl.toFixed(3)} (PSL Distance: ${pslDistance})`, 'success');
-
-                return {
-                    newSl: candidateSl,
-                    isProfitLock: true,
-                    buffer: pslDistance,
-                    volatility: 0,
-                    spread
-                };
-            }
-        } else {
-            // SELL: PSL = Original TP + 1.5
-            const initialProtectedSl = Number((effectiveOriginalTp + pslDistance).toFixed(3));
-            // When price continues in profit, trail above trough by 1.5
-            const trailingFromTrough = Number((pState.troughPrice + pslDistance).toFixed(3));
-
-            const candidateSl = Math.min(initialProtectedSl, trailingFromTrough);
-
-            // Strict monotonic check: SL can only move DOWN, never UP, and must be above current price
-            if ((currentSl === 0 || candidateSl < currentSl) && candidateSl > currentPrice) {
-                pState.lastProtectedSl = candidateSl;
-
-                const logMsg = 
-`[PROFIT LOCK]
-Direction: SELL
-Entry: ${entryPrice.toFixed(3)}
-Original TP: ${effectiveOriginalTp.toFixed(3)}
-Current Price: ${currentPrice.toFixed(3)}
-PSL Distance: ${pslDistance.toFixed(3)}
-New Protected SL: ${candidateSl.toFixed(3)}`;
-
-                this.log(logMsg);
-                this.addAnalysisLog(`🔒 [PROFIT LOCK] SELL TP Reached (${effectiveOriginalTp.toFixed(3)}) -> Protected SL Locked at ${candidateSl.toFixed(3)} (PSL Distance: ${pslDistance})`, 'success');
-
-                return {
-                    newSl: candidateSl,
-                    isProfitLock: true,
-                    buffer: pslDistance,
-                    volatility: 0,
-                    spread
-                };
-            }
-        }
-
-        return { newSl: null, isProfitLock: true, buffer: pslDistance, volatility: 0, spread };
-    }
-
     public evaluateTrailingSL(
         tradeId: string, 
         side: 'BUY' | 'SELL', 
@@ -1369,32 +1236,7 @@ New Protected SL: ${candidateSl.toFixed(3)}`;
         originalTp?: number,
         spread: number = 0.3
     ): number | null {
-        // 1. Check TP Reached -> Profit Lock / Dynamic Trailing
-        const pState = this.tradeProfitLockState.get(tradeId);
-        const effectiveOriginalTp = (pState && pState.originalTp > 0)
-            ? pState.originalTp
-            : (originalTp && originalTp > 0 ? originalTp : 0);
-
-        if (effectiveOriginalTp > 0) {
-            const plResult = this.evaluateProfitLockTrailing(
-                tradeId,
-                side,
-                entryPrice,
-                currentSl,
-                currentPrice,
-                effectiveOriginalTp,
-                spread,
-                m1Candles
-            );
-            if (plResult.newSl !== null) {
-                return plResult.newSl;
-            }
-            if (plResult.isProfitLock) {
-                return null;
-            }
-        }
-
-        // 2. Standard Trailing SL before TP (Swing Structure Trailing at >= 1R)
+        // Standard Trailing SL before TP (Swing Structure Trailing at >= 1R)
         if (!m1Candles || m1Candles.length < 15) return null;
         
         const profit = side === 'BUY' ? (currentPrice - entryPrice) : (entryPrice - currentPrice);

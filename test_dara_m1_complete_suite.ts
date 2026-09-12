@@ -67,13 +67,13 @@ async function runTestSuite() {
 
     const setup = sm.getSetup();
     assert(setup?.entryLevels?.length === 5, 'BUY must generate exactly 5 entry levels');
-    assert(setup?.entryLevels?.[0].targetPrice === 1998, 'BUY L1 = locked - 1*dist = 1998');
-    assert(setup?.entryLevels?.[1].targetPrice === 1996, 'BUY L2 = locked - 2*dist = 1996');
-    assert(setup?.entryLevels?.[2].targetPrice === 1994, 'BUY L3 = locked - 3*dist = 1994');
-    assert(setup?.entryLevels?.[3].targetPrice === 1992, 'BUY L4 = locked - 4*dist = 1992');
-    assert(setup?.entryLevels?.[4].targetPrice === 1990, 'BUY L5 = locked - 5*dist = 1990');
+    assert(setup?.entryLevels?.[0].targetPrice === 2000, 'BUY L1 = locked = 2000');
+    assert(setup?.entryLevels?.[1].targetPrice === 1998, 'BUY L2 = locked - 1*dist = 1998');
+    assert(setup?.entryLevels?.[2].targetPrice === 1996, 'BUY L3 = locked - 2*dist = 1996');
+    assert(setup?.entryLevels?.[3].targetPrice === 1994, 'BUY L4 = locked - 3*dist = 1994');
+    assert(setup?.entryLevels?.[4].targetPrice === 1992, 'BUY L5 = locked - 4*dist = 1992');
 
-    results.push({ name: '1. 5-level BUY structure', passed: true, details: 'L1: 1998, L2: 1996, L3: 1994, L4: 1992, L5: 1990' });
+    results.push({ name: '1. 5-level BUY structure', passed: true, details: 'L1: 2000, L2: 1998, L3: 1996, L4: 1994, L5: 1992' });
   } catch (err: any) {
     results.push({ name: '1. 5-level BUY structure', passed: false, details: err.message });
   }
@@ -106,13 +106,13 @@ async function runTestSuite() {
 
     const setup = sm.getSetup();
     assert(setup?.entryLevels?.length === 5, 'SELL must generate exactly 5 entry levels');
-    assert(setup?.entryLevels?.[0].targetPrice === 2002, 'SELL L1 = locked + 1*dist = 2002');
-    assert(setup?.entryLevels?.[1].targetPrice === 2004, 'SELL L2 = locked + 2*dist = 2004');
-    assert(setup?.entryLevels?.[2].targetPrice === 2006, 'SELL L3 = locked + 3*dist = 2006');
-    assert(setup?.entryLevels?.[3].targetPrice === 2008, 'SELL L4 = locked + 4*dist = 2008');
-    assert(setup?.entryLevels?.[4].targetPrice === 2010, 'SELL L5 = locked + 5*dist = 2010');
+    assert(setup?.entryLevels?.[0].targetPrice === 2000, 'SELL L1 = locked = 2000');
+    assert(setup?.entryLevels?.[1].targetPrice === 2002, 'SELL L2 = locked + 1*dist = 2002');
+    assert(setup?.entryLevels?.[2].targetPrice === 2004, 'SELL L3 = locked + 2*dist = 2004');
+    assert(setup?.entryLevels?.[3].targetPrice === 2006, 'SELL L4 = locked + 3*dist = 2006');
+    assert(setup?.entryLevels?.[4].targetPrice === 2008, 'SELL L5 = locked + 4*dist = 2008');
 
-    results.push({ name: '2. 5-level SELL structure', passed: true, details: 'L1: 2002, L2: 2004, L3: 2006, L4: 2008, L5: 2010' });
+    results.push({ name: '2. 5-level SELL structure', passed: true, details: 'L1: 2000, L2: 2002, L3: 2004, L4: 2006, L5: 2008' });
   } catch (err: any) {
     results.push({ name: '2. 5-level SELL structure', passed: false, details: err.message });
   }
@@ -142,36 +142,36 @@ async function runTestSuite() {
       sharedSL: 1970, sharedTP: 2008
     }, engine.getUserSettings());
 
-    // Trigger L1 (1998)
+    // Trigger L1 (2000)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
-      m1Candles: [{ open: 2000, high: 2000, low: 1998, close: 1998 }], openTradesCount: 0
+      symbol: 'XAUUSD', bid: 2000, ask: 2000, spreadPoints: 5,
+      m1Candles: [{ open: 2002, high: 2002, low: 2000, close: 2000 }], openTradesCount: 0
     });
     assert(executedOrders.length === 1, 'Only L1 should execute first');
 
-    // Trigger L2 (1996)
+    // Trigger L2 (1998)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
-      m1Candles: [{ open: 1998, high: 1998, low: 1996, close: 1996 }], openTradesCount: 1
+      symbol: 'XAUUSD', bid: 1998, ask: 1998, spreadPoints: 5,
+      m1Candles: [{ open: 2000, high: 2000, low: 1998, close: 1998 }], openTradesCount: 1
     });
     assert(executedOrders.length === 2, 'L2 should execute second');
 
     // Trigger L3, L4, L5
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1994, ask: 1994, spreadPoints: 5,
-      m1Candles: [{ open: 1996, high: 1996, low: 1994, close: 1994 }], openTradesCount: 2
+      symbol: 'XAUUSD', bid: 1996, ask: 1996, spreadPoints: 5,
+      m1Candles: [{ open: 1998, high: 1998, low: 1996, close: 1996 }], openTradesCount: 2
     });
     assert(executedOrders.length === 3, 'L3 should execute third');
 
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1992, ask: 1992, spreadPoints: 5,
-      m1Candles: [{ open: 1994, high: 1994, low: 1992, close: 1992 }], openTradesCount: 3
+      symbol: 'XAUUSD', bid: 1994, ask: 1994, spreadPoints: 5,
+      m1Candles: [{ open: 1996, high: 1996, low: 1994, close: 1994 }], openTradesCount: 3
     });
     assert(executedOrders.length === 4, 'L4 should execute fourth');
 
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 1990, ask: 1990, spreadPoints: 5,
-      m1Candles: [{ open: 1992, high: 1992, low: 1990, close: 1990 }], openTradesCount: 4
+      symbol: 'XAUUSD', bid: 1992, ask: 1992, spreadPoints: 5,
+      m1Candles: [{ open: 1994, high: 1994, low: 1992, close: 1992 }], openTradesCount: 4
     });
     assert(executedOrders.length === 5, 'L5 should execute fifth');
 

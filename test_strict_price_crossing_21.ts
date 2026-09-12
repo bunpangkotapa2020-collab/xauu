@@ -90,7 +90,6 @@ const defaultSettings: DaRaUserSettings = {
   newsMinsBefore: 0,
   newsMinsAfter: 0,
   trailingEnabled: true,
-  profitLockTarget: 5,
   entryDistance: 1.0
 };
 
@@ -612,39 +611,6 @@ async function runAll21Tests() {
     }
 
     pass(18, 'Shared SL/TP Integrity', 'All 3 opened levels share exact identical SL=70 and TP=130');
-  }
-
-  // ---------------------------------------------------------------------------
-  // TEST 19: User Profit Lock Target (USC) + True Net Profit (Commission + Swap)
-  // ---------------------------------------------------------------------------
-  {
-    const broker = createMockBroker();
-    const engine = new DaRaM1Engine(broker as any, { ...defaultSettings, profitLockTarget: 10 });
-    engine.start();
-    const sm = (engine as any).stateMachine as DaRaM1StateMachine;
-    sm.onSetupDetected({
-      id: 'setup_profit_lock', direction: 'BUY', sweepLevel: 95, sweepTime: 1000, displacementConfirmed: true,
-      mssLevel: 105, mssTime: 1010, lockedEntryPrice: 100, signalPrice: 100,
-      virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
-    }, engine.getUserSettings());
-
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 100.0, ask: 100.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
-    assert(broker.openPositions.length === 1, 'Position 1 opened');
-
-    // Simulate broker reporting profit = +15, commission = -2, swap = -1 => Net = +12 (>= 10)
-    broker.openPositions[0].unrealizedProfit = 15;
-    broker.openPositions[0].commission = -2;
-    broker.openPositions[0].swap = -1;
-
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 105.0, ask: 105.1, time: 2, serverTime: 2, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
-    assert(sm.getSetup()?.trailingState?.profitLockActivated === true, 'Profit lock must activate at net +12 USC');
-
-    // Profit drops back to +9.5 USC (<= 10 threshold)
-    broker.openPositions[0].unrealizedProfit = 12.5; // Net = 12.5 - 2 - 1 = +9.5 USC
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 103.0, ask: 103.1, time: 3, serverTime: 3, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
-    assert(broker.openPositions.length === 0, 'Entire basket closed on profit lock pullback');
-
-    pass(19, 'Profit Lock with Commission and Swap', 'Accurately calculated Net Profit and closed basket upon lock breach');
   }
 
   // ---------------------------------------------------------------------------

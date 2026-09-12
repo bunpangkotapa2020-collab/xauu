@@ -338,43 +338,6 @@ export class DaRaM1Engine {
         setupForTrailing.trailingState = { activated: false };
       }
 
-      const rawLockTarget = Number(this.userSettings?.profitLockTarget);
-      const PROFIT_LOCK_THRESHOLD = (!isNaN(rawLockTarget) && rawLockTarget > 0) ? rawLockTarget : 50; // User-controlled Profit Lock Target (USC), default 50 USC
-
-      // Phase 1: Activate Profit Lock when TRUE Net Profit reaches >= configured threshold
-      let justActivatedLock = false;
-      if (!setupForTrailing.trailingState.profitLockActivated && basketNetProfit >= PROFIT_LOCK_THRESHOLD) {
-        setupForTrailing.trailingState.profitLockActivated = true;
-        setupForTrailing.trailingState.highestBasketNetProfit = basketNetProfit;
-        justActivatedLock = true;
-        console.log(`[DaRa M1 EA v1.0] 🔒 BASKET PROFIT LOCK ACTIVATED at +${basketNetProfit.toFixed(2)} USC (Threshold: +${PROFIT_LOCK_THRESHOLD} USC)`);
-        if (this.telegram) {
-          const title = `🔒 DaRa M1 - PROFIT LOCK ACTIVATED`;
-          const msg = [
-            `${setupForTrailing.direction} Basket | ${feed.symbol}`,
-            `Locked Profit: +${PROFIT_LOCK_THRESHOLD} USC`,
-            `Current Net Profit: +${basketNetProfit.toFixed(2)} USC`,
-            `Active Positions: ${activePositions.length}`
-          ].join('\n');
-          this.telegram.notify(title, msg, `PROFIT_LOCK_${setupForTrailing.id}`).catch(() => {});
-        }
-      }
-
-      // Track highest profit achieved after activation
-      if (setupForTrailing.trailingState.profitLockActivated) {
-        setupForTrailing.trailingState.highestBasketNetProfit = Math.max(
-          setupForTrailing.trailingState.highestBasketNetProfit || basketNetProfit,
-          basketNetProfit
-        );
-
-        // Phase 2: If profit was running above threshold and returns to <= configured threshold, close the ENTIRE Basket
-        if (!justActivatedLock && basketNetProfit <= PROFIT_LOCK_THRESHOLD) {
-          console.log(`[DaRa M1 EA v1.0] 🛡️ BASKET PROFIT LOCK HIT! Net profit returned to +${basketNetProfit.toFixed(2)} USC (Peak: +${(setupForTrailing.trailingState.highestBasketNetProfit || PROFIT_LOCK_THRESHOLD).toFixed(2)} USC, Locked at +${PROFIT_LOCK_THRESHOLD} USC). Closing entire Basket!`);
-          await this.closeBasket('PROFIT_LOCK_HIT', `Basket Net Profit returned to +${basketNetProfit.toFixed(2)} USC`, currentBid, currentAsk);
-          return;
-        }
-      }
-
       // 1.c. Evaluate standard setup trailing
       const trailingResult = this.trailing.evaluateSetupTrailing(
         setupForTrailing,
@@ -958,17 +921,6 @@ export class DaRaM1Engine {
         isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_TRAILING_SL_${trade.ticket}`).catch(() => {});
-    } else if (trade.exitReason === 'PROFIT_LOCK_HIT') {
-      const isProfit = trade.pnl >= 0;
-      const rawLockTarget = Number(this.userSettings?.profitLockTarget);
-      const lockTargetUsc = (!isNaN(rawLockTarget) && rawLockTarget > 0) ? rawLockTarget : 50;
-      const title = `🔒 បិទ ${trade.type} — Profit Lock (+${lockTargetUsc} USC)`;
-      const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
-        isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
-      ].join('\n');
-      await this.telegram.notify(title, msg, `TRADE_PROFIT_LOCK_${trade.ticket}`).catch(() => {});
     } else if (trade.exitReason === 'CLOSE_ALL') {
       const isProfit = trade.pnl >= 0;
       const title = `🛑 បិទ ${trade.type} — CLOSE ALL`;

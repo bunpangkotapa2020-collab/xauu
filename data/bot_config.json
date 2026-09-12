@@ -2,7 +2,7 @@
   "desiredBotState": "STOPPED",
   "status": "stopped",
   "selectedAsset": "XAUUSD",
-  "currentTradingDate": "2026-09-10T17:00:00.000Z",
+  "currentTradingDate": "2026-09-11T17:00:00.000Z",
   "dailyLossLimitHit": false,
   "account": {
     "accountType": "cent",
@@ -18,10 +18,10 @@
     "pingMs": 15,
     "connectionMethod": "rest_bridge",
     "vpsOnline": true,
-    "balance": 8400.37,
-    "equity": 8400.37,
-    "freeMargin": 8400.37,
-    "marginLevel": 38697.19411223551,
+    "balance": 8057.77,
+    "equity": 7889.07,
+    "freeMargin": 6802.52,
+    "marginLevel": 726.0659886797663,
     "currency": "USC",
     "stages": {
       "appLoggedIn": true,
@@ -50,7 +50,7 @@
     "stopLossPips": 8,
     "takeProfitPips": 5,
     "trailingStopEnabled": true,
-    "maxOpenTrades": 2,
+    "maxOpenTrades": 3,
     "entriesPerSignal": 1,
     "maxConsecutiveLosses": 90,
     "cooldownMinutes": 0,
@@ -68,5 +68,5 @@
     "soundEnabled": true,
     "theme": "dark"
   },
-  "lastSavedAt": "2026-09-11T09:12:42.767Z"
+  "lastSavedAt": "2026-09-12T01:21:04.682Z"
 }

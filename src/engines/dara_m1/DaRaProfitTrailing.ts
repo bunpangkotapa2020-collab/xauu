@@ -18,17 +18,17 @@ export interface TrailingEvaluationResult {
 }
 
 export class DaRaProfitTrailing {
-  public static readonly ACTIVATION_DISTANCE: number = 1.5;
+  public static readonly ACTIVATION_BUFFER: number = 0.5;
   public static readonly TRAILING_DISTANCE: number = 1.5;
 
   /**
    * Evaluates Setup-level Basket Trailing according to DaRa M1 Specification:
    * - 1 Setup = ONE shared Trailing State
    * - Up to 5 Positions share the SAME Hidden Trailing SL
-   * - Activation distance = 1.5 points from TP
+   * - Activation distance = 0.5 points from TP
    * - Activation happens ONLY ONCE per Setup
-   * - Initial Hidden SL = TP ± 1.5
-   * - Continuous Trailing = Current Price ± 1.5
+   * - Initial Hidden SL = TP +/- trailDistance
+   * - Continuous Trailing = Highest/Lowest Price +/- trailDistance
    * - Never loosen the Hidden SL (Strict Monotonicity)
    * - Basket Close when Price reaches the last Hidden SL
    */
@@ -66,17 +66,18 @@ export class DaRaProfitTrailing {
     // ==========================================================
     if (!setup.trailingState.activated) {
       if (setup.direction === 'BUY') {
-        const activationPrice = Number((targetTp - trailDistance).toFixed(3));
+        const activationPrice = Number((targetTp - DaRaProfitTrailing.ACTIVATION_BUFFER).toFixed(3));
         if (currentBid >= activationPrice) {
-          // ACTIVATE ONCE: Initial Hidden SL is set at activation price (TP - trailDistance)
-          const hiddenSl = activationPrice;
+          // ACTIVATE ONCE: Initial Hidden SL is set at (TP - trailDistance)
+          const hiddenSl = Number((targetTp - trailDistance).toFixed(3));
+          
           setup.trailingState.activated = true;
           setup.trailingState.activatedAt = Date.now();
           setup.trailingState.activationPrice = activationPrice;
           setup.trailingState.initialHiddenSL = hiddenSl;
           setup.trailingState.currentHiddenSL = hiddenSl;
-          setup.trailingState.highestPrice = currentBid;
-
+          setup.trailingState.highestPrice = Math.max(currentBid, targetTp); // Handle slippage
+          
           for (const pos of activePositions) {
             pos.trailingActivated = true;
             pos.lastTrailingSl = hiddenSl;
@@ -86,23 +87,24 @@ export class DaRaProfitTrailing {
             activatedThisTick: true,
             shouldModifyBrokerSL: true,
             newHiddenSL: hiddenSl,
-            newTp: 0, // Clear broker TP so trade continues trailing beyond original TP
+            newTp: targetTp, // Preserve original TP
             shouldCloseBasket: false,
-            reason: `BUY Trailing Activated ONCE: Price ${currentBid} reached activation level ${activationPrice} (TP ${targetTp} - ${trailDistance}). Initial Hidden SL = ${hiddenSl}`
+            reason: `BUY Trailing Activated ONCE: Price ${currentBid} reached activation level ${activationPrice} (TP ${targetTp} - ${DaRaProfitTrailing.ACTIVATION_BUFFER}). Initial Hidden SL = ${hiddenSl}`
           };
         }
       } else { // SELL
-        const activationPrice = Number((targetTp + trailDistance).toFixed(3));
+        const activationPrice = Number((targetTp + DaRaProfitTrailing.ACTIVATION_BUFFER).toFixed(3));
         if (currentAsk <= activationPrice) {
-          // ACTIVATE ONCE: Initial Hidden SL is set at activation price (TP + trailDistance)
-          const hiddenSl = activationPrice;
+          // ACTIVATE ONCE: Initial Hidden SL is set at (TP + trailDistance)
+          const hiddenSl = Number((targetTp + trailDistance).toFixed(3));
+          
           setup.trailingState.activated = true;
           setup.trailingState.activatedAt = Date.now();
           setup.trailingState.activationPrice = activationPrice;
           setup.trailingState.initialHiddenSL = hiddenSl;
           setup.trailingState.currentHiddenSL = hiddenSl;
-          setup.trailingState.lowestPrice = currentAsk;
-
+          setup.trailingState.lowestPrice = Math.min(currentAsk, targetTp); // Handle slippage
+          
           for (const pos of activePositions) {
             pos.trailingActivated = true;
             pos.lastTrailingSl = hiddenSl;
@@ -112,9 +114,9 @@ export class DaRaProfitTrailing {
             activatedThisTick: true,
             shouldModifyBrokerSL: true,
             newHiddenSL: hiddenSl,
-            newTp: 0, // Clear broker TP so trade continues trailing beyond original TP
+            newTp: targetTp, // Preserve original TP
             shouldCloseBasket: false,
-            reason: `SELL Trailing Activated ONCE: Price ${currentAsk} reached activation level ${activationPrice} (TP ${targetTp} + ${trailDistance}). Initial Hidden SL = ${hiddenSl}`
+            reason: `SELL Trailing Activated ONCE: Price ${currentAsk} reached activation level ${activationPrice} (TP ${targetTp} + ${DaRaProfitTrailing.ACTIVATION_BUFFER}). Initial Hidden SL = ${hiddenSl}`
           };
         }
       }
@@ -140,9 +142,9 @@ export class DaRaProfitTrailing {
         };
       }
 
-      // 2. Continuous Trailing: Current Price - 1.5
+      // 2. Continuous Trailing: Highest Price - trailDistance
       setup.trailingState.highestPrice = Math.max(setup.trailingState.highestPrice || currentBid, currentBid);
-      const proposedSL = Number((currentBid - trailDistance).toFixed(3));
+      const proposedSL = Number((setup.trailingState.highestPrice - trailDistance).toFixed(3));
 
       // 3. Strict Monotonicity: Never loosen the Hidden SL (New >= Previous)
       if (proposedSL > currentHiddenSL) {
@@ -155,9 +157,9 @@ export class DaRaProfitTrailing {
           activatedThisTick: false,
           shouldModifyBrokerSL: true,
           newHiddenSL: proposedSL,
-          newTp: 0,
+          newTp: targetTp, // Preserve original TP
           shouldCloseBasket: false,
-          reason: `BUY Hidden SL advanced to ${proposedSL} (Current Bid ${currentBid} - ${trailDistance})`
+          reason: `BUY Hidden SL advanced to ${proposedSL} (Highest Bid ${setup.trailingState.highestPrice} - ${trailDistance})`
         };
       }
 
@@ -181,9 +183,9 @@ export class DaRaProfitTrailing {
         };
       }
 
-      // 2. Continuous Trailing: Current Price + 1.5
+      // 2. Continuous Trailing: Lowest Price + trailDistance
       setup.trailingState.lowestPrice = Math.min(setup.trailingState.lowestPrice || currentAsk, currentAsk);
-      const proposedSL = Number((currentAsk + trailDistance).toFixed(3));
+      const proposedSL = Number((setup.trailingState.lowestPrice + trailDistance).toFixed(3));
 
       // 3. Strict Monotonicity: Never loosen the Hidden SL (New <= Previous)
       if (proposedSL < currentHiddenSL) {
@@ -196,9 +198,9 @@ export class DaRaProfitTrailing {
           activatedThisTick: false,
           shouldModifyBrokerSL: true,
           newHiddenSL: proposedSL,
-          newTp: 0,
+          newTp: targetTp, // Preserve original TP
           shouldCloseBasket: false,
-          reason: `SELL Hidden SL advanced to ${proposedSL} (Current Ask ${currentAsk} + ${trailDistance})`
+          reason: `SELL Hidden SL advanced to ${proposedSL} (Lowest Ask ${setup.trailingState.lowestPrice} + ${trailDistance})`
         };
       }
 
@@ -235,7 +237,7 @@ export class DaRaProfitTrailing {
         return {
           shouldModify: true,
           newSl: proposedSl,
-          newTp: 0,
+          newTp: position.tp, // Preserve TP
           reason: `BUY Trailing SL: ${proposedSl}`
         };
       }
@@ -248,7 +250,7 @@ export class DaRaProfitTrailing {
         return {
           shouldModify: true,
           newSl: proposedSl,
-          newTp: 0,
+          newTp: position.tp, // Preserve TP
           reason: `SELL Trailing SL: ${proposedSl}`
         };
       }
