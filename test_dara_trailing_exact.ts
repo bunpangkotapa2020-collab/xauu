@@ -29,15 +29,17 @@ function testExactScenario(name: string, direction: 'BUY' | 'SELL', tp: number, 
   // Test exactly at activation
   res = trailingEngine.evaluateSetupTrailing(setup, [pos], tickPrice, tickPrice, settings);
   
-  if (res.activatedThisTick && res.newHiddenSL === expectedSl) {
-    console.log(`✅ ${name} PASS | TP: ${tp} | Act Price: ${tickPrice} | Dist: ${distance} | Initial SL: ${res.newHiddenSL}`);
+  const tpRemoved = res.newTp === 0;
+
+  if (res.activatedThisTick && res.newHiddenSL === expectedSl && tpRemoved) {
+    console.log(`✅ ${name} PASS | TP: ${tp} | Act Price: ${tickPrice} | Dist: ${distance} | Initial SL: ${res.newHiddenSL} | TP Removed: ${tpRemoved}`);
   } else {
-    console.error(`❌ ${name} FAILED | Expected SL: ${expectedSl} | Got SL: ${res.newHiddenSL} | Activated: ${res.activatedThisTick}`);
+    console.error(`❌ ${name} FAILED | Expected SL: ${expectedSl} | Got SL: ${res.newHiddenSL} | Activated: ${res.activatedThisTick} | TP Removed: ${tpRemoved}`);
   }
 }
 
 console.log('--- RUNNING EXACT SCENARIO TESTS ---');
-testExactScenario('BUY  (Dist 3)', 'BUY',  100, 99.5,  3, 97);
-testExactScenario('BUY  (Dist 2)', 'BUY',  100, 99.5,  2, 98);
-testExactScenario('SELL (Dist 3)', 'SELL', 100, 100.5, 3, 103);
-testExactScenario('SELL (Dist 2)', 'SELL', 100, 100.5, 2, 102);
+testExactScenario('BUY  (Dist 3)', 'BUY',  110, 109.5,  3, 107);
+testExactScenario('BUY  (Dist 2)', 'BUY',  110, 109.5,  2, 108);
+testExactScenario('SELL (Dist 3)', 'SELL', 90, 90.5, 3, 93);
+testExactScenario('SELL (Dist 2)', 'SELL', 90, 90.5, 2, 92);

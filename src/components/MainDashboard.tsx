@@ -153,7 +153,7 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base md:text-lg font-black text-white tracking-tight leading-tight truncate">
-                XAU AI SCALPER PRO
+                DaRa M1 EA v1.0
               </h1>
             </div>
           </div>
@@ -688,6 +688,7 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                 { slot: 4, label: 'Entry #4', stage: 'Level 4' },
                 { slot: 5, label: 'Entry #5', stage: 'Level 5' },
               ].map(({ slot, label, stage }) => {
+                const activeTrade = state.openTrades?.[0];
                 const openCount = state.openTrades?.length || 0;
                 
                 const setup = state.signalDetails?.daraSetup;
@@ -702,53 +703,45 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                 const targetPrice = levelState?.targetPrice;
                 const daraState = state.signalDetails?.daraState || '';
                 
-                // Detailed State Machine Logic
+                // Detailed State Machine Logic (L1-L5 Strict Mapping)
                 let cardStatus = 'WAIT';
                 let isActiveStyle = false;
                 let isFilled = false;
                 
                 if (!setup) {
-                   cardStatus = 'WAIT FOR NEXT SETUP';
+                   cardStatus = 'WAIT';
                 } else if (levelState) {
+                   const isSetupClosed = daraState === 'TRADE_CLOSED' || setup.status === 'CANCELED' || (setup.status === 'EXECUTED' && !activeTrade && daraState !== 'TRADE_ACTIVE');
+                   
                    if (levelState.executed) {
-                       if (tradeInSlot) {
-                           isFilled = true;
-                           isActiveStyle = true;
-                           const isTrailed = setup.sharedSL && tradeInSlot.sl && (tradeInSlot.side === 'BUY' ? tradeInSlot.sl > setup.sharedSL : tradeInSlot.sl < setup.sharedSL);
-                           if (isTrailed || daraState === 'TRAILING') {
-                               cardStatus = 'PROFIT TRAILING';
-                           } else {
-                               cardStatus = 'TRADE ACTIVE';
-                           }
-                       } else {
-                           cardStatus = 'TRADE CLOSED';
-                       }
+                       isFilled = true;
+                       isActiveStyle = true;
+                       cardStatus = 'FILLED';
+                   } else if (isSetupClosed) {
+                       cardStatus = 'NOT REACHED';
                    } else {
-                       let nextPendingLevel = 0;
-                       for (let i = 0; i < 5; i++) {
-                           if (setup.entryLevels && !setup.entryLevels[i]?.executed) {
-                               nextPendingLevel = i;
-                               break;
+                       let nextPendingLevel = -1;
+                       if (setup.entryLevels) {
+                           for (let i = 0; i < 5; i++) {
+                               if (!setup.entryLevels[i]?.executed) {
+                                   nextPendingLevel = i;
+                                   break;
+                               }
                            }
                        }
+                       
                        if (slot - 1 === nextPendingLevel) {
                            isActiveStyle = true;
-                           if (daraState === 'EXECUTING') {
-                               cardStatus = 'BROKER CONFIRMATION';
-                           } else if (daraState === 'ENTRY_REACHED' || setup.status === 'ENTRY_REACHED') {
-                               cardStatus = 'ENTRY REACHED';
-                           } else if (daraState === 'WAIT_FOR_LOCKED_ENTRY' || setup.lockedEntryPrice) {
-                               cardStatus = 'LOCKED ENTRY / TARGET REACHED';
-                           } else {
-                               cardStatus = 'WAIT';
-                           }
+                           cardStatus = 'READY';
+                       } else if (nextPendingLevel !== -1 && slot - 1 < nextPendingLevel) {
+                           cardStatus = 'SKIPPED';
                        } else {
                            cardStatus = 'WAIT';
                        }
                    }
                 }
                 
-                // Keep UI backwards compatible
+                // Keep UI backwards compatible for the 'Analyzing' visual state
                 const isAnalyzingSlot = isActiveStyle && !isFilled;
 
                 return (

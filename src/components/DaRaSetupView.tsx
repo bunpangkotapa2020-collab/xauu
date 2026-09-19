@@ -15,7 +15,8 @@ import {
   Database,
   Eye,
   Wifi,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react';
 
 interface DaRaSetupViewProps {
@@ -161,15 +162,14 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
     else if (isNewsBlocked) blockedReason = 'ស្ថិតក្នុងម៉ោងព័ត៌មានសេដ្ឋកិច្ចធំ (High Impact News Window Active)';
   }
 
-  // 3. Setup Flow Step (1 to 9 - Strict Fast Market Entry Flow)
+  // 3. Setup Flow Step (1 to 10 - Strict Fast Market Entry Flow)
   let currentStep = 1;
   if (!isRunning) {
     currentStep = 0; // IDLE
-  } else if (daraState === 'TRADE_CLOSED' || (setup?.status === 'EXECUTED' && !activeTrade && daraState !== 'TRADE_ACTIVE' && daraState !== 'TRAILING')) {
-    currentStep = 11;
+  } else if (daraState === 'TRADE_CLOSED' || (setup?.status === 'EXECUTED' && !activeTrade && daraState !== 'TRADE_ACTIVE')) {
+    currentStep = 10;
   } else if (activeTrade) {
-    const isTrailed = setup && activeTrade.sl && setup.sharedSL && (activeTrade.side === 'BUY' ? activeTrade.sl > setup.sharedSL : activeTrade.sl < setup.sharedSL);
-    currentStep = isTrailed || daraState === 'TRAILING' ? 10 : 9;
+    currentStep = 9;
   } else if (daraState === 'EXECUTING') {
     currentStep = 8; // SAFETY CHECK is part of execution phase
   } else if (daraState === 'ENTRY_REACHED' || setup?.status === 'ENTRY_REACHED') {
@@ -188,19 +188,18 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
     currentStep = 1;
   }
 
-  // 4. Setup Flow Step Definitions (9 Disciplined Steps Flow - Bilingual Khmer & English)
+  // 4. Setup Flow Step Definitions (10 Disciplined Steps Flow - Bilingual Khmer & English)
   const stepDefinitions = [
-    { num: 1, name: 'SCANNING', titleKh: 'កំពុងស្កេន M1', shortDescKh: 'ស្កេន M1', shortDescEn: 'Scan M1', descKh: 'ស្កេនទៀន M1', descEn: 'Scan M1 candles' },
-    { num: 2, name: 'LIQUIDITY SWEEP', titleKh: 'បោសយកសាច់ប្រាក់', shortDescKh: 'បោស H/L', shortDescEn: 'Sweep H/L', descKh: 'Wick ហួស M1 Swing', descEn: 'Wick beyond recent M1 Swing' },
-    { num: 3, name: 'DISPLACEMENT', titleKh: 'ចលនាតម្លៃខ្លាំង', shortDescKh: 'ទៀនធំ', shortDescEn: 'Impulsive', descKh: 'ទៀនធ្លាក់/ឡើងខ្លាំង', descEn: 'Impulsive directional displacement' },
-    { num: 4, name: 'MSS CONFIRMED', titleKh: 'បញ្ជាក់ MSS', shortDescKh: 'បញ្ជាក់ MSS', shortDescEn: 'MSS Confirm', descKh: 'Structure Shift', descEn: 'Market Structure Shift' },
-    { num: 5, name: 'LOCK ENTRY', titleKh: 'កំណត់ទីតាំង Entry', shortDescKh: 'Lock Entry', shortDescEn: 'Lock Entry', descKh: 'គណនាទីតាំង Entry', descEn: 'Calculate Locked Entry Price' },
-    { num: 6, name: 'WAIT FOR ENTRY', titleKh: 'រង់ចាំតម្លៃ Entry', shortDescKh: 'Wait Entry', shortDescEn: 'Wait Entry', descKh: 'រង់ចាំតម្លៃថយក្រោយ', descEn: 'Wait for retracement' },
-    { num: 7, name: 'ENTRY REACHED', titleKh: 'ដល់ទីតាំង Entry', shortDescKh: 'Entry Reached', shortDescEn: 'Entry Reached', descKh: 'តម្លៃបច្ចុប្បន្នដល់ទីតាំង', descEn: 'Current price reached Entry level' },
-    { num: 8, name: 'SAFETY CHECK', titleKh: 'ផ្ទៀងផ្ទាត់សុវត្ថិភាព', shortDescKh: 'ឆែកសុវត្ថិភាព', shortDescEn: 'Safety Check', descKh: 'ត្រួតពិនិត្យសុវត្ថិភាព', descEn: 'Safety guards verification' },
-    { num: 9, name: 'TRADE ACTIVE', titleKh: 'TRADE ដំណើរការ', shortDescKh: 'Order & SL/TP', shortDescEn: 'Trade Active', descKh: 'បើក Order', descEn: 'Position active' },
-    { num: 10, name: 'TRAILING', titleKh: 'រំកិលការពារ SL', shortDescKh: 'Trailing', shortDescEn: 'Trailing', descKh: 'Auto Trailing', descEn: 'Auto Trailing SL' },
-    { num: 11, name: 'TRADE CLOSED', titleKh: 'TRADE បានបិទ', shortDescKh: 'បិទ & ស្កេន', shortDescEn: 'Trade Closed', descKh: 'បិទ Order → ស្កេនថ្មី', descEn: 'Trade closed, scanning again' }
+    { num: 1, name: 'M1 MARKET SCAN', titleKh: 'ស្កេន M1', shortDescKh: 'ស្កេន M1', shortDescEn: 'Market Scan', descKh: 'ស្កេនទៀន M1 ២៤/៧', descEn: '24/7 M1 Market Scanning' },
+    { num: 2, name: 'M1 LIQUIDITY SWEEP', titleKh: 'Liquidity Sweep', shortDescKh: 'បោស H/L', shortDescEn: 'Liq Sweep', descKh: 'Wick ហួស M1 Swing', descEn: 'Wick beyond recent M1 Swing' },
+    { num: 3, name: 'M1 DISPLACEMENT', titleKh: 'Displacement', shortDescKh: 'ទៀនធំ', shortDescEn: 'Displacement', descKh: 'ទៀនធ្លាក់/ឡើងខ្លាំង', descEn: 'Impulsive directional displacement' },
+    { num: 4, name: 'M1 MSS CONFIRMED', titleKh: 'MSS Confirmed', shortDescKh: 'បញ្ជាក់ MSS', shortDescEn: 'MSS Confirm', descKh: 'Market Structure Shift', descEn: 'Market Structure Shift Confirmed' },
+    { num: 5, name: 'LOCK ENTRY', titleKh: 'Lock Entry', shortDescKh: 'Lock Entry', shortDescEn: 'Lock Entry', descKh: 'គណនាទីតាំង Entry', descEn: 'Calculate Locked Entry Price' },
+    { num: 6, name: 'WAIT FOR ENTRY', titleKh: 'Wait For Entry', shortDescKh: 'Wait Entry', shortDescEn: 'Wait Entry', descKh: 'រង់ចាំតម្លៃថយក្រោយ', descEn: 'Wait for retracement' },
+    { num: 7, name: 'ENTRY REACHED', titleKh: 'Entry Reached', shortDescKh: 'Entry Reached', shortDescEn: 'Entry Reached', descKh: 'តម្លៃដល់ទីតាំង', descEn: 'Price reached Entry level' },
+    { num: 8, name: 'SAFETY CHECK', titleKh: 'Safety Check', shortDescKh: 'ឆែកសុវត្ថិភាព', shortDescEn: 'Safety Check', descKh: 'ត្រួតពិនិត្យសុវត្ថិភាព', descEn: 'Safety guards verification' },
+    { num: 9, name: 'TRADE ACTIVE', titleKh: 'Trade Active', shortDescKh: 'Trade Active', shortDescEn: 'Trade Active', descKh: 'Position ដំណើរការ', descEn: 'Trade position active' },
+    { num: 10, name: 'TRADE CLOSED', titleKh: 'Trade Closed', shortDescKh: 'Trade Closed', shortDescEn: 'Trade Closed', descKh: 'Trade បានបញ្ចប់', descEn: 'Trade execution completed' }
   ];
 
   // 5. Activity Logs State
@@ -329,7 +328,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
 
               </div>
               <p className="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed">
-                ប្រព័ន្ធជួញដូរមាស M1 ICT ស្វ័យប្រវត្ត • Autonomous ICT Engine for Gold (XAUUSD) • Exness MT5
+                ប្រព័ន្ធជួញដូរមាស M1 DaRa ស្វ័យប្រវត្ត • Autonomous DaRa Execution Cycle for Gold (XAUUSD) • Exness MT5
               </p>
             </div>
           </div>
@@ -471,11 +470,11 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               🔥 លំហូរប្រតិបត្តិការ DaRa ៩ ជំហាន (9 Steps Fast Market Execution Flow)
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              វដ្តប្រតិបត្តិការ M1 យ៉ាងម៉ត់ចត់៖ ស្កេន ២៤/៧ → MSS CONFIRMED + SAFETY PASS → ចូល Market Order ភ្លាមៗ (Fast Market Entry) → Trailing 1.5 → Scan ថ្មី
+              វដ្តប្រតិបត្តិការ M1 យ៉ាងម៉ត់ចត់៖ ស្កេន ២៤/៧ → MSS CONFIRMED + SAFETY PASS → ចូល Market Order ភ្លាមៗ (Fast Market Entry) → Scan ថ្មី
             </p>
           </div>
           <div className="text-xs font-mono font-bold px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-cyan-400 whitespace-nowrap self-start sm:self-auto">
-            បច្ចុប្បន្ន (CURRENT): ជំហាន {currentStep.toString().padStart(2, '0')}/11 ({stepDefinitions.find(s => s.num === currentStep)?.titleKh || 'IDLE'})
+            បច្ចុប្បន្ន (CURRENT): ជំហាន {currentStep.toString().padStart(2, '0')}/10 ({stepDefinitions.find(s => s.num === currentStep)?.titleKh || 'IDLE'})
           </div>
         </div>
 
@@ -558,11 +557,10 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               ? `« ការត្រួតពិនិត្យសុវត្ថិភាព៖ រារាំងមិនទាន់ឱ្យចូល (${blockedReason}) • Safety Guard Active: Entry blocked. »` 
               : '« ប្រព័ន្ធសុវត្ថិភាពទាំង ៩ ចំណុចឆ្លងកាត់ទាំងអស់ (SAFETY PASS)! រួចរាល់ដើម្បីចូល Market Order ភ្លាមៗ • All 9 safety guards passed! Ready for instant market order execution. »')}
             {currentStep === 6 && '« កំពុងបញ្ជូន Market Order ភ្លាមៗ (Fast Market Execution) ទៅកាន់ Exness MT5 (Ask សម្រាប់ BUY / Bid សម្រាប់ SELL)... • Dispatching instant market order to broker at live market price... »'}
-            {currentStep === 7 && `« Trade កំពុងដំណើរការជាមួយសំបុត្រ #${(activeTrade as any)?.ticket || 'LIVE'} (Hard SL & TP ការពាររួចរាល់) • Trade active with Ticket #${(activeTrade as any)?.ticket || 'LIVE'}. Initial SL & TP established. »`}
-            {currentStep === 8 && '« Auto Trailing 1.5 កំពុងដំណើរការ! SL រំកិលតាមទិសដៅតែប៉ុណ្ណោះ មិនដែលថយក្រោយ • Auto Trailing active at TP. Stop Loss advances monotonically with 1.5 price distance. »'}
-            {currentStep === 9 && (lastClosedTrade 
-              ? `« Trade #${lastClosedTrade.ticket} ត្រូវបានបិទបញ្ចប់ដោយ ${lastClosedTrade.exitReason} (${lastClosedTrade.pnl >= 0 ? '+' : ''}${lastClosedTrade.pnl.toFixed(2)})! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed via ${lastClosedTrade.exitReason}. Resetting engine to Step 01 (Scanning) for next setup. »`
-              : '« Trade ត្រូវបានបិទបញ្ចប់! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី (ជំហានទី ០១) • Trade closed. Resetting engine to Step 01 (Scanning) for next setup. »')}
+            {currentStep === 9 && '« Trade កំពុងដំណើរការជាមួយសំបុត្រ #' + ((activeTrade as any)?.ticket || 'LIVE') + ' (Hard SL & TP ការពាររួចរាល់) • Trade active. Initial SL & TP established. »'}
+            {currentStep === 10 && (lastClosedTrade 
+              ? `« Trade #${lastClosedTrade.ticket} ត្រូវបានបិទបញ្ចប់ដោយ ${lastClosedTrade.exitReason} (${lastClosedTrade.pnl >= 0 ? '+' : ''}${lastClosedTrade.pnl.toFixed(2)})! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed via ${lastClosedTrade.exitReason}. Resetting engine for next setup. »`
+              : '« Trade ត្រូវបានបិទបញ្ចប់! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed. Resetting engine for next setup. »')}
           </div>
         </div>
 
@@ -573,12 +571,12 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               <span className={`px-2.5 py-1 rounded-md font-bold font-mono text-[11px] uppercase tracking-wider ${
                 lastClosedTrade.exitReason === 'TP_HIT' 
                   ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
-                  : lastClosedTrade.exitReason === 'TRAILING_SL_HIT'
+                  : lastClosedTrade.exitReason === 'SL_HIT'
                     ? 'bg-blue-950 text-cyan-300 border border-blue-500/40'
                     : 'bg-rose-950 text-rose-400 border border-rose-500/40'
               }`}>
                 {lastClosedTrade.exitReason === 'TP_HIT' ? '✅ TP HIT' :
-                 lastClosedTrade.exitReason === 'TRAILING_SL_HIT' ? '🔒 TRAILING SL HIT' :
+                 lastClosedTrade.exitReason === 'SL_HIT' ? '🔴 SL HIT' :
                  '❌ SL HIT'}
               </span>
               <span className="font-mono text-slate-300">
@@ -593,6 +591,35 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
               </strong></span>
               <span className="text-[11px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
                 🔄 ស្កេន M1 ថ្មី (Scanning M1)
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Candlestick Confirmation Filter Badge (when setup has confirmed candle pattern) */}
+        {setup?.candleConfirmation && (
+          <div className="mt-3 p-3.5 bg-indigo-950/40 border border-indigo-500/40 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-400/40">
+                <Sparkles className="w-4 h-4 text-indigo-300" />
+              </span>
+              <div>
+                <span className="text-indigo-200 font-bold uppercase tracking-wide text-xs">
+                  🕯️ CANDLESTICK CONFIRMATION:
+                </span>
+                <span className="ml-2 font-mono font-bold text-white">
+                  {setup.candleConfirmation.patternName}
+                </span>
+                <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-900/60 text-indigo-200 border border-indigo-500/30">
+                  {setup.candleConfirmation.direction}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 font-mono text-slate-300">
+              <span>Score: <strong className="text-emerald-400">{setup.candleConfirmation.score} pts</strong></span>
+              <span>Quality: <strong className="text-cyan-300">{setup.candleConfirmation.quality}</strong></span>
+              <span className="text-[11px] text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded border border-emerald-500/30 font-bold">
+                ✓ CONFIRMED (ឆ្លងកាត់)
               </span>
             </div>
           </div>

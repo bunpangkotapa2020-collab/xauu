@@ -54,7 +54,16 @@ export class DaRaOrderExecution {
     isBotRunning: boolean
   ): Promise<ExecutionResult> {
     const positionNumber = levelIndex + 1;
-    // 0. Hard Limit: 1 Confirmed Signal = 5 Positions MAX
+    // 0. Hard Limit: Positions Per Setup (Authoritative limit from user settings, max 5)
+    const rawUserMax = Number(settings.positionsPerSetup ?? settings.maxOpenTrades ?? settings.entriesPerSignal ?? 1);
+    const maxAllowedPositions = isNaN(rawUserMax) ? 1 : Math.max(1, Math.min(5, Math.floor(rawUserMax)));
+    if (positionNumber > maxAllowedPositions) {
+      console.error(`[DaRa M1 EA v1.0] 🛡️ HARD BLOCK: Position #${positionNumber} exceeds configured Positions Per Setup (${maxAllowedPositions}). Execution aborted.`);
+      return { 
+        success: false, 
+        error: `Strict Rule Violation: Configured Positions Per Setup is ${maxAllowedPositions}. Position #${positionNumber} is strictly FORBIDDEN.` 
+      };
+    }
     if (positionNumber > 5) {
       return { success: false, error: `Strict Rule Violation: 1 Confirmed Signal = 5 Positions MAX (Position #${positionNumber} is strictly FORBIDDEN)` };
     }
@@ -91,17 +100,24 @@ export class DaRaOrderExecution {
     const slPriceDistance = slDistance;
     const tpPriceDistance = tpDistance;
 
-    // 4. Calculate SL and TP based strictly on original Locked Entry Price
+    // 4. Calculate SL and TP based strictly on the immutable Master/Locked Entry reference
+    const masterEntry = setup.masterEntryPrice ?? setup.lockedEntryPrice;
+    const execDir = setup.executionDirection || setup.direction;
     let sl: number;
     let tp: number;
-    let openPrice: number = setup.direction === 'BUY' ? currentAsk : currentBid;
+    let openPrice: number = execDir === 'BUY' ? currentAsk : currentBid;
 
     if (setup.sharedSL !== undefined && setup.sharedTP !== undefined) {
       sl = setup.sharedSL;
       tp = setup.sharedTP;
     } else {
-      sl = setup.virtualSLPrice;
-      tp = setup.virtualTPPrice;
+      sl = execDir === 'BUY' 
+        ? Number((masterEntry - slPriceDistance).toFixed(3)) 
+        : Number((masterEntry + slPriceDistance).toFixed(3));
+      tp = execDir === 'BUY' 
+        ? Number((masterEntry + tpPriceDistance).toFixed(3)) 
+        : Number((masterEntry - tpPriceDistance).toFixed(3));
+      
       setup.sharedSL = sl;
       setup.sharedTP = tp;
     }
@@ -110,23 +126,25 @@ export class DaRaOrderExecution {
     if (lot !== settings.lotSize) {
       return { success: false, error: `Pre-flight Verification Failed: Lot size ${lot} does not match User Saved Settings ${settings.lotSize}` };
     }
-    if (setup.direction === 'BUY') {
-      if (sl >= openPrice || tp <= openPrice) {
-        return { success: false, error: `Pre-flight Verification Failed: BUY SL (${sl}) must be below and TP (${tp}) must be above entry (${openPrice})` };
+    if (execDir === 'BUY') {
+      if (sl >= masterEntry || tp <= masterEntry) {
+        return { success: false, error: `Pre-flight Verification Failed: BUY SL (${sl}) must be below and TP (${tp}) must be above Master Entry (${masterEntry})` };
       }
     } else {
-      if (sl <= openPrice || tp >= openPrice) {
-        return { success: false, error: `Pre-flight Verification Failed: SELL SL (${sl}) must be above and TP (${tp}) must be below entry (${openPrice})` };
+      if (sl <= masterEntry || tp >= masterEntry) {
+        return { success: false, error: `Pre-flight Verification Failed: SELL SL (${sl}) must be above and TP (${tp}) must be below Master Entry (${masterEntry})` };
       }
     }
+
+    console.log(`[DaRa EXECUTION AUDIT] 📝 SetupID=${setup.id} | Direction=${execDir} | MasterEntry=${masterEntry} | EntryDist=${settings.entryDistance ?? 1.0} | Level=${levelIndex + 1} | TargetPrice=${setup.entryLevels?.[levelIndex]?.targetPrice} | ConfigPositionsPerSetup=${maxAllowedPositions} | CurrentPositionsOpened=${setup.positionsOpened || 0} | SL=${sl} | TP=${tp}`);
 
     this.isExecutionInProgress = true;
 
     try {
-      console.log(`[DaRa M1 EA v1.0] 🛡️ PRE-FLIGHT VERIFIED (SINGLE SOURCE OF TRUTH 100%): Direction=${setup.direction}, Lot=${lot} (user), SL=${sl} (dist: ${slDistance}), TP=${tp} (dist: ${tpDistance}), Entry=${openPrice}`);
-      console.log(`[DaRa M1 EA v1.0] 🚀 Sending ${setup.direction} Order to Broker...`);
+      console.log(`[DaRa M1 EA v1.0] 🛡️ PRE-FLIGHT VERIFIED (SINGLE SOURCE OF TRUTH 100%): Direction=${execDir}, Lot=${lot} (user), SL=${sl} (dist: ${slDistance}), TP=${tp} (dist: ${tpDistance}), Entry=${openPrice}`);
+      console.log(`[DaRa M1 EA v1.0] 🚀 Sending ${execDir} Order to Broker...`);
 
-      const comment = positionNumber > 1 ? `DaRa v1.0 ${setup.direction} #${positionNumber}` : `DaRa v1.0 ${setup.direction}`;
+      const comment = positionNumber > 1 ? `DaRa v1.0 ${execDir} #${positionNumber}` : `DaRa v1.0 ${execDir}`;
       
       // ==========================================
       // FINAL LIVE TRADING SAFETY GUARD
@@ -149,7 +167,7 @@ export class DaRaOrderExecution {
       
       const brokerResponse = await this.broker.sendOrder({
         symbol,
-        type: setup.direction,
+        type: execDir,
         lot,
         openPrice,
         sl,
@@ -171,14 +189,16 @@ export class DaRaOrderExecution {
       // Order successfully filled
       this.lastExecutedSetupId = execKey;
       this.executedKeys.add(execKey);
-      setup.lockedEntryPrice = openPrice;
+      // Preserve Master/Locked Entry as IMMUTABLE (do not overwrite with openPrice)
+      setup.masterEntryPrice = masterEntry;
+      setup.lastExecutedPrice = openPrice;
       setup.virtualSLPrice = sl;
       setup.virtualTPPrice = tp;
 
       const position: DaRaPosition = {
         ticket: brokerResponse.ticket,
         symbol,
-        type: setup.direction,
+        type: execDir,
         lot,
         openPrice,
         currentPrice: openPrice,

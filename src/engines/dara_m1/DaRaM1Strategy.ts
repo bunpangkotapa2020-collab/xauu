@@ -12,6 +12,7 @@
  */
 
 import { DaRaCandle, DaRaDirection, DaRaSetup, DaRaUserSettings, DaRaAnalysisDetails } from './types';
+import { DaRaCandleConfirmationModule, DaRaCandleConfirmationResult } from './DaRaCandleConfirmation';
 
 export interface SwingPoint {
   index: number;
@@ -23,6 +24,11 @@ export interface SwingPoint {
 export class DaRaM1Strategy {
   private lastProcessedMssTime: number = 0;
   private scanBaselineTime: number = 0;
+  private candleConfirmationModule: DaRaCandleConfirmationModule = new DaRaCandleConfirmationModule();
+
+  public getCandleConfirmationModule(): DaRaCandleConfirmationModule {
+    return this.candleConfirmationModule;
+  }
 
   public markSetupProcessed(direction: string, mssTime: number): void {
     if (mssTime > this.lastProcessedMssTime) {
@@ -117,11 +123,31 @@ export class DaRaM1Strategy {
 
     // Check BUY Setup
     const buySetup = this.checkBuySetup(candles, swingHighs, swingLows, settings, pointSize);
-    if (buySetup) return buySetup;
+    if (buySetup) {
+      buySetup.executionDirection = 'BUY';
+      buySetup.masterEntryPrice = buySetup.lockedEntryPrice;
+      // BUY logic from the immutable Master/Locked Entry:
+      // SL below Entry, TP above Entry
+      buySetup.virtualSLPrice = Number((buySetup.lockedEntryPrice - buySetup.userSlDistance).toFixed(3));
+      buySetup.virtualTPPrice = Number((buySetup.lockedEntryPrice + buySetup.userTpDistance).toFixed(3));
+      buySetup.sharedSL = buySetup.virtualSLPrice;
+      buySetup.sharedTP = buySetup.virtualTPPrice;
+      return buySetup;
+    }
 
     // Check SELL Setup
     const sellSetup = this.checkSellSetup(candles, swingHighs, swingLows, settings, pointSize);
-    if (sellSetup) return sellSetup;
+    if (sellSetup) {
+      sellSetup.executionDirection = 'SELL';
+      sellSetup.masterEntryPrice = sellSetup.lockedEntryPrice;
+      // SELL logic from the immutable Master/Locked Entry:
+      // SL above Entry, TP below Entry
+      sellSetup.virtualSLPrice = Number((sellSetup.lockedEntryPrice + sellSetup.userSlDistance).toFixed(3));
+      sellSetup.virtualTPPrice = Number((sellSetup.lockedEntryPrice - sellSetup.userTpDistance).toFixed(3));
+      sellSetup.sharedSL = sellSetup.virtualSLPrice;
+      sellSetup.sharedTP = sellSetup.virtualTPPrice;
+      return sellSetup;
+    }
 
     return null;
   }
@@ -191,6 +217,7 @@ export class DaRaM1Strategy {
       // MSS: Candle closes strictly ABOVE targetSwingHigh
       let mssConfirmed = false;
       let mssCandle: DaRaCandle | null = null;
+      let mssIdx = -1;
       for (let i = displacementIdx; i < candles.length; i++) {
         const c = candles[i];
         if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
@@ -199,16 +226,34 @@ export class DaRaM1Strategy {
         if (c.close > targetSwingHigh.price) {
           mssConfirmed = true;
           mssCandle = c;
+          mssIdx = i;
           break;
         }
       }
 
-      if (mssConfirmed && mssCandle) {
+      if (mssConfirmed && mssCandle && mssIdx >= 0) {
         if (this.scanBaselineTime > 0 && (mssCandle.time <= this.scanBaselineTime || candles[sweepIdx].time <= this.scanBaselineTime)) {
           return null; // Formed before or during previous trade. Discard stale setup.
         }
         if (this.lastProcessedMssTime > 0 && mssCandle.time <= this.lastProcessedMssTime) {
           return null; // This setup (or a newer one) was already processed. Discard old setups.
+        }
+
+        // ====================================================================
+        // 🕯️ CANDLESTICK CONFIRMATION MODULE (BETWEEN MSS CONFIRMED & LOCK ENTRY)
+        // CLOSED CANDLES ONLY: Inspects closed patterns at/after MSS candle
+        // ====================================================================
+        const candleConfEnabled = settings.candleConfirmationEnabled !== false;
+        const candleMinScore = settings.candleMinScoreRequired ?? 2;
+        this.candleConfirmationModule.updateConfig({
+          enabled: candleConfEnabled,
+          minScoreRequired: candleMinScore
+        });
+
+        const candleConf = this.candleConfirmationModule.evaluateConfirmation(candles, 'BUY', mssIdx);
+        if (candleConfEnabled && !candleConf.isConfirmed) {
+          // Candlestick confirmation failed -> NO TRADE (Setup discarded)
+          return null;
         }
 
         const lockedEntry = targetSwingHigh.price;
@@ -232,6 +277,7 @@ export class DaRaM1Strategy {
           virtualTPPrice: Number((lockedEntry + tpPriceDistance).toFixed(3)),
           userSlDistance: userSl,
           userTpDistance: userTp,
+          candleConfirmation: candleConf,
           createdAt: Date.now(),
           status: 'PENDING_ENTRY'
         };
@@ -302,6 +348,7 @@ export class DaRaM1Strategy {
 
       let mssConfirmed = false;
       let mssCandle: DaRaCandle | null = null;
+      let mssIdx = -1;
       for (let i = displacementIdx; i < candles.length; i++) {
         const c = candles[i];
         if (this.scanBaselineTime > 0 && c.time <= this.scanBaselineTime) {
@@ -310,16 +357,34 @@ export class DaRaM1Strategy {
         if (c.close < targetSwingLow.price) {
           mssConfirmed = true;
           mssCandle = c;
+          mssIdx = i;
           break;
         }
       }
 
-      if (mssConfirmed && mssCandle) {
+      if (mssConfirmed && mssCandle && mssIdx >= 0) {
         if (this.scanBaselineTime > 0 && (mssCandle.time <= this.scanBaselineTime || candles[sweepIdx].time <= this.scanBaselineTime)) {
           return null; // Formed before or during previous trade. Discard stale setup.
         }
         if (this.lastProcessedMssTime > 0 && mssCandle.time <= this.lastProcessedMssTime) {
           return null; // This setup (or a newer one) was already processed. Discard old setups.
+        }
+
+        // ====================================================================
+        // 🕯️ CANDLESTICK CONFIRMATION MODULE (BETWEEN MSS CONFIRMED & LOCK ENTRY)
+        // CLOSED CANDLES ONLY: Inspects closed patterns at/after MSS candle
+        // ====================================================================
+        const candleConfEnabled = settings.candleConfirmationEnabled !== false;
+        const candleMinScore = settings.candleMinScoreRequired ?? 2;
+        this.candleConfirmationModule.updateConfig({
+          enabled: candleConfEnabled,
+          minScoreRequired: candleMinScore
+        });
+
+        const candleConf = this.candleConfirmationModule.evaluateConfirmation(candles, 'SELL', mssIdx);
+        if (candleConfEnabled && !candleConf.isConfirmed) {
+          // Candlestick confirmation failed -> NO TRADE (Setup discarded)
+          return null;
         }
 
         const lockedEntry = targetSwingLow.price;
@@ -343,6 +408,7 @@ export class DaRaM1Strategy {
           virtualTPPrice: Number((lockedEntry - tpPriceDistance).toFixed(3)),
           userSlDistance: userSl,
           userTpDistance: userTp,
+          candleConfirmation: candleConf,
           createdAt: Date.now(),
           status: 'PENDING_ENTRY'
         };

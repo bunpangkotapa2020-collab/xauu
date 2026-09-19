@@ -40,9 +40,8 @@ export function BotSettingsModal({
   const [tpDist, setTpDist] = useState('8');
   const [dailyLoss, setDailyLoss] = useState('2000');
   const [maxTrades, setMaxTrades] = useState('5');
-  const [entryDistance, setEntryDistance] = useState('2.0');
-  const [trailingStopEnabled, setTrailingStopEnabled] = useState(true);
-  const [trailingDistance, setTrailingDistance] = useState('1.5');
+  const [entryPullbackPos1, setEntryPullbackPos1] = useState('0.0');
+  const [entryDistance, setEntryDistance] = useState('0.5');
   const [maxConsSL, setMaxConsSL] = useState('6');
   const [cooldown, setCooldown] = useState('20');
   const [maxSpread, setMaxSpread] = useState('27');
@@ -115,9 +114,8 @@ export function BotSettingsModal({
         if (botState.riskConfig.maxDailyLossAmount !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLossAmount));
         else if (botState.riskConfig.maxDailyLoss !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLoss));
         if (botState.riskConfig.maxOpenTrades !== undefined) setMaxTrades(String(botState.riskConfig.maxOpenTrades));
+        if ((botState.riskConfig as any).entryPullbackPos1 !== undefined) setEntryPullbackPos1(String((botState.riskConfig as any).entryPullbackPos1));
         if ((botState.riskConfig as any).entryDistance !== undefined) setEntryDistance(String((botState.riskConfig as any).entryDistance));
-        if (botState.riskConfig.trailingStopEnabled !== undefined) setTrailingStopEnabled(Boolean(botState.riskConfig.trailingStopEnabled));
-        if (botState.riskConfig.trailingDistance !== undefined) setTrailingDistance(String(botState.riskConfig.trailingDistance));
         if (botState.riskConfig.maxConsecutiveLosses !== undefined) setMaxConsSL(String(botState.riskConfig.maxConsecutiveLosses));
         if (botState.riskConfig.cooldownMinutes !== undefined) setCooldown(String(botState.riskConfig.cooldownMinutes));
         if (botState.riskConfig.maxSpreadPoints !== undefined) setMaxSpread(String(botState.riskConfig.maxSpreadPoints));
@@ -146,8 +144,10 @@ export function BotSettingsModal({
       const parsedTp = Number(tpDist);
         const parsedDailyLoss = Number(dailyLoss);
       const parsedTrades = Math.max(1, Math.min(5, Math.floor(Number(maxTrades) || 5)));
+      const parsedPullback = Number(entryPullbackPos1);
+      const cleanPullback = isNaN(parsedPullback) || parsedPullback < 0 ? 0.0 : parsedPullback;
       const parsedEntryDist = Number(entryDistance);
-      const parsedTrailDist = Number(trailingDistance);
+      const cleanDist = isNaN(parsedEntryDist) || parsedEntryDist <= 0 ? 0.5 : parsedEntryDist;
       const parsedConsSl = Number(maxConsSL);
       const parsedCooldown = Number(cooldown);
       const parsedSpread = Number(maxSpread);
@@ -167,10 +167,8 @@ export function BotSettingsModal({
         maxDailyLossAmount: parsedDailyLoss,
         maxDailyLoss: parsedDailyLoss,
         maxOpenTrades: parsedTrades,
-        entryDistance: isNaN(parsedEntryDist) || parsedEntryDist <= 0 ? 2.0 : parsedEntryDist,
-        trailingStopEnabled: Boolean(trailingStopEnabled),
-        trailingDistance: isNaN(parsedTrailDist) || parsedTrailDist <= 0 ? 1.5 : parsedTrailDist,
-        trailingRule: 'Auto at Original TP (1.5 Price Distance)',
+        entryPullbackPos1: cleanPullback,
+        entryDistance: cleanDist,
         maxConsecutiveLosses: parsedConsSl,
         cooldownMinutes: parsedCooldown,
         maxSpreadPoints: parsedSpread,
@@ -285,19 +283,34 @@ export function BotSettingsModal({
               />
             </div>
 
-            {/* ENTRY DISTANCE POS #1 */}
+            {/* ENTRY PULLBACK POS #1 */}
             <div className="bg-slate-800/30 border border-blue-900/40 bg-blue-950/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs text-blue-300 font-semibold">Entry Pullback Pos #1 / ចម្ងាយ Pullback ចូល Pos #1</label>
+                <label className="block text-xs text-blue-300 font-semibold">Entry Pullback Pos #1</label>
                 <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Entry 1</span>
               </div>
               <input 
-                type="number" step="0.1" min="0.1"
-                value={entryDistance} onChange={(e) => setEntryDistance(e.target.value)}
-                placeholder="2.0"
+                type="number" step="0.1" min="0" max="50.0"
+                value={entryPullbackPos1} onChange={(e) => setEntryPullbackPos1(e.target.value)}
+                placeholder="0.0"
                 className="w-full bg-slate-900 border border-blue-600/50 focus:border-blue-400 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
               />
-              <p className="text-[10px] text-slate-400 mt-1">រង់ចាំតម្លៃ Pullback ថយក្រោយ {entryDistance || '2.0'} ទើបបើក Trade Pos #1</p>
+              <p className="text-[10px] text-slate-400 mt-1">Distance from Master Entry before Position #1 is triggered. Set 0 for immediate entry.</p>
+            </div>
+
+            {/* ENTRY DISTANCE (POS #2–#5) */}
+            <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-slate-400 mb-1">Entry Distance (Pos #2–#5) / ចម្ងាយរវាង Position បន្តបន្ទាប់</label>
+                <span className="text-[10px] bg-slate-700/50 text-slate-300 px-1.5 py-0.5 rounded">Grid Ladder</span>
+              </div>
+              <input 
+                type="number" step="0.1" min="0.1" max="50.0"
+                value={entryDistance} onChange={(e) => setEntryDistance(e.target.value)}
+                placeholder="0.5"
+                className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Grid ladder step distance for subsequent positions (e.g. 0.5 or 1.0)</p>
             </div>
 
             {/* SL DISTANCE */}
@@ -404,38 +417,6 @@ export function BotSettingsModal({
               </div>
             </div>
 
-          </div>
-
-          {/* TRAILING PROFIT SETTINGS SECTION */}
-          <div className="bg-slate-800/20 border border-slate-800 rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">Trailing Profit Settings (ការកំណត់ Trailing យកចំណេញ)</h3>
-                <p className="text-xs text-slate-400">បើកដំណើរការ Trailing Stop Loss ដោយស្វ័យប្រវត្តិនៅពេលតម្លៃដល់ TP ដើម</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={trailingStopEnabled} 
-                  onChange={(e) => setTrailingStopEnabled(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-              </label>
-            </div>
-
-            {trailingStopEnabled && (
-              <div className="pt-2 border-t border-slate-800/60">
-                <label className="block text-xs text-slate-400 mb-1">Trailing Distance (Raw Price) / ចម្ងាយ Trailing តាមតម្លៃ</label>
-                <input 
-                  type="number" step="0.1" min="0.1"
-                  value={trailingDistance} onChange={(e) => setTrailingDistance(e.target.value)}
-                  placeholder="1.5"
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">រក្សាគម្លាតសុវត្ថិភាព {trailingDistance || '1.5'} ពីក្រោយតម្លៃ (SL រំកិលទៅមុខជានិច្ច មិនថយក្រោយឡើយ)</p>
-              </div>
-            )}
           </div>
 
           {/* NEWS FILTER SETTINGS SECTION */}

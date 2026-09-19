@@ -6,7 +6,7 @@
  * Strict Sequence:
  * M1 MARKET -> SWEEP -> DISPLACEMENT -> MSS -> FULL SETUP READY -> LOCK ENTRY ->
  * WAIT FOR LOCKED ENTRY -> ENTRY REACHED -> EXECUTE -> TRADE ACTIVE ->
- * TRAILING -> CLOSED -> SCAN NEW SETUP
+ * CLOSED -> SCAN NEW SETUP
  * 
  * Pending Setup Cancellation:
  * If Price reaches Virtual TP or Virtual SL before Entry:
@@ -92,7 +92,7 @@ export class DaRaM1StateMachine {
 
   /**
    * Called when user presses STOP.
-   * If a real position is active, it continues to be protected by broker SL/TP and trailing.
+   * If a real position is active, it continues to be protected by broker SL/TP.
    * Only new entries and pending setups are stopped.
    */
   public onUserStop(): void {
@@ -115,12 +115,18 @@ export class DaRaM1StateMachine {
     this.currentSetup = setup;
 
     const locked = setup.lockedEntryPrice;
+    setup.masterEntryPrice = locked;
     setup.entryLevels = [];
     
+    // Position #1: Controlled independently by entryPullbackPos1 (default 0.0)
+    const pullbackPos1 = (userSettings && userSettings.entryPullbackPos1 !== undefined) ? userSettings.entryPullbackPos1 : 0.0;
+    // Positions #2–#5: Controlled independently by entryDistance (default 1.0)
+    const step = (userSettings && userSettings.entryDistance !== undefined) ? userSettings.entryDistance : 1.0;
+    const execDir = setup.executionDirection || setup.direction;
+
     for (let i = 0; i < 5; i++) {
-      const step = (userSettings && userSettings.entryDistance !== undefined) ? userSettings.entryDistance : 1.0;
-      const dist = i * step;
-      let target = setup.direction === 'BUY' ? locked - dist : locked + dist;
+      const dist = (i + 1) * step;
+      const target = execDir === 'SELL' ? locked + dist : locked - dist;
       setup.entryLevels.push({
         targetPrice: Number(target.toFixed(3)),
         executed: false
@@ -170,8 +176,9 @@ export class DaRaM1StateMachine {
     }
 
     const setup = this.currentSetup;
+    const execDir = setup.executionDirection || setup.direction;
 
-    if (setup.direction === 'BUY') {
+    if (execDir === 'BUY') {
       // Reached Virtual TP first
       if (currentPrice >= setup.virtualTPPrice) {
         this.cancelSetup('VIRTUAL_TP_REACHED', `BUY Virtual TP (${setup.virtualTPPrice}) reached before entry. Setup invalidated.`);
@@ -182,7 +189,7 @@ export class DaRaM1StateMachine {
         this.cancelSetup('VIRTUAL_SL_REACHED', `BUY Virtual SL (${setup.virtualSLPrice}) reached before entry. Setup invalidated.`);
         return true;
       }
-    } else if (setup.direction === 'SELL') {
+    } else if (execDir === 'SELL') {
       // Reached Virtual TP first
       if (currentPrice <= setup.virtualTPPrice) {
         this.cancelSetup('VIRTUAL_TP_REACHED', `SELL Virtual TP (${setup.virtualTPPrice}) reached before entry. Setup invalidated.`);
@@ -194,14 +201,13 @@ export class DaRaM1StateMachine {
         return true;
       }
     }
-
     return false;
   }
 
-  public getNextPendingLevel(maxAllowedPositions: number = 5): { levelIndex: number; targetPrice: number } | null {
+  public getNextPendingLevel(maxAllowedPositions: number = 1): { levelIndex: number; targetPrice: number } | null {
     if (!this.currentSetup || !this.currentSetup.entryLevels) return null;
     const rawLimit = Number(maxAllowedPositions);
-    const limit = isNaN(rawLimit) ? 5 : Math.max(1, Math.min(5, Math.floor(rawLimit)));
+    const limit = isNaN(rawLimit) ? 1 : Math.max(1, Math.min(5, Math.floor(rawLimit)));
 
     // Stop if we have already opened the maximum allowed positions for this setup
     if ((this.currentSetup.positionsOpened || 0) >= limit) {
@@ -231,6 +237,7 @@ export class DaRaM1StateMachine {
     const setup = this.currentSetup;
     const target = nextLevel.targetPrice;
     const levelIndex = nextLevel.levelIndex;
+    const execDir = setup.executionDirection || setup.direction;
 
     const effectivePrevPrice = prevPrice !== undefined ? prevPrice : this.lastEvaluatedPrice;
 
@@ -238,7 +245,7 @@ export class DaRaM1StateMachine {
     // Directly checks if current market price reached locked entry price
     if (levelIndex === 0) {
       let isReached = false;
-      if (setup.direction === 'BUY') {
+      if (execDir === 'BUY') {
         isReached = currentPrice <= target;
       } else {
         isReached = currentPrice >= target;
@@ -252,20 +259,25 @@ export class DaRaM1StateMachine {
 
     // Rejection Rule A: Price is identical to the fill price of the previous level
     // (Sitting stationary at the fill price of the prior level cannot trigger another level)
-    if (setup.lastExecutedPrice !== undefined && currentPrice === setup.lastExecutedPrice) {
+    // EXCEPTION: If the NEXT target price is also identical to the last fill price, allow it.
+    if (setup.lastExecutedPrice !== undefined && currentPrice === setup.lastExecutedPrice && target !== setup.lastExecutedPrice) {
       this.lastEvaluatedPrice = currentPrice;
       return false;
     }
 
     // Rejection Rule B: Repeated identical tick with no price movement
-    if (effectivePrevPrice !== undefined && currentPrice === effectivePrevPrice) {
+    // EXCEPTION: If the current price IS the target price, allow evaluation to proceed.
+    if (effectivePrevPrice !== undefined && currentPrice === effectivePrevPrice && currentPrice !== target) {
       return false;
     }
 
-    // Determine entry distance step: argument, or difference between first 2 levels, or default 1.0
+    // Determine entry distance step: argument, or difference between levels 2 and 1, or default 1.0
     let step = 1.0;
     if (entryDistance !== undefined && entryDistance > 0) {
       step = entryDistance;
+    } else if (setup.entryLevels && setup.entryLevels.length >= 3) {
+      const detected = Math.abs(setup.entryLevels[2].targetPrice - setup.entryLevels[1].targetPrice);
+      if (detected > 0) step = Number(detected.toFixed(3));
     } else if (setup.entryLevels && setup.entryLevels.length >= 2) {
       const detected = Math.abs(setup.entryLevels[1].targetPrice - setup.entryLevels[0].targetPrice);
       if (detected > 0) step = Number(detected.toFixed(3));
@@ -274,12 +286,12 @@ export class DaRaM1StateMachine {
     const lastExecPrice = setup.lastExecutedPrice;
     let isReached = false;
 
-    if (setup.direction === 'BUY') {
+    if (execDir === 'BUY') {
       // Must be at or below target price
       if (currentPrice <= target) {
-        if (lastExecPrice === undefined || lastExecPrice > target) {
+        if (lastExecPrice === undefined || lastExecPrice > target || lastExecPrice === target) {
           // Normal case: previous level executed above target (e.g. L1 at 100, L2 target 99)
-          // Price moved down into/past target
+          // Or level 2+ shares the same target price as level 1 fill
           isReached = true;
         } else {
           // Deep price spike/overshoot barrier (lastExecPrice <= target):
@@ -292,12 +304,12 @@ export class DaRaM1StateMachine {
           isReached = hasCrossedDown || hasContinuedLower;
         }
       }
-    } else if (setup.direction === 'SELL') {
+    } else if (execDir === 'SELL') {
       // Must be at or above target price
       if (currentPrice >= target) {
-        if (lastExecPrice === undefined || lastExecPrice < target) {
+        if (lastExecPrice === undefined || lastExecPrice < target || lastExecPrice === target) {
           // Normal case: previous level executed below target (e.g. L1 at 100, L2 target 101)
-          // Price moved up into/past target
+          // Or level 2+ shares the same target price as level 1 fill
           isReached = true;
         } else {
           // Deep price spike/overshoot barrier (lastExecPrice >= target):

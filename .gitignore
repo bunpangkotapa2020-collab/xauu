@@ -4,5 +4,9 @@ dist/
 coverage/
 .DS_Store
 *.log
+*.pid
+legacy_archives/
+*.tar.gz
+!public/*.tar.gz
 .env*
 !.env.example

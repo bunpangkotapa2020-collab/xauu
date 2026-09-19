@@ -1,0 +1,24 @@
+{
+  "name": "XAU AI SCALPER PRO",
+  "short_name": "XAU SCALPER",
+  "description": "ប្រព័ន្ធ Bot ជួញដូរមាស XAU AI SCALPER PRO ដោយស្វ័យប្រវត្តិ 100% ភាសាខ្មែរ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#f59e0b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

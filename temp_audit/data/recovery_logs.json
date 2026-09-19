@@ -1,0 +1,497 @@
+[
+  {
+    "time": "2026-09-14T10:45:34.388Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:45:32.388Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:44:46.325Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:44:44.323Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:44:36.137Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:44:32.102Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:43:04.791Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:40:14.561Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:40:12.559Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:38:59.675Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:38:57.672Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:38:13.481Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:38:11.480Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:37:32.922Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:37:30.921Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T10:09:37.800Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T10:09:35.800Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:49:36.744Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:49:34.742Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:49:25.537Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:49:23.535Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:48:01.163Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:47:59.163Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:46:54.374Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:46:52.375Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:46:39.658Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:46:37.656Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:41:03.218Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:41:01.216Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:34:32.573Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:34:30.551Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:34:19.072Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:34:17.069Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:34:05.179Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:32:15.442Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:32:13.441Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:31:40.101Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:28:50.995Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:28:48.752Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:28:17.761Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:28:11.102Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:24:16.904Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:24:14.903Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:22:21.933Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T09:22:21.933Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T09:21:33.740Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:21:31.738Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:12:52.960Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:12:50.958Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T09:12:30.825Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T09:12:28.823Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T08:58:49.114Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T08:58:47.093Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T08:58:26.531Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T08:58:24.531Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T08:56:19.748Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T08:56:19.747Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T08:55:59.573Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T08:55:59.572Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:8080"
+  },
+  {
+    "time": "2026-09-14T08:55:55.242Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T08:55:55.242Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T08:54:02.339Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T08:54:02.338Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T08:53:05.605Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T08:53:03.603Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T08:52:27.575Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T08:52:25.573Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T08:43:26.677Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T08:43:24.676Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T08:32:18.575Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T08:32:16.574Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T07:06:25.462Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "RESOLVED: MT5 Reconnected"
+  },
+  {
+    "time": "2026-09-14T07:06:25.462Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 9.6 minutes."
+  },
+  {
+    "time": "2026-09-14T07:01:52.251Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRITICAL: MT5 Disconnected"
+  },
+  {
+    "time": "2026-09-14T06:56:52.044Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T05:48:04.172Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T05:48:01.965Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T05:46:13.673Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:46:13.672Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T05:44:54.330Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T05:44:51.977Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T05:44:11.448Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T05:44:09.447Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T05:41:32.591Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:41:32.590Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T05:40:43.459Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:40:43.458Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T05:38:34.202Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T05:38:31.847Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T05:37:57.268Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:37:57.267Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:8080"
+  },
+  {
+    "time": "2026-09-14T05:37:46.200Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:37:46.200Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T05:37:09.721Z",
+    "event": "RECOVERED",
+    "details": "MT5 Connection restored after 0.0 minutes."
+  },
+  {
+    "time": "2026-09-14T05:37:07.719Z",
+    "event": "DISCONNECTED",
+    "details": "MT5 Connection lost. Tracking downtime."
+  },
+  {
+    "time": "2026-09-14T05:36:53.566Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:36:53.521Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  },
+  {
+    "time": "2026-09-14T05:35:08.847Z",
+    "event": "EMAIL_ALERT_DISABLED",
+    "details": "CRASH: Uncaught Exception"
+  },
+  {
+    "time": "2026-09-14T05:35:08.847Z",
+    "event": "CRASH",
+    "details": "Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:3000"
+  }
+]

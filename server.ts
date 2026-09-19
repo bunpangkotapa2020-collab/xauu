@@ -6,6 +6,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
+import http from 'http';
 
 const SERVER_INSTANCE_ID = crypto.randomBytes(4).toString('hex').toUpperCase();
 const SERVER_BOOT_TIME = new Date().toISOString();
@@ -128,8 +129,10 @@ class DaRaServerBroker implements DaRaBrokerInterface {
              }
              const data = JSON.parse(responseText);
              if (data.numericCode && data.numericCode !== 10009) {
+                 console.error('[DaRa Broker Modify] ❌ MetaApi Error:', data.stringCode || data.message);
                  return { success: false, error: data.stringCode || data.message || `MetaApi Error ${data.numericCode}` };
              }
+             console.log('[DaRa Broker Modify] ✅ Success for ticket', ticket, 'newSl:', newSl, 'newTp:', newTp);
              return { success: true };
         } catch (err) {
              return { success: false, error: err.message };
@@ -232,8 +235,10 @@ const initialDaraSettings = {
     newsFilterEnabled: false,
     newsMinsBefore: 60,
     newsMinsAfter: 60,
-    trailingEnabled: true,
     entryDistance: 2.0,
+    entryPullbackPos1: 0.0,
+    candleConfirmationEnabled: true,
+    candleMinScoreRequired: 2,
     liveTradingEnabled: false
 };
 const daraEngine = new DaRaM1Engine(daraBroker, initialDaraSettings, daraTelegram);
@@ -638,6 +643,7 @@ const mt5Password = process.env.MT5_PASSWORD ? process.env.MT5_PASSWORD.trim() :
 // SELF-HEALING & AUTO-RECOVERY ENGINE 24/7
 // ==========================================
 const DATA_DIR = path.join(process.cwd(), 'data');
+if (!fs.existsSync(DATA_DIR)) { fs.mkdirSync(DATA_DIR, { recursive: true }); }
 
 const RECOVERY_LOG_PATH = path.join(DATA_DIR, 'recovery_logs.json');
 if (!fs.existsSync(RECOVERY_LOG_PATH)) {
@@ -719,21 +725,15 @@ Auto Trading resumes normally.`);
     },
 
     registerCrashHandlers() {
-        process.on('uncaughtException', (err) => {
-            this.log('CRASH', `Uncaught Exception: ${err.message}`);
-            this.sendAlert('CRASH: Uncaught Exception', `Bot crashed: ${err.stack}
-
-PM2 should auto-restart it shortly.`).finally(() => {
-                process.exit(1);
-            });
+        process.on('uncaughtException', (err: any) => {
+            console.error('[UNCAUGHT EXCEPTION]', err);
+            this.log('CRASH', `Uncaught Exception: ${err?.message || err}`);
+            this.sendAlert('CRASH: Uncaught Exception', `Bot error: ${err?.stack || err}`).catch(() => {});
         });
-        process.on('unhandledRejection', (reason, promise) => {
+        process.on('unhandledRejection', (reason: any) => {
+            console.error('[UNHANDLED REJECTION]', reason);
             this.log('CRASH', `Unhandled Rejection: ${reason}`);
-            this.sendAlert('CRASH: Unhandled Rejection', `Bot crashed due to unhandled promise rejection: ${reason}
-
-PM2 will restart it.`).finally(() => {
-                process.exit(1);
-            });
+            this.sendAlert('CRASH: Unhandled Rejection', `Bot promise rejection: ${reason}`).catch(() => {});
         });
     }
 };
@@ -1000,8 +1000,12 @@ interface BotServerState {
     trailingStopBreakEven?: boolean;
     trailingStopBreakEvenOffset?: number;
     maxOpenTrades: number;
+    positionsPerSetup?: number;
     newsFilterEnabled?: boolean;
     entryDistance?: number;
+    entryPullbackPos1?: number;
+    candleConfirmationEnabled?: boolean;
+    candleMinScoreRequired?: number;
     trailingDistance?: number;
     liveTradingEnabled?: boolean;
     entriesPerSignal: number;
@@ -1101,6 +1105,8 @@ const DEFAULT_BOT_CONFIG = {
     maxDailyLossAmount: 50,
     noMartingale: true,
     noGrid: true,
+    candleConfirmationEnabled: true,
+    candleMinScoreRequired: 2,
     liveTradingEnabled: false,
   },
   userPreferences: {
@@ -1209,19 +1215,22 @@ const botState: BotServerState = {
 
 // Sync Dara Engine with loaded config
 if (global.daraEngine) {
+    const rawPositions = Number(botState.riskConfig.positionsPerSetup ?? botState.riskConfig.maxOpenTrades ?? botState.riskConfig.entriesPerSignal ?? 1);
+    const posPerSetup = isNaN(rawPositions) ? 1 : Math.max(1, Math.min(5, Math.floor(rawPositions)));
     global.daraEngine.updateUserSettings({
         lotSize: botState.riskConfig.lotSize || 0.01,
         slDistance: botState.riskConfig.stopLossPips || 30,
         tpDistance: botState.riskConfig.takeProfitPips || 30,
         dailyLossLimit: botState.riskConfig.maxDailyLossAmount || 50,
-        maxOpenTrades: botState.riskConfig.maxOpenTrades || 5,
+        maxOpenTrades: posPerSetup,
+        positionsPerSetup: posPerSetup,
+        entriesPerSignal: posPerSetup,
         maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses || 3,
         cooldownMinutes: botState.riskConfig.cooldownMinutes || 15,
         maxSpreadPoints: botState.riskConfig.maxSpreadPoints || 30,
         newsFilterEnabled: botState.riskConfig.newsFilterEnabled || false,
-        trailingEnabled: botState.riskConfig.trailingStopEnabled !== false,
-        trailingDistance: botState.riskConfig.trailingDistance,
-        entryDistance: botState.riskConfig.entryDistance || 2.0,
+        entryDistance: botState.riskConfig.entryDistance !== undefined ? botState.riskConfig.entryDistance : 0.5,
+        entryPullbackPos1: botState.riskConfig.entryPullbackPos1 !== undefined ? botState.riskConfig.entryPullbackPos1 : 0.0,
         liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
     });
     if (botState.status === 'running' || botState.desiredBotState === 'RUNNING') {
@@ -2158,13 +2167,14 @@ if (botState.account.loginId && botState.account.metaApiToken && botState.accoun
 }
 
 const app = express();
+  // Infrastructure port: NGINX reverse proxy forwards external traffic to 3000
   const PORT = 3000;
 
   app.use(express.json());
 
-  // Health check endpoint for Cloud Run and Platform Probes
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
+  // Health check endpoints for Cloud Run, Kubernetes, and platform probes
+  app.get(['/api/health', '/health', '/_health'], (req, res) => {
+    res.json({ status: 'ok', service: 'xauusd-scalper-bot' });
   });
 
   // Authentication Token Extractor Middleware
@@ -3698,11 +3708,24 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.takeProfitPips !== undefined) botState.riskConfig.takeProfitPips = Number(riskConfig.takeProfitPips);
       if (riskConfig.trailingStopEnabled !== undefined) botState.riskConfig.trailingStopEnabled = Boolean(riskConfig.trailingStopEnabled);
       if (riskConfig.entryDistance !== undefined) botState.riskConfig.entryDistance = Number(riskConfig.entryDistance);
-      if (riskConfig.trailingDistance !== undefined) botState.riskConfig.trailingDistance = Number(riskConfig.trailingDistance);
-      if (riskConfig.maxOpenTrades !== undefined) {
-        botState.riskConfig.maxOpenTrades = Math.max(1, Math.min(5, Math.floor(Number(riskConfig.maxOpenTrades) || 5)));
+      if (riskConfig.entryPullbackPos1 !== undefined) {
+        const parsedPb = Number(riskConfig.entryPullbackPos1);
+        botState.riskConfig.entryPullbackPos1 = isNaN(parsedPb) || parsedPb < 0 ? 0.0 : parsedPb;
       }
-      if (riskConfig.entriesPerSignal !== undefined) botState.riskConfig.entriesPerSignal = Number(riskConfig.entriesPerSignal);
+      if (riskConfig.candleConfirmationEnabled !== undefined) {
+        botState.riskConfig.candleConfirmationEnabled = Boolean(riskConfig.candleConfirmationEnabled);
+      }
+      if (riskConfig.candleMinScoreRequired !== undefined) {
+        botState.riskConfig.candleMinScoreRequired = Number(riskConfig.candleMinScoreRequired);
+      }
+      if (riskConfig.trailingDistance !== undefined) botState.riskConfig.trailingDistance = Number(riskConfig.trailingDistance);
+      if (riskConfig.maxOpenTrades !== undefined || riskConfig.positionsPerSetup !== undefined || riskConfig.entriesPerSignal !== undefined) {
+        const rawPos = Number(riskConfig.positionsPerSetup ?? riskConfig.maxOpenTrades ?? riskConfig.entriesPerSignal ?? botState.riskConfig.maxOpenTrades ?? 1);
+        const posLimit = isNaN(rawPos) ? 1 : Math.max(1, Math.min(5, Math.floor(rawPos)));
+        botState.riskConfig.maxOpenTrades = posLimit;
+        botState.riskConfig.entriesPerSignal = posLimit;
+        botState.riskConfig.positionsPerSetup = posLimit;
+      }
       if (riskConfig.maxConsecutiveLosses !== undefined) botState.riskConfig.maxConsecutiveLosses = Number(riskConfig.maxConsecutiveLosses);
       if (riskConfig.cooldownMinutes !== undefined) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
       if (riskConfig.maxDailyLossPercent !== undefined) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
@@ -3719,13 +3742,16 @@ app.post('/api/bot/action', async (req, res) => {
               tpDistance: botState.riskConfig.takeProfitPips,
               dailyLossLimit: botState.riskConfig.maxDailyLossAmount,
               maxOpenTrades: botState.riskConfig.maxOpenTrades,
+              positionsPerSetup: botState.riskConfig.positionsPerSetup,
+              entriesPerSignal: botState.riskConfig.entriesPerSignal,
               maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses,
               cooldownMinutes: botState.riskConfig.cooldownMinutes,
               maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
               newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
-              trailingEnabled: botState.riskConfig.trailingStopEnabled,
-              trailingDistance: botState.riskConfig.trailingDistance,
               entryDistance: botState.riskConfig.entryDistance,
+              entryPullbackPos1: botState.riskConfig.entryPullbackPos1 !== undefined ? botState.riskConfig.entryPullbackPos1 : 0.0,
+              candleConfirmationEnabled: botState.riskConfig.candleConfirmationEnabled !== false,
+              candleMinScoreRequired: botState.riskConfig.candleMinScoreRequired ?? 2,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
           const engineSettings = daraEngine.getUserSettings();
@@ -3758,8 +3784,12 @@ app.post('/api/bot/action', async (req, res) => {
       botState.account = { ...botState.account, ...account };
     }
     if (riskConfig) {
-      if (riskConfig.maxOpenTrades !== undefined) {
-        riskConfig.maxOpenTrades = Math.max(1, Math.min(5, Math.floor(Number(riskConfig.maxOpenTrades) || 5)));
+      if (riskConfig.maxOpenTrades !== undefined || riskConfig.positionsPerSetup !== undefined || riskConfig.entriesPerSignal !== undefined) {
+        const rawPos = Number(riskConfig.positionsPerSetup ?? riskConfig.maxOpenTrades ?? riskConfig.entriesPerSignal ?? botState.riskConfig.maxOpenTrades ?? 1);
+        const posLimit = isNaN(rawPos) ? 1 : Math.max(1, Math.min(5, Math.floor(rawPos)));
+        riskConfig.maxOpenTrades = posLimit;
+        riskConfig.entriesPerSignal = posLimit;
+        riskConfig.positionsPerSetup = posLimit;
       }
       botState.riskConfig = { ...botState.riskConfig, ...riskConfig };
       
@@ -3770,13 +3800,14 @@ app.post('/api/bot/action', async (req, res) => {
               tpDistance: botState.riskConfig.takeProfitPips,
               dailyLossLimit: botState.riskConfig.maxDailyLossAmount,
               maxOpenTrades: botState.riskConfig.maxOpenTrades,
+              positionsPerSetup: botState.riskConfig.positionsPerSetup,
+              entriesPerSignal: botState.riskConfig.entriesPerSignal,
               maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses,
               cooldownMinutes: botState.riskConfig.cooldownMinutes,
               maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
               newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
-              trailingEnabled: botState.riskConfig.trailingStopEnabled,
-              trailingDistance: botState.riskConfig.trailingDistance,
               entryDistance: botState.riskConfig.entryDistance,
+              entryPullbackPos1: botState.riskConfig.entryPullbackPos1 !== undefined ? botState.riskConfig.entryPullbackPos1 : 0.0,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
       }
@@ -4235,6 +4266,39 @@ app.post('/api/bot/action', async (req, res) => {
   app.get('/download/dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz', handleV22Download);
   app.get('/api/download/dara_m1_ea_v2.2_SESSION_DRIFT_FIX_FINAL.tar.gz', handleV22Download);
 
+  // Direct Binary Download for DaRa M1 EA FINAL V1.15 SAFE Package
+  const handleV115Download = (req: express.Request, res: express.Response) => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz'),
+      path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz'),
+      path.join(process.cwd(), 'dist', 'dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz')
+    ];
+    let finalPath = '';
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        finalPath = p;
+        break;
+      }
+    }
+
+    if (finalPath) {
+      const stat = fs.statSync(finalPath);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz"');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      fs.createReadStream(finalPath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Package file dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz not found' });
+    }
+  };
+
+  app.get('/dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz', handleV115Download);
+  app.get('/download/dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz', handleV115Download);
+  app.get('/api/download/dara_m1_ea_FINAL_CURRENT_VPS_V1.15_SAFE.tar.gz', handleV115Download);
+
 
   // Direct Downloads for .mq5 and .set files with Auto-Configured Server URL
   app.get('/api/bot/download/ea', (req, res) => {
@@ -4626,6 +4690,47 @@ Categories=Finance;Trading;
     res.send(desktopContent);
   });
 
+  // --- DIRECT FILE DELIVERY MECHANISMS (Dev & Production) ---
+  app.get('/download-v2.4', (req, res) => {
+    res.download(path.join(process.cwd(), 'public', 'dara_m1_ea_v2.4_DEPLOY.tar.gz'));
+  });
+
+  app.get('/dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz', (req, res) => {
+    const filePath = path.join(process.cwd(), 'dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz');
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz"');
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+    } else {
+      res.status(404).send('Frozen package not found');
+    }
+  });
+
+  app.get('/dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz', (req, res) => {
+    const filePath = path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz');
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz"');
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+    } else {
+      res.status(404).send('Frozen package not found');
+    }
+  });
+
+  app.get('/dara_m1_ea_FINAL_TRAILING_V1.5.tar.gz', (req, res) => {
+    const filePath = path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_TRAILING_V1.5.tar.gz');
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_TRAILING_V1.5.tar.gz"');
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+    } else {
+      res.status(404).send('V1.5 package not found');
+    }
+  });
+
   // Vite middleware setup vs Production Static Serving
   const isProduction = process.env.NODE_ENV === 'production' || 
     (typeof __filename !== 'undefined' && __filename.includes('dist')) ||
@@ -4637,55 +4742,15 @@ Categories=Finance;Trading;
       server: { middlewareMode: true },
       appType: 'spa',
     });
-    
-    // --- DIRECT FILE DELIVERY MECHANISM ---
-    app.get('/dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz', (req, res) => {
-      const filePath = path.join(process.cwd(), 'dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz');
-      if (fs.existsSync(filePath)) {
-        res.setHeader('Content-Type', 'application/gzip');
-        res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_v1_0_APPROVED_FROZEN_20260908.tar.gz"');
-        const fileStream = fs.createReadStream(filePath);
-        fileStream.pipe(res);
-      } else {
-        res.status(404).send('Frozen package not found');
-      }
-    });
-    
-    app.get('/dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz', (req, res) => {
-      const filePath = path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz');
-      if (fs.existsSync(filePath)) {
-        res.setHeader('Content-Type', 'application/gzip');
-        res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz"');
-        const fileStream = fs.createReadStream(filePath);
-        fileStream.pipe(res);
-      } else {
-        res.status(404).send('Frozen package not found');
-      }
-    });
-
     app.use(vite.middlewares);
   } else {
     const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
       ? path.join(process.cwd(), 'dist')
-      : (typeof __dirname !== 'undefined' ? __dirname : path.join(process.cwd(), 'dist'));
+      : (typeof __dirname !== 'undefined' && fs.existsSync(path.join(__dirname, 'index.html'))
+          ? __dirname
+          : path.join(process.cwd(), 'dist'));
     app.use(express.static(distPath));
 
-    // Bypass SPA routing for direct file downloads in public directory
-    app.get('/download-v2.4', (req, res) => {
-      res.download(path.join(process.cwd(), 'public', 'dara_m1_ea_v2.4_DEPLOY.tar.gz'));
-    });
-    
-    app.get('/dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz', (req, res) => {
-      const filePath = path.join(process.cwd(), 'public', 'dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz');
-      if (fs.existsSync(filePath)) {
-        res.setHeader('Content-Type', 'application/gzip');
-        res.setHeader('Content-Disposition', 'attachment; filename="dara_m1_ea_FINAL_MERGED_FROZEN_v1.3.tar.gz"');
-        const fileStream = fs.createReadStream(filePath);
-        fileStream.pipe(res);
-      } else {
-        res.status(404).send('Frozen package not found');
-      }
-    });
     app.get('*', (req, res) => {
       const indexPath = path.join(distPath, 'index.html');
       if (fs.existsSync(indexPath)) {
@@ -4696,12 +4761,36 @@ Categories=Finance;Trading;
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[XAUUSD AI Scalping Bot Server] running on http://0.0.0.0:${PORT}`);
-    setTimeout(() => {
-        sendTelegramAlert('BOT STATUS', 'ប្រព័ន្ធត្រូវបាន Restart/Boot', 'សេវាកម្មដំណើរការឡើងវិញដោយជោគជ័យ', 0);
-    }, 10000);
-  });
+  // Server Port Listeners:
+  // 1. process.env.PORT (typically 8080): Required by Cloud Run production container for health checks.
+  // 2. Port 3000: Standard internal port for dev container NGINX proxy and VPS PM2.
+  const defaultPort = 3000;
+  const envPort = process.env.PORT ? Number(process.env.PORT) : null;
+  const portsToListen = envPort && !isNaN(envPort) && envPort > 0
+    ? (envPort === defaultPort ? [envPort] : [envPort, defaultPort])
+    : [defaultPort];
+
+  for (const portToBind of portsToListen) {
+    try {
+      const serverInstance = http.createServer(app);
+      serverInstance.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`[PORT RECOVERY] Port ${portToBind} is in use (e.g. reverse proxy active). Continuing.`);
+        } else {
+          console.error(`[SERVER LISTEN ERROR] Unexpected error on port ${portToBind}:`, err);
+        }
+      });
+      serverInstance.listen(portToBind, '0.0.0.0', () => {
+        console.log(`[XAUUSD AI Scalping Bot Server] running on http://0.0.0.0:${portToBind}`);
+      });
+    } catch (err) {
+      console.warn(`[PORT BIND ERROR] Could not bind port ${portToBind}:`, err);
+    }
+  }
+
+  setTimeout(() => {
+    sendTelegramAlert('BOT STATUS', 'ប្រព័ន្ធត្រូវបាន Restart/Boot', 'សេវាកម្មដំណើរការឡើងវិញដោយជោគជ័យ', 0).catch(() => {});
+  }, 10000);
 }
 
 startServer();

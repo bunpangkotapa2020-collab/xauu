@@ -19,8 +19,6 @@ export type DaRaDirection = 'BUY' | 'SELL';
 export type DaRaExitReason =
   | 'TP_HIT'
   | 'SL_HIT'
-  | 'TRAILING_SL_HIT' |
-  'PROFIT_LOCK_HIT'
   | 'MANUAL_CLOSE'
   | 'CLOSE_ALL'
   | 'BROKER_REJECTION'
@@ -36,7 +34,6 @@ export interface DaRaClosedTrade {
   sl: number;
   tp: number;
   originalTp?: number;
-  trailingActivated?: boolean;
   pnl: number;
   exitReason: DaRaExitReason;
   closedAt: number;
@@ -49,30 +46,22 @@ export type DaRaState =
   | 'MSS_CONFIRMED'          // M1 MSS confirmed
   | 'SETUP_READY'            // Full setup ready, immutable entry locked
   | 'WAIT_FOR_LOCKED_ENTRY'  // Waiting for price to hit locked entry (or virtual TP/SL cancel)
-  | 'EXECUTING'              // Sending order to broker
-  | 'TRADE_ACTIVE'           // Broker ticket confirmed, profit trailing active
-  | 'TRADE_CLOSED'           // Trade closed (TP hit, SL hit, or Trailing SL hit)
+  | 'EXECUTING'
+  | 'TRADE_ACTIVE'
+  | 'TRADE_CLOSED'           // Trade closed (TP hit, SL hit)
   | 'SETUP_CANCELED';        // Virtual TP or Virtual SL touched before entry
-
-export interface DaRaSetupTrailingState {
-  activated: boolean;
-  activatedAt?: number;
-  activationPrice?: number;
-  initialHiddenSL?: number;
-  currentHiddenSL?: number;
-  highestPrice?: number;
-  lowestPrice?: number;
-}
 
 export interface DaRaSetup {
   id: string;
   direction: DaRaDirection;
+  executionDirection?: DaRaDirection;
   sweepLevel: number;
   sweepTime: number;
   displacementConfirmed: boolean;
   mssLevel: number;
   mssTime: number;
   lockedEntryPrice: number;
+  masterEntryPrice?: number;
   signalPrice?: number;
   
   // 5-Level Entry System
@@ -82,7 +71,6 @@ export interface DaRaSetup {
   lastExecutedLevel?: number;
   sharedSL?: number;
   sharedTP?: number;
-  trailingState?: DaRaSetupTrailingState;
 
   virtualSLPrice: number;
   virtualTPPrice: number;
@@ -91,6 +79,15 @@ export interface DaRaSetup {
   createdAt: number;
   status: 'PENDING_ENTRY' | 'EXECUTED' | 'CANCELED';
   cancellationReason?: 'VIRTUAL_TP_REACHED' | 'VIRTUAL_SL_REACHED' | 'EXPIRED' | 'USER_STOP';
+  candleConfirmation?: {
+    patternName: string;
+    direction: DaRaDirection;
+    score: number;
+    candleIndex: number;
+    candleTime: number;
+    quality: string;
+    isConfirmed: boolean;
+  };
 }
 
 export interface DaRaUserSettings {
@@ -100,18 +97,18 @@ export interface DaRaUserSettings {
   tpDistance: number;          // Take Profit (Price Distance) - Direct price distance from entry (e.g. 10 means Entry ± 10)
   dailyLossLimit: number;      // Maximum loss currency/USD/USC per day
   maxOpenTrades: number;       // Usually 1 for single position or user-defined
+  positionsPerSetup?: number;  // Authoritative Positions Per Setup (1-5)
+  entriesPerSignal?: number;   // Alias for positionsPerSetup
   maxConsecutiveSL: number;    // Stop EA after N consecutive SL hits
   cooldownMinutes: number;     // Cooldown duration after a real loss (in minutes)
   maxSpreadPoints: number;     // Max allowable spread in points
   newsFilterEnabled: boolean;  // Whether news filter is active
   newsMinsBefore: number;      // Mins before high impact news
-  newsMinsAfter: number;       // Mins after high impact news
-  trailingEnabled: boolean;
-  entryDistance?: number;              // Pullback Entry Distance Pos #1 (e.g. 2.0 raw price)
-  trailingDistance?: number;   // Auto fixed 1.5 Price Distance (dynamic)
-  trailingRule?: string;       // Rule description: Auto at Original TP (1.5 Price Distance)
-  trailingTriggerPips?: number;// [DEPRECATED / LEGACY]: DaRa Auto Trailing starts at Original TP automatically
-  trailingDistancePips?: number;// [DEPRECATED / LEGACY]: DaRa Auto Trailing uses 1.5 Price Distance automatically
+  newsMinsAfter: number;
+  entryDistance?: number;              // Grid ladder step distance for Pos #2–#5 (e.g. 1.0 raw price)
+  entryPullbackPos1?: number;          // Pullback distance for Pos #1 (0 = immediate at Master Entry)
+  candleConfirmationEnabled?: boolean; // Enable/Disable Candlestick Confirmation Filter (Default: true)
+  candleMinScoreRequired?: number;     // Minimum required score (Default: 2)
 }
 
 export interface DaRaPosition {
@@ -125,11 +122,7 @@ export interface DaRaPosition {
   tp: number;
   originalTp?: number;
   originalSl?: number;
-  trailingActivated?: boolean;
   openTime: number;
-  highestPriceSinceOpen?: number;
-  lowestPriceSinceOpen?: number;
-  lastTrailingSl?: number;
   unrealizedProfit?: number;
   commission?: number;
   swap?: number;

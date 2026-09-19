@@ -41,7 +41,6 @@ const defaultSettings: DaRaUserSettings = {
   newsFilterEnabled: false,
   newsMinsBefore: 0,
   newsMinsAfter: 0,
-  trailingEnabled: true,
   entryDistance: 1.0,
   liveTradingEnabled: true
 };
@@ -90,12 +89,12 @@ async function run20VerificationTests() {
 
     const setup = sm.getSetup()!;
     assert(setup.entryLevels!.length === 5, 'Setup must have 5 levels');
-    assert(setup.entryLevels![0].targetPrice === 100, `L1 must be 100, got ${setup.entryLevels![0].targetPrice}`);
-    assert(setup.entryLevels![1].targetPrice === 99, `L2 must be 99, got ${setup.entryLevels![1].targetPrice}`);
-    assert(setup.entryLevels![2].targetPrice === 98, `L3 must be 98, got ${setup.entryLevels![2].targetPrice}`);
-    assert(setup.entryLevels![3].targetPrice === 97, `L4 must be 97, got ${setup.entryLevels![3].targetPrice}`);
-    assert(setup.entryLevels![4].targetPrice === 96, `L5 must be 96, got ${setup.entryLevels![4].targetPrice}`);
-    markPass(1, 'BUY L1-L5 Target Calculation', 'Locked=100, Dist=1.0 -> L1=100, L2=99, L3=98, L4=97, L5=96');
+    assert(setup.entryLevels![0].targetPrice === 99, `L1 must be 99, got ${setup.entryLevels![0].targetPrice}`);
+    assert(setup.entryLevels![1].targetPrice === 98, `L2 must be 98, got ${setup.entryLevels![1].targetPrice}`);
+    assert(setup.entryLevels![2].targetPrice === 97, `L3 must be 97, got ${setup.entryLevels![2].targetPrice}`);
+    assert(setup.entryLevels![3].targetPrice === 96, `L4 must be 96, got ${setup.entryLevels![3].targetPrice}`);
+    assert(setup.entryLevels![4].targetPrice === 95, `L5 must be 95, got ${setup.entryLevels![4].targetPrice}`);
+    markPass(1, 'BUY L1-L5 Target Calculation', 'Locked=100, Dist=1.0 -> L1=99, L2=98, L3=97, L4=96, L5=95');
   }
 
   // -------------------------------------------------------------------------
@@ -123,12 +122,12 @@ async function run20VerificationTests() {
 
     const setup = sm.getSetup()!;
     assert(setup.entryLevels!.length === 5, 'Setup must have 5 levels');
-    assert(setup.entryLevels![0].targetPrice === 100, `L1 must be 100, got ${setup.entryLevels![0].targetPrice}`);
-    assert(setup.entryLevels![1].targetPrice === 101, `L2 must be 101, got ${setup.entryLevels![1].targetPrice}`);
-    assert(setup.entryLevels![2].targetPrice === 102, `L3 must be 102, got ${setup.entryLevels![2].targetPrice}`);
-    assert(setup.entryLevels![3].targetPrice === 103, `L4 must be 103, got ${setup.entryLevels![3].targetPrice}`);
-    assert(setup.entryLevels![4].targetPrice === 104, `L5 must be 104, got ${setup.entryLevels![4].targetPrice}`);
-    markPass(2, 'SELL L1-L5 Target Calculation', 'Locked=100, Dist=1.0 -> L1=100, L2=101, L3=102, L4=103, L5=104');
+    assert(setup.entryLevels![0].targetPrice === 101, `L1 must be 101, got ${setup.entryLevels![0].targetPrice}`);
+    assert(setup.entryLevels![1].targetPrice === 102, `L2 must be 102, got ${setup.entryLevels![1].targetPrice}`);
+    assert(setup.entryLevels![2].targetPrice === 103, `L3 must be 103, got ${setup.entryLevels![2].targetPrice}`);
+    assert(setup.entryLevels![3].targetPrice === 104, `L4 must be 104, got ${setup.entryLevels![3].targetPrice}`);
+    assert(setup.entryLevels![4].targetPrice === 105, `L5 must be 105, got ${setup.entryLevels![4].targetPrice}`);
+    markPass(2, 'SELL L1-L5 Target Calculation', 'Locked=100, Dist=1.0 -> L1=101, L2=102, L3=103, L4=104, L5=105');
   }
 
   // -------------------------------------------------------------------------
@@ -155,12 +154,12 @@ async function run20VerificationTests() {
     }, { ...defaultSettings, entryDistance: 1.25, maxOpenTrades: 5 });
 
     const setup = sm.getSetup()!;
-    assert(setup.entryLevels![0].targetPrice === 2650.50, `L1 got ${setup.entryLevels![0].targetPrice}`);
-    assert(setup.entryLevels![1].targetPrice === 2649.25, `L2 got ${setup.entryLevels![1].targetPrice}`);
-    assert(setup.entryLevels![2].targetPrice === 2648.00, `L3 got ${setup.entryLevels![2].targetPrice}`);
-    assert(setup.entryLevels![3].targetPrice === 2646.75, `L4 got ${setup.entryLevels![3].targetPrice}`);
-    assert(setup.entryLevels![4].targetPrice === 2645.50, `L5 got ${setup.entryLevels![4].targetPrice}`);
-    markPass(3, 'Float Precision Spacing', 'Locked=2650.50, Dist=1.25 -> Exactly 2650.50, 2649.25, 2648.00, 2646.75, 2645.50');
+    assert(setup.entryLevels![0].targetPrice === 2649.25, `L1 got ${setup.entryLevels![0].targetPrice}`);
+    assert(setup.entryLevels![1].targetPrice === 2648.00, `L2 got ${setup.entryLevels![1].targetPrice}`);
+    assert(setup.entryLevels![2].targetPrice === 2646.75, `L3 got ${setup.entryLevels![2].targetPrice}`);
+    assert(setup.entryLevels![3].targetPrice === 2645.50, `L4 got ${setup.entryLevels![3].targetPrice}`);
+    assert(setup.entryLevels![4].targetPrice === 2644.25, `L5 got ${setup.entryLevels![4].targetPrice}`);
+    markPass(3, 'Float Precision Spacing', 'Locked=2650.50, Dist=1.25 -> Exactly 2649.25, 2648.00, 2646.75, 2645.50, 2644.25');
   }
 
   // -------------------------------------------------------------------------
@@ -179,17 +178,17 @@ async function run20VerificationTests() {
 
     assert(sm.getNextPendingLevel(1) !== null, 'Level 1 is pending');
 
-    // Tick 1: Price touches 100 -> L1 executes
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 100, ask: 100.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
+    // Tick 1: Price touches 99 -> L1 executes
+    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 99, ask: 99.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
     assert(broker.orders.length === 1, 'Order 1 executed');
 
-    // Tick 2: Price drops to 99, 98, 97, 96 -> NO further orders
-    for (const p of [99, 98, 97, 96]) {
+    // Tick 2: Price drops to 98, 97, 96 -> NO further orders
+    for (const p of [98, 97, 96]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 2, serverTime: 2, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
     }
     assert(broker.orders.length === 1, 'Max 1 position respected; L2-L5 never executed');
     assert(sm.getNextPendingLevel(1) === null, 'No pending level allowed after 1 position opened');
-    markPass(4, 'Positions Per Setup = 1', 'Executed L1 at 100, completely halted on subsequent drops');
+    markPass(4, 'Positions Per Setup = 1', 'Executed L1 at 99, completely halted on subsequent drops');
   }
 
   // -------------------------------------------------------------------------
@@ -206,24 +205,24 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    // Tick 1: 100 -> L1
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 100, ask: 100.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
+    // Tick 1: 99 -> L1
+    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 99, ask: 99.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
     assert(broker.orders.length === 1, 'L1 executed');
 
-    // Price sits at 99.50 (has NOT reached L2 target 99) -> must WAIT
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 99.50, ask: 99.60, time: 2, serverTime: 2, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
-    assert(broker.orders.length === 1, 'L2 did not execute at 99.50');
+    // Price sits at 98.50 (has NOT reached L2 target 98) -> must WAIT
+    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 98.50, ask: 98.60, time: 2, serverTime: 2, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
+    assert(broker.orders.length === 1, 'L2 did not execute at 98.50');
 
-    // Price reaches 99.00 -> L2 executes
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 99.00, ask: 99.10, time: 3, serverTime: 3, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
-    assert(broker.orders.length === 2, 'L2 executed at 99');
+    // Price reaches 98.00 -> L2 executes
+    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 98.00, ask: 98.10, time: 3, serverTime: 3, spreadPoints: 10, openTradesCount: 1, m1Candles: [] });
+    assert(broker.orders.length === 2, 'L2 executed at 98');
 
-    // Price drops further to 98, 97, 96 -> STOPPED
-    for (const p of [98, 97, 96]) {
+    // Price drops further to 97, 96 -> STOPPED
+    for (const p of [97, 96]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 4, serverTime: 4, spreadPoints: 10, openTradesCount: 2, m1Candles: [] });
     }
     assert(broker.orders.length === 2, 'Strictly stopped at 2 positions');
-    markPass(5, 'Positions Per Setup = 2', 'L1 (100) -> WAIT -> L2 (99) -> STOP; L3-L5 blocked');
+    markPass(5, 'Positions Per Setup = 2', 'L1 (99) -> WAIT -> L2 (98) -> STOP; L3-L5 blocked');
   }
 
   // -------------------------------------------------------------------------
@@ -240,7 +239,7 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    for (const p of [100, 99, 98]) {
+    for (const p of [99, 98, 97]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: [] });
     }
     assert(broker.orders.length === 3, 'Executed L1, L2, L3');
@@ -267,7 +266,7 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    for (const p of [100, 99, 98, 97]) {
+    for (const p of [99, 98, 97, 96]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: [] });
     }
     assert(broker.orders.length === 4, 'Executed L1-L4');
@@ -292,11 +291,11 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    for (const p of [100, 99, 98, 97, 96]) {
+    for (const p of [99, 98, 97, 96, 95]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: [] });
     }
     assert(broker.orders.length === 5, 'All 5 levels executed');
-    markPass(8, 'Positions Per Setup = 5', 'All 5 levels executed sequentially at 100, 99, 98, 97, 96');
+    markPass(8, 'Positions Per Setup = 5', 'All 5 levels executed sequentially at 99, 98, 97, 96, 95');
   }
 
   // -------------------------------------------------------------------------
@@ -346,9 +345,11 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, { ...defaultSettings, entryDistance: 2.0, maxOpenTrades: 5 });
 
-    // Both must have L1=100, L2=98
-    assert(sm2.getSetup()!.entryLevels![1].targetPrice === 98, 'sm2 L2 is 98');
-    assert(sm5.getSetup()!.entryLevels![1].targetPrice === 98, 'sm5 L2 is 98');
+    // Both must have L1=98, L2=96
+    assert(sm2.getSetup()!.entryLevels![0].targetPrice === 98, 'sm2 L1 is 98');
+    assert(sm5.getSetup()!.entryLevels![0].targetPrice === 98, 'sm5 L1 is 98');
+    assert(sm2.getSetup()!.entryLevels![1].targetPrice === 96, 'sm2 L2 is 96');
+    assert(sm5.getSetup()!.entryLevels![1].targetPrice === 96, 'sm5 L2 is 96');
     assert(sm2.getNextPendingLevel(2) !== null, 'sm2 has pending level');
     assert(sm5.getNextPendingLevel(5) !== null, 'sm5 has pending level');
     markPass(10, 'Entry Distance Independence', 'Distance between levels remains 2.0 regardless of maxOpenTrades setting (2 vs 5)');
@@ -369,20 +370,20 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    // Execute L1 at 100
+    // Execute L1 at 99
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 100, ask: 100.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0,
-      m1Candles: [{ open: 100, high: 101, low: 100, close: 100, time: 1 }]
+      symbol: 'XAUUSD', bid: 99, ask: 99.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0,
+      m1Candles: [{ open: 100, high: 101, low: 99, close: 99, time: 1 }]
     });
     assert(broker.orders.length === 1, 'L1 executed');
 
-    // Next tick: live bid is 99.50 (above L2 99.00), BUT the candle array has a deep wick low=96.00!
+    // Next tick: live bid is 98.50 (above L2 98.00), BUT the candle array has a deep wick low=96.00!
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 99.50, ask: 99.60, time: 2, serverTime: 2, spreadPoints: 10, openTradesCount: 1,
-      m1Candles: [{ open: 100, high: 100, low: 96.00, close: 99.50, time: 2 }]
+      symbol: 'XAUUSD', bid: 98.50, ask: 98.60, time: 2, serverTime: 2, spreadPoints: 10, openTradesCount: 1,
+      m1Candles: [{ open: 99, high: 99, low: 96.00, close: 98.50, time: 2 }]
     });
-    assert(broker.orders.length === 1, 'Candle wick low=96 MUST NOT trigger L2 (target 99) when live bid is 99.50');
-    markPass(11, 'Candle Wick Elimination', 'Candle wick low=96.00 did NOT trigger L2 while live bid was 99.50');
+    assert(broker.orders.length === 1, 'Candle wick low=96 MUST NOT trigger L2 (target 98) when live bid is 98.50');
+    markPass(11, 'Candle Wick Elimination', 'Candle wick low=96.00 did NOT trigger L2 while live bid was 98.50');
   }
 
   // -------------------------------------------------------------------------
@@ -397,10 +398,10 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, { ...defaultSettings, entryDistance: 1.0 });
 
-    assert(!sm.isEntryPriceReached(100.01), 'Price 100.01 does not reach BUY 100.00');
-    assert(sm.isEntryPriceReached(100.00), 'Price 100.00 reaches BUY 100.00');
-    assert(sm.isEntryPriceReached(99.99), 'Price 99.99 reaches BUY 100.00');
-    markPass(12, 'Live Current Price Triggering', 'Only live current price evaluated against level target');
+    assert(!sm.isEntryPriceReached(99.01), 'Price 99.01 does not reach BUY 99.00');
+    assert(sm.isEntryPriceReached(99.00), 'Price 99.00 reaches BUY 99.00');
+    assert(sm.isEntryPriceReached(98.99), 'Price 98.99 reaches BUY 99.00');
+    markPass(12, 'Live Current Price Triggering', 'Only live current price evaluated against level target (99.0)');
   }
 
   // -------------------------------------------------------------------------
@@ -418,13 +419,13 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    // Abrupt flash crash to 96.00 on Tick 1
+    // Abrupt flash crash to 94.00 on Tick 1 (L1 target 99)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 96.00, ask: 96.10, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: []
+      symbol: 'XAUUSD', bid: 94.00, ask: 94.10, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: []
     });
     assert(broker.orders.length === 1, `Expected exactly 1 order on abrupt price gap, got ${broker.orders.length}`);
     assert(broker.orders[0].comment.includes('#1') || broker.orders[0].comment.includes('BUY'), 'Only Level 1 executed');
-    markPass(13, 'One Level Per Market Update', 'Flash drop to 96 executed ONLY L1 on the first update');
+    markPass(13, 'One Level Per Market Update', 'Flash drop to 94 executed ONLY L1 (target 99) on the first update');
   }
 
   // -------------------------------------------------------------------------
@@ -442,20 +443,20 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    // Tick 1 at 96 opens L1
+    // Tick 1 at 95 opens L1 (target 99)
     await engine.onMarketUpdate({
-      symbol: 'XAUUSD', bid: 96.00, ask: 96.10, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: []
+      symbol: 'XAUUSD', bid: 95.00, ask: 95.10, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: []
     });
-    assert(broker.orders.length === 1, 'Tick 1 at 96 opens L1');
+    assert(broker.orders.length === 1, 'Tick 1 at 95 opens L1');
 
-    // Ticks 2-5 at identical price 96.00 MUST NOT execute any more levels
+    // Ticks 2-5 at identical price 95.00 MUST NOT execute any more levels
     for (let tick = 2; tick <= 5; tick++) {
       await engine.onMarketUpdate({
-        symbol: 'XAUUSD', bid: 96.00, ask: 96.10, time: tick, serverTime: tick, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: []
+        symbol: 'XAUUSD', bid: 95.00, ask: 95.10, time: tick, serverTime: tick, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: []
       });
-      assert(broker.orders.length === 1, `Identical tick ${tick} at 96.00 must be rejected`);
+      assert(broker.orders.length === 1, `Identical tick ${tick} at 95.00 must be rejected`);
     }
-    markPass(14, 'Strict New Price Event Requirement', 'Repeated ticks at 96.00 strictly rejected; 0 additional levels executed without new price event');
+    markPass(14, 'Strict New Price Event Requirement', 'Repeated ticks at 95.00 strictly rejected; 0 additional levels executed without new price event');
   }
 
   // -------------------------------------------------------------------------
@@ -478,8 +479,8 @@ async function run20VerificationTests() {
       symbol: 'XAUUSD', bid: 99.00, ask: 99.10, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: []
     });
 
-    // Fire 3 intermediate ticks while tick1 is in flight
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 99.00, ask: 99.10, time: 1.1, serverTime: 1.1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
+    // Fire 3 intermediate ticks while tick1 is in flight (L1 target 99)
+    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 98.50, ask: 98.60, time: 1.1, serverTime: 1.1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
     await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 98.00, ask: 98.10, time: 1.2, serverTime: 1.2, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
 
     await tick1Promise;
@@ -500,22 +501,24 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, { ...defaultSettings, entryDistance: 1.0 });
 
-    const p1 = sm.getNextPendingLevel();
+    const p1 = sm.getNextPendingLevel(5);
     assert(p1?.levelIndex === 0, 'First pending must be level index 0 (L1)');
-    sm.onPositionOpened({ ticket: 'TICK_1', openPrice: 100, direction: 'BUY', volume: 0.01, sl: 70, tp: 130, openTime: 1 } as any, 0);
+    assert(p1?.targetPrice === 99, 'L1 target must be 99');
+    sm.onPositionOpened({ ticket: 'TICK_1', openPrice: 99, direction: 'BUY', volume: 0.01, sl: 70, tp: 130, openTime: 1 } as any, 0);
 
-    const p2 = sm.getNextPendingLevel();
+    const p2 = sm.getNextPendingLevel(5);
     assert(p2?.levelIndex === 1, 'Second pending must be level index 1 (L2)');
-    sm.onPositionOpened({ ticket: 'TICK_2', openPrice: 99, direction: 'BUY', volume: 0.01, sl: 70, tp: 130, openTime: 2 } as any, 1);
+    assert(p2?.targetPrice === 98, 'L2 target must be 98');
+    sm.onPositionOpened({ ticket: 'TICK_2', openPrice: 98, direction: 'BUY', volume: 0.01, sl: 70, tp: 130, openTime: 2 } as any, 1);
 
-    const p3 = sm.getNextPendingLevel();
+    const p3 = sm.getNextPendingLevel(5);
     assert(p3?.levelIndex === 2, 'Third pending must be level index 2 (L3)');
     markPass(16, 'Sequential Level Ordering', 'Levels strictly advance: 0 (L1) -> 1 (L2) -> 2 (L3); no skipping possible');
   }
 
   // -------------------------------------------------------------------------
   // TEST 17: Duplicate Tick Protection at Same Level
-  // Price hovers at 100 for 10 ticks -> only 1 position opened for L1
+  // Price hovers at 99 for 10 ticks -> only 1 position opened for L1
   // -------------------------------------------------------------------------
   {
     const broker = createMockBroker();
@@ -530,11 +533,11 @@ async function run20VerificationTests() {
 
     for (let i = 0; i < 10; i++) {
       await engine.onMarketUpdate({
-        symbol: 'XAUUSD', bid: 100, ask: 100.1, time: i, serverTime: i, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: []
+        symbol: 'XAUUSD', bid: 99, ask: 99.1, time: i, serverTime: i, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: []
       });
     }
-    assert(broker.orders.length === 1, `10 ticks at 100 must produce 1 order, got ${broker.orders.length}`);
-    markPass(17, 'Duplicate Tick Rejection', '10 continuous ticks at 100 produced exactly 1 order');
+    assert(broker.orders.length === 1, `10 ticks at 99 must produce 1 order, got ${broker.orders.length}`);
+    markPass(17, 'Duplicate Tick Rejection', '10 continuous ticks at 99 produced exactly 1 order');
   }
 
   // -------------------------------------------------------------------------
@@ -552,7 +555,7 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    for (const p of [100, 99, 98, 97, 96]) {
+    for (const p of [99, 98, 97, 96, 95]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: [] });
     }
     assert(broker.orders.length === 5, '5 orders opened');
@@ -581,7 +584,7 @@ async function run20VerificationTests() {
       virtualSLPrice: 70, virtualTPPrice: 130, sharedSL: 70, sharedTP: 130
     }, engine.getUserSettings());
 
-    for (const p of [100, 99, 98]) {
+    for (const p of [99, 98, 97]) {
       await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: p, ask: p + 0.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: broker.orders.length, m1Candles: [] });
     }
     for (let i = 0; i < broker.orders.length; i++) {
@@ -606,7 +609,7 @@ async function run20VerificationTests() {
     }, engine.getUserSettings());
 
     // Execute L1
-    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 100, ask: 100.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
+    await engine.onMarketUpdate({ symbol: 'XAUUSD', bid: 99, ask: 99.1, time: 1, serverTime: 1, spreadPoints: 10, openTradesCount: 0, m1Candles: [] });
     assert(sm.hasOpenPositions(), 'Basket has open position');
 
     // Attempt to inject opposite SELL setup

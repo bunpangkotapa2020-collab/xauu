@@ -1,0 +1,60 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*",
+    "server.ts",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/*test.ts",
+    "src/**/*_test.ts",
+    "src/engines/dara_m1/pre_live_audit.ts",
+    "src/engines/dara_m1/runtime_test.ts",
+    "src/engines/dara_m1/sltp_point_verification_test.ts",
+    "src/engines/dara_m1/test_direct_price_distance.ts",
+    "src/engines/dara_m1/test_runner.ts",
+    "src/engines/dara_m1/paper_comparison_test.ts",
+    "src/engines/dara_m1/test_broker_deal_integrity.ts",
+    "src/engines/dara_m1/test_metaapi_autonomous_feed.ts",
+    "src/engines/dara_m1/test_trade_exit_protection.ts",
+    "src/engines/dara_m1/test_trailing_sl_verification.ts",
+    "src/engines/dara_m1/final_sandbox_verification.ts",
+    "pre_live_audit.ts",
+    "runtime_test.ts",
+    "sltp_point_verification_test.ts",
+    "test_direct_price_distance.ts",
+    "test_runner.ts",
+    "test_*.ts",
+    "*test.ts",
+    "*.test.ts",
+    "*.spec.ts",
+    "simulate_final_audit.ts",
+    "dara_stress_test.ts",
+    "e2e_verification.ts"
+  ]
+}

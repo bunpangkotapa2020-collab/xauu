@@ -16,10 +16,8 @@ export interface TradeOrder {
   tp: number;
   floatingProfit: number;
   openedAt: string;
-  trailingActivated?: boolean;
   highestPriceReached?: number;
   lowestPriceReached?: number;
-  trailingSlValue?: number;
 }
 
 export interface TradingHoursConfig {
@@ -46,16 +44,15 @@ export interface RiskConfig {
   slDistance?: number; // Price Distance
   tpDistance?: number; // Price Distance
   entryDistance?: number; // Pullback entry distance Pos #1 (raw price)
+  entryPullbackPos1?: number; // Pullback distance for Pos #1 (0 = immediate at Master Entry)
+  candleConfirmationEnabled?: boolean; // Candlestick Confirmation Filter
+  candleMinScoreRequired?: number; // Min score required
   dailyLossCurrency?: string; // Account currency (USC for Cent account)
-  trailingStopEnabled: boolean;
-  trailingDistance?: number;
-  trailingRule?: string;
-  trailingStopActivationPoints?: number; // legacy points
-  trailingStopDistancePoints?: number;   // legacy points
   newsFilterEnabled?: boolean;
   minutesBeforeNewsBlock?: number;
   minutesAfterNewsBlock?: number;
   maxOpenTrades: number;
+  positionsPerSetup?: number;
   entriesPerSignal: number;
   maxConsecutiveLosses: number;
   cooldownMinutes: number;

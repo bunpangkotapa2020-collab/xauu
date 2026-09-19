@@ -43,7 +43,10 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
   const [riskPerTrade, setRiskPerTrade] = useState<string>(
     String(botState?.riskConfig?.riskPercent ?? '1.0')
   );
-  const [entryDistance, setEntryDistance] = useState<string>(String((botState?.riskConfig as any)?.entryDistance ?? 2.0));
+  const [entryPullbackPos1, setEntryPullbackPos1] = useState<string>(
+    String((botState?.riskConfig as any)?.entryPullbackPos1 ?? 0.0)
+  );
+  const [entryDistance, setEntryDistance] = useState<string>(String((botState?.riskConfig as any)?.entryDistance ?? 0.5));
   const [entriesPerSignal, setEntriesPerSignal] = useState<string>(
     "5"
   );
@@ -51,8 +54,13 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
     "5"
   );
   const [liveTradingEnabled, setLiveTradingEnabled] = useState<boolean>(botState?.riskConfig?.liveTradingEnabled ?? false);
+  const [candleConfirmationEnabled, setCandleConfirmationEnabled] = useState<boolean>(
+    botState?.riskConfig?.candleConfirmationEnabled !== false
+  );
+  const [candleMinScoreRequired, setCandleMinScoreRequired] = useState<string>(
+    String(botState?.riskConfig?.candleMinScoreRequired ?? 2)
+  );
   const [showLiveConfirmDialog, setShowLiveConfirmDialog] = useState(false);
-  const [trailingStopEnabled, setTrailingStopEnabled] = useState(botState?.riskConfig?.trailingStopEnabled ?? true);
 
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
@@ -74,6 +82,9 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
       if (botState.riskConfig.riskPercent !== undefined) {
         setRiskPerTrade(String(botState.riskConfig.riskPercent));
       }
+      if ((botState.riskConfig as any).entryPullbackPos1 !== undefined) {
+        setEntryPullbackPos1(String((botState.riskConfig as any).entryPullbackPos1));
+      }
       if ((botState.riskConfig as any).entryDistance !== undefined) {
         setEntryDistance(String((botState.riskConfig as any).entryDistance));
       }
@@ -83,18 +94,23 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
       if (botState.riskConfig.maxOpenTrades !== undefined) {
         setMaxOpenTrades(String(botState.riskConfig.maxOpenTrades));
       }
-      if (botState.riskConfig.trailingStopEnabled !== undefined) {
-        setTrailingStopEnabled(botState.riskConfig.trailingStopEnabled);
+      if (botState.riskConfig.candleConfirmationEnabled !== undefined) {
+        setCandleConfirmationEnabled(botState.riskConfig.candleConfirmationEnabled);
+      }
+      if (botState.riskConfig.candleMinScoreRequired !== undefined) {
+        setCandleMinScoreRequired(String(botState.riskConfig.candleMinScoreRequired));
       }
     }
   }, [
     botState?.riskConfig?.lotSize,
     botState?.riskConfig?.lotSizeMode,
     botState?.riskConfig?.riskPercent,
+    (botState?.riskConfig as any)?.entryPullbackPos1,
     (botState?.riskConfig as any)?.entryDistance,
     botState?.riskConfig?.entriesPerSignal,
     botState?.riskConfig?.maxOpenTrades,
-    botState?.riskConfig?.trailingStopEnabled,
+    botState?.riskConfig?.candleConfirmationEnabled,
+    botState?.riskConfig?.candleMinScoreRequired,
     botState?.riskConfig?.liveTradingEnabled,
   ]);
 
@@ -104,8 +120,8 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
   const parsedRiskPercent = parseFloat(riskPerTrade) || 1.0;
   const parsedSlPips = parseFloat(slPips) || 10;
   const parsedTpPips = parseFloat(tpPips) || 10;
-  const parsedEntries = Math.max(1, parseInt(entriesPerSignal) || 1);
-  const parsedMaxOpen = Math.max(1, Math.min(5, parseInt(maxOpenTrades) || 5));
+  const parsedEntries = Math.max(1, Math.min(5, parseInt(entriesPerSignal) || parseInt(maxOpenTrades) || 1));
+  const parsedMaxOpen = parsedEntries;
 
   // Calculate lot based on active mode
   let effectiveLotSize = 0.01;
@@ -126,18 +142,22 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
   const totalLots = Number((effectiveLotSize * parsedEntries).toFixed(2));
   const maxPortfolioLots = Number((effectiveLotSize * parsedMaxOpen).toFixed(2));
 
+  const handlePositionsChange = (val: string) => {
+    setIsDirty(true);
+    setMaxOpenTrades(val);
+    setEntriesPerSignal(val);
+  };
+
   const handleResetToCurrent = () => {
     if (botState?.riskConfig) {
       if (botState.riskConfig.lotSizeMode) setLotSizeMode(botState.riskConfig.lotSizeMode);
-            if (botState.riskConfig.lotSize !== undefined) setLotSize(String(botState.riskConfig.lotSize));
+      if (botState.riskConfig.lotSize !== undefined) setLotSize(String(botState.riskConfig.lotSize));
       if (botState.riskConfig.stopLossPips !== undefined) setSlPips(String(botState.riskConfig.stopLossPips));
       if (botState.riskConfig.takeProfitPips !== undefined) setTpPips(String(botState.riskConfig.takeProfitPips));
       if (botState.riskConfig.riskPercent !== undefined) setRiskPerTrade(String(botState.riskConfig.riskPercent));
-      if (botState.riskConfig.entriesPerSignal !== undefined) setEntriesPerSignal(String(botState.riskConfig.entriesPerSignal));
-      if (botState.riskConfig.maxOpenTrades !== undefined) setMaxOpenTrades(String(botState.riskConfig.maxOpenTrades));
-
-      if (botState.riskConfig.trailingStopEnabled !== undefined) setTrailingStopEnabled(botState.riskConfig.trailingStopEnabled);
-
+      const pos = String(botState.riskConfig.positionsPerSetup ?? botState.riskConfig.maxOpenTrades ?? botState.riskConfig.entriesPerSignal ?? 1);
+      setEntriesPerSignal(pos);
+      setMaxOpenTrades(pos);
     }
     setIsDirty(false);
     setErrorMessage('');
@@ -151,19 +171,27 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
     try {
       const parsedLot = parseFloat(lotSize);
       const cleanLotSize = (!isNaN(parsedLot) && parsedLot > 0) ? Number(parsedLot.toFixed(2)) : 0.01;
+      const cleanPositions = Math.max(1, Math.min(5, parseInt(maxOpenTrades) || parseInt(entriesPerSignal) || 1));
+      const parsedPullback = parseFloat(entryPullbackPos1);
+      const cleanPullback = (!isNaN(parsedPullback) && parsedPullback >= 0) ? parsedPullback : 0.0;
+      const parsedDist = parseFloat(entryDistance);
+      const cleanDist = (!isNaN(parsedDist) && parsedDist > 0) ? parsedDist : 0.5;
 
       await botApi.updateRiskConfig({
         lotSizeMode: 'fixed',
         lotSize: cleanLotSize,
         riskPercent: parsedRiskPercent,
-        entryDistance: Number(entryDistance) || 2.0,
-        entriesPerSignal: parsedEntries,
-        maxOpenTrades: parsedMaxOpen,
+        entryPullbackPos1: cleanPullback,
+        entryDistance: cleanDist,
+        positionsPerSetup: cleanPositions,
+        entriesPerSignal: cleanPositions,
+        maxOpenTrades: cleanPositions,
         stopLossPips: parsedSlPips,
         slDistance: parsedSlPips,
         takeProfitPips: parsedTpPips,
         tpDistance: parsedTpPips,
-        trailingStopEnabled: Boolean(trailingStopEnabled),
+        candleConfirmationEnabled: Boolean(candleConfirmationEnabled),
+        candleMinScoreRequired: Math.max(1, Math.min(10, parseInt(candleMinScoreRequired) || 2)),
         liveTradingEnabled: Boolean(liveTradingEnabled),
       });
 
@@ -362,32 +390,56 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
                 />
               </div>
 
-              {/* Entries Per Signal */}
+              {/* Positions Per Setup (Authoritative L1-L5 limit) */}
               <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3.5 flex justify-between items-center">
                 <div>
                   <div className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
-                    Entries Per Signal
-                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">M1 5-LEVEL</span>
+                    Positions Per Setup (1–5)
+                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">L1–L5 BASKET</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">ចំនួន Order ចូលក្នុង 1 Signal (Max 5)</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">ចំនួន Position ក្នុងមួយ Setup (កំណត់ 1 = ចូលតែ 1 Order, Max 5)</div>
                 </div>
                 <input
+                  id="input-positions-per-setup"
                   type="number"
                   min="1"
                   max="5"
-                  value={entriesPerSignal}
-                  onChange={(e) => setEntriesPerSignal(e.target.value)}
+                  step="1"
+                  value={maxOpenTrades}
+                  onChange={(e) => handlePositionsChange(e.target.value)}
                   className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-center font-mono font-bold focus:border-amber-500 focus:outline-none"
                 />
               </div>
 
-              {/* Entry Pullback Pos #1 Distance */}
+              {/* Entry Pullback Pos #1 */}
+              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-blue-900/40 bg-blue-950/10">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5 text-blue-300">
+                    <span className="text-xs font-semibold">Entry Pullback Pos #1</span>
+                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Entry 1</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400">Distance from Master Entry before Position #1 is triggered. Set 0 for immediate entry.</div>
+                </div>
+                <input 
+                  id="input-entry-pullback-pos1"
+                  type="number" 
+                  step="0.1"
+                  min="0"
+                  max="50.0"
+                  value={entryPullbackPos1} 
+                  onChange={(e) => { setEntryPullbackPos1(e.target.value); setIsDirty(true); }}
+                  className="bg-slate-900 border border-blue-600/50 focus:border-blue-400 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-right font-mono font-bold focus:outline-none"
+                />
+              </div>
+
+              {/* Entry Distance (Pos #2–#5) */}
               <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-800">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5 text-slate-300">
-                    <span className="text-xs font-semibold">Entry Pullback Pos #1 (Raw Price)</span>
+                    <span className="text-xs font-semibold">Entry Distance (Pos #2–#5)</span>
+                    <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Grid Ladder</span>
                   </div>
-                  <div className="text-[10px] text-slate-500">Distance for Pos #1 (e.g. 2.0)</div>
+                  <div className="text-[10px] text-slate-500">Grid ladder step distance for subsequent positions (e.g. 0.5 or 1.0)</div>
                 </div>
                 <input 
                   id="input-entry-distance"
@@ -396,28 +448,8 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
                   min="0.1"
                   max="50.0"
                   value={entryDistance} 
-                  onChange={(e) => setEntryDistance(e.target.value)}
+                  onChange={(e) => { setEntryDistance(e.target.value); setIsDirty(true); }}
                   className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-right font-mono font-bold focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Maximum Open Trades / Positions Per Setup */}
-              <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3.5 flex justify-between items-center">
-                <div>
-                  <div className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
-                    Positions Per Setup (1–5)
-                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">L1–L5</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">ចំនួន Position ក្នុងមួយ Setup (1–5)</div>
-                </div>
-                <input
-                  type="number"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={maxOpenTrades}
-                  onChange={(e) => setMaxOpenTrades(e.target.value)}
-                  className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-center font-mono font-bold focus:border-amber-500 focus:outline-none"
                 />
               </div>
 
@@ -452,6 +484,46 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
                   placeholder="10"
                   className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-24 text-right font-mono font-bold focus:border-amber-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Candlestick Confirmation Filter Settings */}
+              <div className="bg-slate-950/70 border border-indigo-950/70 rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5 text-slate-200">
+                      <span className="text-xs font-semibold">Candlestick Confirmation</span>
+                      <span className="text-[9px] bg-indigo-900/60 text-indigo-300 border border-indigo-700/40 px-1.5 py-0.5 rounded font-mono">Filter Layer</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">តម្រូវឱ្យមានសញ្ញាទៀនបញ្ជាក់ (Closed M1 Candle) ក្រោយ MSS Confirmed មុន Lock Entry</div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={candleConfirmationEnabled}
+                      onChange={(e) => { setCandleConfirmationEnabled(e.target.checked); setIsDirty(true); }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {candleConfirmationEnabled && (
+                  <div className="flex items-center justify-between pt-2 border-t border-indigo-950/40">
+                    <div className="text-[11px] text-slate-400">
+                      Min Pattern Score (1–5) <span className="text-slate-500 text-[10px]">• 1=All, 2=Strong, 3=Prime, 4=Top tier</span>
+                    </div>
+                    <select
+                      value={candleMinScoreRequired}
+                      onChange={(e) => { setCandleMinScoreRequired(e.target.value); setIsDirty(true); }}
+                      className="bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs font-mono font-bold focus:border-indigo-500 focus:outline-none"
+                    >
+                      <option value="1">Score ≥ 1 (All Valid Patterns)</option>
+                      <option value="2">Score ≥ 2 (Strong - Default)</option>
+                      <option value="3">Score ≥ 3 (Very Strong)</option>
+                      <option value="4">Score ≥ 4 (Elite/Engulfing Only)</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               
