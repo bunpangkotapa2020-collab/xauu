@@ -44,7 +44,6 @@ export interface RiskConfig {
   slDistance?: number; // Price Distance
   tpDistance?: number; // Price Distance
   entryDistance?: number; // Pullback entry distance Pos #1 (raw price)
-  entryPullbackPos1?: number; // Pullback distance for Pos #1 (0 = immediate at Master Entry)
   candleConfirmationEnabled?: boolean; // Candlestick Confirmation Filter
   candleMinScoreRequired?: number; // Min score required
   dailyLossCurrency?: string; // Account currency (USC for Cent account)

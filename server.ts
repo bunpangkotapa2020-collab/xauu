@@ -236,7 +236,6 @@ const initialDaraSettings = {
     newsMinsBefore: 60,
     newsMinsAfter: 60,
     entryDistance: 2.0,
-    entryPullbackPos1: 0.0,
     candleConfirmationEnabled: true,
     candleMinScoreRequired: 2,
     liveTradingEnabled: false
@@ -1003,7 +1002,6 @@ interface BotServerState {
     positionsPerSetup?: number;
     newsFilterEnabled?: boolean;
     entryDistance?: number;
-    entryPullbackPos1?: number;
     candleConfirmationEnabled?: boolean;
     candleMinScoreRequired?: number;
     trailingDistance?: number;
@@ -1230,7 +1228,6 @@ if (global.daraEngine) {
         maxSpreadPoints: botState.riskConfig.maxSpreadPoints || 30,
         newsFilterEnabled: botState.riskConfig.newsFilterEnabled || false,
         entryDistance: botState.riskConfig.entryDistance !== undefined ? botState.riskConfig.entryDistance : 0.5,
-        entryPullbackPos1: botState.riskConfig.entryPullbackPos1 !== undefined ? botState.riskConfig.entryPullbackPos1 : 0.0,
         liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
     });
     if (botState.status === 'running' || botState.desiredBotState === 'RUNNING') {
@@ -3707,10 +3704,9 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.stopLossPips !== undefined) botState.riskConfig.stopLossPips = Number(riskConfig.stopLossPips);
       if (riskConfig.takeProfitPips !== undefined) botState.riskConfig.takeProfitPips = Number(riskConfig.takeProfitPips);
       if (riskConfig.trailingStopEnabled !== undefined) botState.riskConfig.trailingStopEnabled = Boolean(riskConfig.trailingStopEnabled);
-      if (riskConfig.entryDistance !== undefined) botState.riskConfig.entryDistance = Number(riskConfig.entryDistance);
-      if (riskConfig.entryPullbackPos1 !== undefined) {
-        const parsedPb = Number(riskConfig.entryPullbackPos1);
-        botState.riskConfig.entryPullbackPos1 = isNaN(parsedPb) || parsedPb < 0 ? 0.0 : parsedPb;
+      if (riskConfig.entryDistance !== undefined) {
+        const parsedDist = Number(riskConfig.entryDistance);
+        botState.riskConfig.entryDistance = isNaN(parsedDist) || parsedDist < 0 ? 0.5 : parsedDist;
       }
       if (riskConfig.candleConfirmationEnabled !== undefined) {
         botState.riskConfig.candleConfirmationEnabled = Boolean(riskConfig.candleConfirmationEnabled);
@@ -3749,7 +3745,6 @@ app.post('/api/bot/action', async (req, res) => {
               maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
               newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
               entryDistance: botState.riskConfig.entryDistance,
-              entryPullbackPos1: botState.riskConfig.entryPullbackPos1 !== undefined ? botState.riskConfig.entryPullbackPos1 : 0.0,
               candleConfirmationEnabled: botState.riskConfig.candleConfirmationEnabled !== false,
               candleMinScoreRequired: botState.riskConfig.candleMinScoreRequired ?? 2,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
@@ -3807,7 +3802,6 @@ app.post('/api/bot/action', async (req, res) => {
               maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
               newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
               entryDistance: botState.riskConfig.entryDistance,
-              entryPullbackPos1: botState.riskConfig.entryPullbackPos1 !== undefined ? botState.riskConfig.entryPullbackPos1 : 0.0,
               liveTradingEnabled: botState.riskConfig.liveTradingEnabled === true
           });
       }

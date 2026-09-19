@@ -118,10 +118,8 @@ export class DaRaM1StateMachine {
     setup.masterEntryPrice = locked;
     setup.entryLevels = [];
     
-    // Position #1: Controlled independently by entryPullbackPos1 (default 0.0)
-    const pullbackPos1 = (userSettings && userSettings.entryPullbackPos1 !== undefined) ? userSettings.entryPullbackPos1 : 0.0;
-    // Positions #2–#5: Controlled independently by entryDistance (default 1.0)
-    const step = (userSettings && userSettings.entryDistance !== undefined) ? userSettings.entryDistance : 1.0;
+    // Unified Step: L(i) = Master ± (i+1) * Step
+    const step = (userSettings && userSettings.entryDistance !== undefined) ? userSettings.entryDistance : 0.5;
     const execDir = setup.executionDirection || setup.direction;
 
     for (let i = 0; i < 5; i++) {

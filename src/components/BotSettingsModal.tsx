@@ -40,7 +40,6 @@ export function BotSettingsModal({
   const [tpDist, setTpDist] = useState('8');
   const [dailyLoss, setDailyLoss] = useState('2000');
   const [maxTrades, setMaxTrades] = useState('5');
-  const [entryPullbackPos1, setEntryPullbackPos1] = useState('0.0');
   const [entryDistance, setEntryDistance] = useState('0.5');
   const [maxConsSL, setMaxConsSL] = useState('6');
   const [cooldown, setCooldown] = useState('20');
@@ -114,7 +113,6 @@ export function BotSettingsModal({
         if (botState.riskConfig.maxDailyLossAmount !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLossAmount));
         else if (botState.riskConfig.maxDailyLoss !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLoss));
         if (botState.riskConfig.maxOpenTrades !== undefined) setMaxTrades(String(botState.riskConfig.maxOpenTrades));
-        if ((botState.riskConfig as any).entryPullbackPos1 !== undefined) setEntryPullbackPos1(String((botState.riskConfig as any).entryPullbackPos1));
         if ((botState.riskConfig as any).entryDistance !== undefined) setEntryDistance(String((botState.riskConfig as any).entryDistance));
         if (botState.riskConfig.maxConsecutiveLosses !== undefined) setMaxConsSL(String(botState.riskConfig.maxConsecutiveLosses));
         if (botState.riskConfig.cooldownMinutes !== undefined) setCooldown(String(botState.riskConfig.cooldownMinutes));
@@ -144,10 +142,8 @@ export function BotSettingsModal({
       const parsedTp = Number(tpDist);
         const parsedDailyLoss = Number(dailyLoss);
       const parsedTrades = Math.max(1, Math.min(5, Math.floor(Number(maxTrades) || 5)));
-      const parsedPullback = Number(entryPullbackPos1);
-      const cleanPullback = isNaN(parsedPullback) || parsedPullback < 0 ? 0.0 : parsedPullback;
       const parsedEntryDist = Number(entryDistance);
-      const cleanDist = isNaN(parsedEntryDist) || parsedEntryDist <= 0 ? 0.5 : parsedEntryDist;
+      const cleanDist = isNaN(parsedEntryDist) || parsedEntryDist < 0 ? 0.5 : parsedEntryDist;
       const parsedConsSl = Number(maxConsSL);
       const parsedCooldown = Number(cooldown);
       const parsedSpread = Number(maxSpread);
@@ -167,7 +163,6 @@ export function BotSettingsModal({
         maxDailyLossAmount: parsedDailyLoss,
         maxDailyLoss: parsedDailyLoss,
         maxOpenTrades: parsedTrades,
-        entryPullbackPos1: cleanPullback,
         entryDistance: cleanDist,
         maxConsecutiveLosses: parsedConsSl,
         cooldownMinutes: parsedCooldown,
@@ -283,34 +278,41 @@ export function BotSettingsModal({
               />
             </div>
 
-            {/* ENTRY PULLBACK POS #1 */}
-            <div className="bg-slate-800/30 border border-blue-900/40 bg-blue-950/10 rounded-xl p-4">
+            {/* ENTRY PULLBACK / GRID STEP (Unified Settings) */}
+            <div className="bg-slate-800/30 border border-blue-900/40 bg-blue-950/10 rounded-xl p-4 md:col-span-2">
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs text-blue-300 font-semibold">Entry Pullback Pos #1</label>
-                <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Entry 1</span>
+                <div className="flex flex-col">
+                  <label className="block text-xs text-blue-300 font-semibold">Entry Pullback / Grid Step (L1–L5)</label>
+                  <span className="text-[10px] text-blue-400/80 uppercase font-mono tracking-tighter">Formula: L(i) = Master ± (i+1) × Step</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {['0.0', '0.1', '0.5', '1.0'].map(p => (
+                    <button 
+                      key={p} 
+                      onClick={() => setEntryDistance(p)}
+                      className={`text-[9px] px-2 py-0.5 rounded border transition-colors ${entryDistance === p ? 'bg-blue-500 text-white border-blue-400' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
               <input 
-                type="number" step="0.1" min="0" max="50.0"
-                value={entryPullbackPos1} onChange={(e) => setEntryPullbackPos1(e.target.value)}
-                placeholder="0.0"
-                className="w-full bg-slate-900 border border-blue-600/50 focus:border-blue-400 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Distance from Master Entry before Position #1 is triggered. Set 0 for immediate entry.</p>
-            </div>
-
-            {/* ENTRY DISTANCE (POS #2–#5) */}
-            <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs text-slate-400 mb-1">Entry Distance (Pos #2–#5) / ចម្ងាយរវាង Position បន្តបន្ទាប់</label>
-                <span className="text-[10px] bg-slate-700/50 text-slate-300 px-1.5 py-0.5 rounded">Grid Ladder</span>
-              </div>
-              <input 
-                type="number" step="0.1" min="0.1" max="50.0"
+                type="number" step="0.05" min="0" max="50.0"
                 value={entryDistance} onChange={(e) => setEntryDistance(e.target.value)}
                 placeholder="0.5"
-                className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
+                className="w-full bg-slate-900 border border-blue-600/50 focus:border-blue-400 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Grid ladder step distance for subsequent positions (e.g. 0.5 or 1.0)</p>
+              <div className="grid grid-cols-2 gap-x-4 mt-2 border-t border-blue-900/20 pt-2 text-[10px] text-slate-400">
+                <div className="space-y-1">
+                   <div>L1 = Master ± 1 × Step {entryDistance !== '0' && `(${entryDistance})`}</div>
+                   <div>L2 = Master ± 2 × Step {entryDistance !== '0' && `(${(parseFloat(entryDistance)*2).toFixed(2)})`}</div>
+                </div>
+                <div className="space-y-1">
+                   <div>L3 = Master ± 3 × Step {entryDistance !== '0' && `(${(parseFloat(entryDistance)*3).toFixed(2)})`}</div>
+                   <div>L4 = Master ± 4 × Step {entryDistance !== '0' && `(${(parseFloat(entryDistance)*4).toFixed(2)})`}</div>
+                </div>
+              </div>
             </div>
 
             {/* SL DISTANCE */}

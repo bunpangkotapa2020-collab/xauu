@@ -43,9 +43,6 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
   const [riskPerTrade, setRiskPerTrade] = useState<string>(
     String(botState?.riskConfig?.riskPercent ?? '1.0')
   );
-  const [entryPullbackPos1, setEntryPullbackPos1] = useState<string>(
-    String((botState?.riskConfig as any)?.entryPullbackPos1 ?? 0.0)
-  );
   const [entryDistance, setEntryDistance] = useState<string>(String((botState?.riskConfig as any)?.entryDistance ?? 0.5));
   const [entriesPerSignal, setEntriesPerSignal] = useState<string>(
     "5"
@@ -82,9 +79,6 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
       if (botState.riskConfig.riskPercent !== undefined) {
         setRiskPerTrade(String(botState.riskConfig.riskPercent));
       }
-      if ((botState.riskConfig as any).entryPullbackPos1 !== undefined) {
-        setEntryPullbackPos1(String((botState.riskConfig as any).entryPullbackPos1));
-      }
       if ((botState.riskConfig as any).entryDistance !== undefined) {
         setEntryDistance(String((botState.riskConfig as any).entryDistance));
       }
@@ -105,7 +99,6 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
     botState?.riskConfig?.lotSize,
     botState?.riskConfig?.lotSizeMode,
     botState?.riskConfig?.riskPercent,
-    (botState?.riskConfig as any)?.entryPullbackPos1,
     (botState?.riskConfig as any)?.entryDistance,
     botState?.riskConfig?.entriesPerSignal,
     botState?.riskConfig?.maxOpenTrades,
@@ -172,16 +165,13 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
       const parsedLot = parseFloat(lotSize);
       const cleanLotSize = (!isNaN(parsedLot) && parsedLot > 0) ? Number(parsedLot.toFixed(2)) : 0.01;
       const cleanPositions = Math.max(1, Math.min(5, parseInt(maxOpenTrades) || parseInt(entriesPerSignal) || 1));
-      const parsedPullback = parseFloat(entryPullbackPos1);
-      const cleanPullback = (!isNaN(parsedPullback) && parsedPullback >= 0) ? parsedPullback : 0.0;
       const parsedDist = parseFloat(entryDistance);
-      const cleanDist = (!isNaN(parsedDist) && parsedDist > 0) ? parsedDist : 0.5;
+      const cleanDist = (!isNaN(parsedDist) && parsedDist >= 0) ? parsedDist : 0.5;
 
       await botApi.updateRiskConfig({
         lotSizeMode: 'fixed',
         lotSize: cleanLotSize,
         riskPercent: parsedRiskPercent,
-        entryPullbackPos1: cleanPullback,
         entryDistance: cleanDist,
         positionsPerSetup: cleanPositions,
         entriesPerSignal: cleanPositions,
@@ -411,46 +401,38 @@ export function RiskSettingsPanel({ botState, onRefresh }: RiskSettingsPanelProp
                 />
               </div>
 
-              {/* Entry Pullback Pos #1 */}
-              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-blue-900/40 bg-blue-950/10">
+              {/* Entry Pullback / Grid Step */}
+              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-amber-900/20 bg-amber-950/5 col-span-1 md:col-span-2">
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5 text-blue-300">
-                    <span className="text-xs font-semibold">Entry Pullback Pos #1</span>
-                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">Entry 1</span>
+                  <div className="flex items-center gap-1.5 text-amber-400">
+                    <span className="text-xs font-semibold">Entry Pullback / Grid Step</span>
+                    <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">L1–L5 LADDER</span>
                   </div>
-                  <div className="text-[10px] text-slate-400">Distance from Master Entry before Position #1 is triggered. Set 0 for immediate entry.</div>
+                  <div className="text-[10px] text-slate-400">Step distance for all levels (0=immediate, 0.5=standard). Calculation: L1=1x, L2=2x, L3=3x, L4=4x, L5=5x Step.</div>
                 </div>
-                <input 
-                  id="input-entry-pullback-pos1"
-                  type="number" 
-                  step="0.1"
-                  min="0"
-                  max="50.0"
-                  value={entryPullbackPos1} 
-                  onChange={(e) => { setEntryPullbackPos1(e.target.value); setIsDirty(true); }}
-                  className="bg-slate-900 border border-blue-600/50 focus:border-blue-400 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-right font-mono font-bold focus:outline-none"
-                />
-              </div>
-
-              {/* Entry Distance (Pos #2–#5) */}
-              <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-800">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5 text-slate-300">
-                    <span className="text-xs font-semibold">Entry Distance (Pos #2–#5)</span>
-                    <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Grid Ladder</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-1 mr-2 hidden md:flex">
+                    {['0.0', '0.1', '0.5', '1.0'].map(p => (
+                      <button 
+                        key={p} 
+                        onClick={() => { setEntryDistance(p); setIsDirty(true); }}
+                        className={`text-[10px] px-2 py-0.5 rounded border ${entryDistance === p ? 'bg-amber-500 text-black border-amber-400' : 'bg-slate-800 text-slate-400 border-slate-700'}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
                   </div>
-                  <div className="text-[10px] text-slate-500">Grid ladder step distance for subsequent positions (e.g. 0.5 or 1.0)</div>
+                  <input 
+                    id="input-entry-distance"
+                    type="number" 
+                    step="0.05"
+                    min="0"
+                    max="50.0"
+                    value={entryDistance} 
+                    onChange={(e) => { setEntryDistance(e.target.value); setIsDirty(true); }}
+                    className="bg-slate-900 border border-amber-600/50 focus:border-amber-400 text-white rounded-lg px-3 py-1.5 text-sm w-24 text-right font-mono font-bold focus:outline-none"
+                  />
                 </div>
-                <input 
-                  id="input-entry-distance"
-                  type="number" 
-                  step="0.1"
-                  min="0.1"
-                  max="50.0"
-                  value={entryDistance} 
-                  onChange={(e) => { setEntryDistance(e.target.value); setIsDirty(true); }}
-                  className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-20 text-right font-mono font-bold focus:border-amber-500 focus:outline-none"
-                />
               </div>
 
               {/* Stop Loss & Take Profit */}

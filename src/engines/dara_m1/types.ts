@@ -105,8 +105,7 @@ export interface DaRaUserSettings {
   newsFilterEnabled: boolean;  // Whether news filter is active
   newsMinsBefore: number;      // Mins before high impact news
   newsMinsAfter: number;
-  entryDistance?: number;              // Grid ladder step distance for Pos #2–#5 (e.g. 1.0 raw price)
-  entryPullbackPos1?: number;          // Pullback distance for Pos #1 (0 = immediate at Master Entry)
+  entryDistance?: number;              // Entry Pullback / Grid Step (L1=1x, L2=2x, etc.)
   candleConfirmationEnabled?: boolean; // Enable/Disable Candlestick Confirmation Filter (Default: true)
   candleMinScoreRequired?: number;     // Minimum required score (Default: 2)
 }
