@@ -301,7 +301,7 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
               </div>
               <div className="bg-slate-950/40 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 flex flex-col justify-center col-span-1 md:col-span-2 shadow-inner transition-all hover:bg-slate-900/60 duration-300">
                  <div className="flex justify-between items-center mb-2">
-                   <div className="text-[11px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold">តម្លៃទីផ្សារបច្ចុប្បន្ន (Live Market Feed)</div>
+                   <div className="text-[11px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold">តម្លៃទីផ្សារបច្ចុប្បន្ន (Live Market Feed) {state.isDataStale && " - 🔴 STALE"}</div>
                    <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
                      <span className={
                        state.marketDataStatus?.includes('SLOW') ? 'text-amber-400 text-glow' :
@@ -309,7 +309,12 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                      }>
                         {state.marketDataStatus || '🔴 NO LIVE MARKET DATA'}
                      </span>
-                     {state.lastPriceUpdate ? ` (Update: ${state.lastPriceUpdate})` : ''}
+                     {state.lastPriceUpdate && !state.isDataStale ? ` (Update: ${state.lastPriceUpdate})` : ''}
+                     {state.isDataStale && state.lastTickTime && (
+                       <span className="text-rose-400 font-bold ml-1">
+                         [FEED AGE: {Math.floor((Date.now() - state.lastTickTime) / 1000)}s]
+                       </span>
+                     )}
                    </div>
                  </div>
                   <div className="p-3.5 rounded-xl border bg-amber-950/10 border-amber-500/30 ring-1 ring-amber-500/20 overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.05)]">

@@ -128,8 +128,8 @@ export class DaRaM1Strategy {
       buySetup.masterEntryPrice = buySetup.lockedEntryPrice;
       // BUY logic from the immutable Master/Locked Entry:
       // SL below Entry, TP above Entry
-      buySetup.virtualSLPrice = Number((buySetup.lockedEntryPrice - buySetup.userSlDistance).toFixed(3));
-      buySetup.virtualTPPrice = Number((buySetup.lockedEntryPrice + buySetup.userTpDistance).toFixed(3));
+      buySetup.virtualSLPrice = Number(((buySetup.lockedEntryPrice || 0) - (buySetup.userSlDistance || 0)).toFixed(3));
+      buySetup.virtualTPPrice = Number(((buySetup.lockedEntryPrice || 0) + (buySetup.userTpDistance || 0)).toFixed(3));
       buySetup.sharedSL = buySetup.virtualSLPrice;
       buySetup.sharedTP = buySetup.virtualTPPrice;
       return buySetup;
@@ -142,8 +142,8 @@ export class DaRaM1Strategy {
       sellSetup.masterEntryPrice = sellSetup.lockedEntryPrice;
       // SELL logic from the immutable Master/Locked Entry:
       // SL above Entry, TP below Entry
-      sellSetup.virtualSLPrice = Number((sellSetup.lockedEntryPrice + sellSetup.userSlDistance).toFixed(3));
-      sellSetup.virtualTPPrice = Number((sellSetup.lockedEntryPrice - sellSetup.userTpDistance).toFixed(3));
+      sellSetup.virtualSLPrice = Number(((sellSetup.lockedEntryPrice || 0) + (sellSetup.userSlDistance || 0)).toFixed(3));
+      sellSetup.virtualTPPrice = Number(((sellSetup.lockedEntryPrice || 0) - (sellSetup.userTpDistance || 0)).toFixed(3));
       sellSetup.sharedSL = sellSetup.virtualSLPrice;
       sellSetup.sharedTP = sellSetup.virtualTPPrice;
       return sellSetup;
@@ -273,8 +273,8 @@ export class DaRaM1Strategy {
           mssLevel: targetSwingHigh.price,
           mssTime: mssCandle.time,
           lockedEntryPrice: lockedEntry,
-          virtualSLPrice: Number((lockedEntry - slPriceDistance).toFixed(3)),
-          virtualTPPrice: Number((lockedEntry + tpPriceDistance).toFixed(3)),
+          virtualSLPrice: Number(((lockedEntry || 0) - (slPriceDistance || 0)).toFixed(3)),
+          virtualTPPrice: Number(((lockedEntry || 0) + (tpPriceDistance || 0)).toFixed(3)),
           userSlDistance: userSl,
           userTpDistance: userTp,
           candleConfirmation: candleConf,
@@ -404,8 +404,8 @@ export class DaRaM1Strategy {
           mssLevel: targetSwingLow.price,
           mssTime: mssCandle.time,
           lockedEntryPrice: lockedEntry,
-          virtualSLPrice: Number((lockedEntry + slPriceDistance).toFixed(3)),
-          virtualTPPrice: Number((lockedEntry - tpPriceDistance).toFixed(3)),
+          virtualSLPrice: Number(((lockedEntry || 0) + (slPriceDistance || 0)).toFixed(3)),
+          virtualTPPrice: Number(((lockedEntry || 0) - (tpPriceDistance || 0)).toFixed(3)),
           userSlDistance: userSl,
           userTpDistance: userTp,
           candleConfirmation: candleConf,

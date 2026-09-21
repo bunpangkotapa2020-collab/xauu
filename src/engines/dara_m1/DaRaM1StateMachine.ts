@@ -31,6 +31,8 @@ export class DaRaM1StateMachine {
   private lastClosedTrade: DaRaClosedTrade | null = null;
   private stateHistory: StateChangeEvent[] = [];
   private lastEvaluatedPrice?: number;
+  private consecutiveEmptyPolls: number = 0;
+  private lastValidPositionsTimestamp: number = Date.now();
 
   constructor() {
     this.transitionTo('IDLE', 'Engine initialized');
@@ -60,6 +62,134 @@ export class DaRaM1StateMachine {
 
   public getHistory(): StateChangeEvent[] {
     return [...this.stateHistory];
+  }
+
+  /**
+   * Synchronizes active positions from an external source (Broker/MT5).
+   * Used during startup or recovery to ensure the state machine matches reality.
+   */
+  public syncPositions(positions: DaRaPosition[], settings: import('./types').DaRaUserSettings, isMt5Connected: boolean = true): void {
+    const now = Date.now();
+    
+    if (positions.length === 0) {
+      this.consecutiveEmptyPolls++;
+      
+      // RULE 2: EMPTY POSITION RESPONSE PROTECTION
+      // If we have local positions but receive [] from broker:
+      if (this.activePositions.length > 0) {
+        const timeSinceLastValid = now - this.lastValidPositionsTimestamp;
+        
+        // If connection is unstable or we haven't reached a "confirmed" closure state, preserve local state.
+        // We only clear if:
+        // 1. We are connected AND have received multiple consecutive empty polls (e.g. 5 polls ~ 15-20s)
+        // 2. OR if we have an explicit confirmation from history (handled in Engine level usually, but here we guard)
+        const EMPTY_POLL_THRESHOLD = 5; 
+        
+        if (!isMt5Connected || this.consecutiveEmptyPolls < EMPTY_POLL_THRESHOLD) {
+          if (this.consecutiveEmptyPolls === 1) {
+             console.log(`[DaRa StateMachine] ⚠️ Received [] from Broker but local state has ${this.activePositions.length} positions. Guarding against transient API error...`);
+          }
+          return; // KEEP local state for now
+        }
+        
+        console.log(`[DaRa StateMachine] 🛑 Confirmed: All positions closed at Broker after ${this.consecutiveEmptyPolls} empty polls. Clearing local state.`);
+        this.activePositions = [];
+        this.currentSetup = null; // Also clear setup when positions are gone
+        this.consecutiveEmptyPolls = 0;
+        if (this.currentState === 'TRADE_ACTIVE') {
+          this.transitionTo('SCANNING', 'BROKER POSITION SYNC: Positions confirmed closed in Broker. Resuming SCANNING.');
+        }
+      } else {
+        // No local positions, no broker positions -> normal scanning
+        this.consecutiveEmptyPolls = 0;
+        this.lastValidPositionsTimestamp = now;
+      }
+      return;
+    }
+
+    // Genuinely received positions
+    this.consecutiveEmptyPolls = 0;
+    this.lastValidPositionsTimestamp = now;
+
+    // DaRa M1 Rule: 1 Setup = 1 Direction.
+    const direction = positions[0].type;
+    const hasMismatch = positions.some(p => p.type !== direction);
+
+    if (hasMismatch) {
+      console.warn(`[DaRa StateMachine] ⚠️ BROKER POSITION SYNC: Mismatched directions detected (BUY/SELL mix). Recovery failed.`);
+      this.activePositions = [...positions];
+      if (this.currentState !== 'TRADE_ACTIVE') {
+        this.transitionTo('TRADE_ACTIVE', 'BROKER POSITION SYNC: Mismatched positions detected. Blocking new entries.');
+      }
+      return;
+    }
+
+    // Reconstruct Setup if missing or direction changed
+    if (!this.currentSetup || this.currentSetup.direction !== direction) {
+      console.log(`[DaRa StateMachine] 🔄 BROKER POSITION SYNC: Recovering ${direction} state from ${positions.length} active position(s).`);
+      
+      const firstPos = positions[0];
+      const masterPrice = firstPos.openPrice;
+      
+      // If we are recovering without a persisted setup, we use RECOVERED prefix
+      const isNewRecovery = !this.currentSetup || this.currentSetup.direction !== direction;
+
+      if (isNewRecovery) {
+        this.currentSetup = {
+          id: `RECOVERED_${direction}_${Date.now()}`,
+          direction: direction,
+          lockedEntryPrice: masterPrice,
+          masterEntryPrice: masterPrice,
+          sweepLevel: masterPrice, // Recovery default
+          sweepTime: Date.now(),    // Recovery default
+          displacementConfirmed: true,
+          mssLevel: masterPrice,    // Recovery default
+          mssTime: Date.now(),       // Recovery default
+          status: 'EXECUTED',
+          createdAt: firstPos.openTime,
+          virtualSLPrice: firstPos.sl,
+          virtualTPPrice: firstPos.tp,
+          userSlDistance: settings.slDistance,
+          userTpDistance: settings.tpDistance,
+          positionsOpened: positions.length,
+          lastExecutedPrice: masterPrice,
+          lastExecutedLevel: positions.length - 1,
+          entryLevels: [],
+          isRecovered: true
+        };
+
+        // Reconstruct grid step if possible
+        const step = settings.entryDistance ?? 0.5;
+        for (let i = 0; i < 5; i++) {
+          const dist = (i + 1) * step;
+          const target = direction === 'SELL' ? masterPrice + dist : masterPrice - dist;
+          this.currentSetup.entryLevels!.push({
+            targetPrice: Number((target || 0).toFixed(3)),
+            executed: i < positions.length,
+            ticket: i < positions.length ? positions[i].ticket : undefined
+          });
+        }
+      }
+    } else {
+      // Setup exists (either from persistence or previous tick), just update executed flags and tickets
+      if (this.currentSetup.entryLevels) {
+        for (let i = 0; i < 5; i++) {
+          if (i < positions.length) {
+            this.currentSetup.entryLevels[i].executed = true;
+            this.currentSetup.entryLevels[i].ticket = positions[i].ticket;
+          }
+        }
+        this.currentSetup.positionsOpened = positions.length;
+        // Also ensure shared SL/TP are synced if they were modified at broker (though EA usually owns them)
+        this.currentSetup.sharedSL = positions[0].sl;
+        this.currentSetup.sharedTP = positions[0].tp;
+      }
+    }
+
+    this.activePositions = [...positions.map(p => ({ ...p, isRecovered: this.currentSetup?.isRecovered }))];
+    if (this.currentState !== 'TRADE_ACTIVE' && this.currentState !== 'EXECUTING') {
+      this.transitionTo('TRADE_ACTIVE', `BROKER POSITION SYNC COMPLETE: ${positions.length} ACTIVE POSITION RECOVERED.`);
+    }
   }
 
   public transitionTo(newState: DaRaState, reason?: string): void {
@@ -126,7 +256,7 @@ export class DaRaM1StateMachine {
       const dist = (i + 1) * step;
       const target = execDir === 'SELL' ? locked + dist : locked - dist;
       setup.entryLevels.push({
-        targetPrice: Number(target.toFixed(3)),
+        targetPrice: Number((target || 0).toFixed(3)),
         executed: false
       });
     }
@@ -274,11 +404,11 @@ export class DaRaM1StateMachine {
     if (entryDistance !== undefined && entryDistance > 0) {
       step = entryDistance;
     } else if (setup.entryLevels && setup.entryLevels.length >= 3) {
-      const detected = Math.abs(setup.entryLevels[2].targetPrice - setup.entryLevels[1].targetPrice);
-      if (detected > 0) step = Number(detected.toFixed(3));
+      const detected = Math.abs((setup.entryLevels[2]?.targetPrice || 0) - (setup.entryLevels[1]?.targetPrice || 0));
+      if (detected > 0) step = Number((detected || 0).toFixed(3));
     } else if (setup.entryLevels && setup.entryLevels.length >= 2) {
-      const detected = Math.abs(setup.entryLevels[1].targetPrice - setup.entryLevels[0].targetPrice);
-      if (detected > 0) step = Number(detected.toFixed(3));
+      const detected = Math.abs((setup.entryLevels[1]?.targetPrice || 0) - (setup.entryLevels[0]?.targetPrice || 0));
+      if (detected > 0) step = Number((detected || 0).toFixed(3));
     }
 
     const lastExecPrice = setup.lastExecutedPrice;
@@ -298,7 +428,7 @@ export class DaRaM1StateMachine {
           // Pathway 1: Re-crossing target from above (price rebounded > target, then crossed <= target)
           // Pathway 2: Continuation lower by at least entry distance (currentPrice <= lastExecPrice - step)
           const hasCrossedDown = effectivePrevPrice !== undefined && effectivePrevPrice > target && currentPrice <= target;
-          const hasContinuedLower = currentPrice <= Number((lastExecPrice - step).toFixed(3));
+          const hasContinuedLower = currentPrice <= Number(((lastExecPrice || 0) - (step || 0)).toFixed(3));
           isReached = hasCrossedDown || hasContinuedLower;
         }
       }
@@ -316,7 +446,7 @@ export class DaRaM1StateMachine {
           // Pathway 1: Re-crossing target from below (price pulled back < target, then crossed >= target)
           // Pathway 2: Continuation higher by at least entry distance (currentPrice >= lastExecPrice + step)
           const hasCrossedUp = effectivePrevPrice !== undefined && effectivePrevPrice < target && currentPrice >= target;
-          const hasContinuedHigher = currentPrice >= Number((lastExecPrice + step).toFixed(3));
+          const hasContinuedHigher = currentPrice >= Number(((lastExecPrice || 0) + (step || 0)).toFixed(3));
           isReached = hasCrossedUp || hasContinuedHigher;
         }
       }
@@ -373,7 +503,7 @@ export class DaRaM1StateMachine {
     this.lastEvaluatedPrice = undefined;
     
     // Record TRADE_CLOSED in state history
-    const exitDesc = closedTrade ? `${closedTrade.exitReason} (${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} P/L)` : 'Position Terminated';
+    const exitDesc = closedTrade ? `${closedTrade.exitReason} (${(closedTrade.pnl || 0) >= 0 ? '+' : ''}${(closedTrade.pnl || 0).toFixed(2)} P/L)` : 'Position Terminated';
     this.transitionTo('TRADE_CLOSED', `Trade #${closedTrade?.ticket || 'LIVE'} closed by Broker: ${exitDesc}`);
 
     // Seamlessly transition back to SCANNING 24/7
@@ -411,7 +541,36 @@ export class DaRaM1StateMachine {
     this.activePositions = [];
     this.lastClosedTrade = null;
     this.lastEvaluatedPrice = undefined;
+    this.consecutiveEmptyPolls = 0;
     this.currentState = 'IDLE';
     this.stateHistory = [];
+  }
+
+  /**
+   * Serializes current state for persistence.
+   */
+  public serialize(): any {
+    return {
+      currentState: this.currentState,
+      currentSetup: this.currentSetup,
+      activePositions: this.activePositions,
+      lastClosedTrade: this.lastClosedTrade,
+      lastEvaluatedPrice: this.lastEvaluatedPrice
+    };
+  }
+
+  /**
+   * Deserializes state from persisted data.
+   */
+  public deserialize(data: any): void {
+    if (!data) return;
+    
+    if (data.currentState) this.currentState = data.currentState;
+    if (data.currentSetup) this.currentSetup = data.currentSetup;
+    if (data.activePositions) this.activePositions = data.activePositions;
+    if (data.lastClosedTrade) this.lastClosedTrade = data.lastClosedTrade;
+    if (data.lastEvaluatedPrice) this.lastEvaluatedPrice = data.lastEvaluatedPrice;
+    
+    console.log(`[DaRa StateMachine] 💾 State deserialized. Current State: ${this.currentState}, Setup: ${this.currentSetup?.id || 'NONE'}`);
   }
 }

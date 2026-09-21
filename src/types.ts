@@ -276,6 +276,7 @@ export interface BotState {
   serverTime: string;
   isInsideTradingHours: boolean;
   isMarketOpen?: boolean;
+  isDataStale?: boolean;
   marketStatusText?: string;
   marketStatusReason?: string;
   liveEaConfig?: any;

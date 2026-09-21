@@ -63,6 +63,7 @@ export interface DaRaSetup {
   lockedEntryPrice: number;
   masterEntryPrice?: number;
   signalPrice?: number;
+  isRecovered?: boolean;
   
   // 5-Level Entry System
   entryLevels?: { targetPrice: number; executed: boolean; ticket?: string | number }[];
@@ -125,6 +126,7 @@ export interface DaRaPosition {
   unrealizedProfit?: number;
   commission?: number;
   swap?: number;
+  isRecovered?: boolean;
 }
 
 export interface DaRaMarketFeed {

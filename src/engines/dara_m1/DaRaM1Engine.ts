@@ -35,6 +35,8 @@ import {
 import { DaRaM1Strategy } from './DaRaM1Strategy';
 import { DaRaM1StateMachine } from './DaRaM1StateMachine';
 import { DaRaOrderExecution } from './DaRaOrderExecution';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class DaRaM1Engine {
   public readonly name = 'DaRa M1 EA v1.0';
@@ -75,7 +77,57 @@ export class DaRaM1Engine {
     this.stateMachine = new DaRaM1StateMachine();
     this.execution = new DaRaOrderExecution(broker, telegram);
 
+    this.loadState();
+
     console.log(`[DaRa M1 EA v1.0] 🔥 Engine initialized successfully. (Status: IDLE)`);
+  }
+
+  private getStateFilePath(): string {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    return path.join(dataDir, 'dara_m1_state.json');
+  }
+
+  private saveState(): void {
+    try {
+      const state = this.stateMachine.serialize();
+      const meta = {
+        dailyLossAccumulated: this.dailyLossAccumulated,
+        consecutiveLossCount: this.consecutiveLossCount,
+        lastLossTime: this.lastLossTime,
+        isRunning: this.isRunning,
+        timestamp: Date.now()
+      };
+      
+      const filePath = this.getStateFilePath();
+      fs.writeFileSync(filePath, JSON.stringify({ state, meta }, null, 2));
+    } catch (error) {
+      console.error(`[DaRa M1 EA v1.0] ❌ Error saving state:`, error);
+    }
+  }
+
+  private loadState(): void {
+    try {
+      const filePath = this.getStateFilePath();
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf8');
+        const { state, meta } = JSON.parse(content);
+        
+        if (state) this.stateMachine.deserialize(state);
+        if (meta) {
+          this.dailyLossAccumulated = meta.dailyLossAccumulated || 0;
+          this.consecutiveLossCount = meta.consecutiveLossCount || 0;
+          this.lastLossTime = meta.lastLossTime || 0;
+          this.isRunning = meta.isRunning || false;
+        }
+        
+        console.log(`[DaRa M1 EA v1.0] 💾 State loaded from persistence. isRunning=${this.isRunning}`);
+      }
+    } catch (error) {
+      console.error(`[DaRa M1 EA v1.0] ❌ Error loading state:`, error);
+    }
   }
 
   // ==========================================
@@ -96,6 +148,7 @@ export class DaRaM1Engine {
     if (this.isRunning) return;
     this.isRunning = true;
     this.stateMachine.onUserStart();
+    this.saveState();
     console.log(`[DaRa M1 EA v1.0] 🟢 START initiated by User. 24/7 M1 Market Scanning ACTIVE.`);
     if (this.telegram) {
       this.telegram.notify(
@@ -109,6 +162,7 @@ export class DaRaM1Engine {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.stateMachine.onUserStop();
+    this.saveState();
     console.log(`[DaRa M1 EA v1.0] 🔴 STOP initiated by User. New scanning and pending entries halted.`);
     console.log(`[DaRa M1 EA v1.0] 🛡️ Note: Any active broker trade continues to be protected by Hard SL/TP .`);
     if (this.telegram) {
@@ -122,6 +176,7 @@ export class DaRaM1Engine {
   public forceCloseAllAndStop(): void {
     this.isRunning = false;
     this.stateMachine.reset();
+    this.saveState();
     console.log(`[DaRa M1 EA v1.0] 🛑 CLOSE ALL executed. All setups cancelled, positions cleared, engine STOPPED.`);
     if (this.telegram) {
       this.telegram.notify(
@@ -204,8 +259,8 @@ export class DaRaM1Engine {
 
     let blockedReason: string | undefined;
     if (isMt5Disconnected) blockedReason = 'MT5 Server or MetaApi Disconnected';
-    else if (isDailyLossHit) blockedReason = `Daily Loss Limit reached (${this.dailyLossAccumulated.toFixed(2)} >= ${s.dailyLossLimit})`;
-    else if (isMaxConsecutiveSLHit) blockedReason = `Max Consecutive SL hit (${this.consecutiveLossCount} >= ${s.maxConsecutiveSL})`;
+    else if (isDailyLossHit) blockedReason = `Daily Loss Limit reached (${(this.dailyLossAccumulated || 0).toFixed(2)} >= ${s.dailyLossLimit})`;
+    else if (isMaxConsecutiveSLHit) blockedReason = `Max Consecutive SL hit (${this.consecutiveLossCount || 0} >= ${s.maxConsecutiveSL})`;
     else if (isInCooldown) blockedReason = `Loss Cooldown Active (${Math.ceil((cooldownMs - (now - this.lastLossTime)) / 60000)}m remaining)`;
     else if (isSpreadTooHigh) blockedReason = `Spread too high (${currentSpreadPoints} > ${s.maxSpreadPoints})`;
     else if (isNewsBlocked) blockedReason = `High Impact News Filter Active`;
@@ -234,16 +289,48 @@ export class DaRaM1Engine {
     this.isMt5ConnectedNow = isConnected;
   }
 
+  /**
+   * Synchronizes active positions from Broker/MT5.
+   * This is the core fix for the State Desynchronization Bug.
+   */
+  public async syncBrokerPositions(brokerPositions: DaRaPosition[]): Promise<void> {
+    const isFirstSync = !this.lastFeedTime;
+    if (isFirstSync) {
+      console.log(`[DaRa M1 EA v1.0] 🔍 BROKER POSITION SYNC START — Initializing Engine State...`);
+    }
+
+    const currentPositions = this.stateMachine.getActivePositions();
+    
+    // DaRa M1 is strictly isolated to its own positions via Magic Number filtering
+    // which should be handled by the Broker interface, but we accept what is passed here.
+    const relevantPositions = brokerPositions; 
+
+    // Sync with state machine, passing current connection status
+    this.stateMachine.syncPositions(relevantPositions, this.userSettings, this.isMt5ConnectedNow);
+    
+    // Persistence Trigger: If local state changed, save it
+    const newPositions = this.stateMachine.getActivePositions();
+    if (newPositions.length !== currentPositions.length) {
+       this.saveState();
+    }
+
+    if (isFirstSync) {
+      console.log(`[DaRa M1 EA v1.0] ✅ BROKER POSITION SYNC COMPLETE.`);
+    }
+  }
+
   public recordRealTradeResult(profitOrLoss: number): void {
     if (profitOrLoss < 0) {
       const loss = Math.abs(profitOrLoss);
       this.dailyLossAccumulated += loss;
       this.consecutiveLossCount += 1;
       this.lastLossTime = Date.now();
-      console.log(`[DaRa M1 EA v1.0] ⚠️ Real Loss Recorded: -${loss.toFixed(2)} USC | Daily Loss Total: ${this.dailyLossAccumulated.toFixed(2)} USC | Consecutive Losses: ${this.consecutiveLossCount}`);
+      console.log(`[DaRa M1 EA v1.0] ⚠️ Real Loss Recorded: -${(loss || 0).toFixed(2)} USC | Daily Loss Total: ${(this.dailyLossAccumulated || 0).toFixed(2)} USC | Consecutive Losses: ${this.consecutiveLossCount}`);
+      this.saveState();
     } else {
       this.consecutiveLossCount = 0; // Reset consecutive loss streak on win
-      console.log(`[DaRa M1 EA v1.0] 🎉 Real Win Recorded: +${profitOrLoss.toFixed(2)} USC | Consecutive Losses Reset to 0`);
+      console.log(`[DaRa M1 EA v1.0] 🎉 Real Win Recorded: +${(profitOrLoss || 0).toFixed(2)} USC | Consecutive Losses Reset to 0`);
+      this.saveState();
     }
   }
 
@@ -324,7 +411,16 @@ export class DaRaM1Engine {
     const currentSetup = this.stateMachine.getSetup();
 
     // 2. State: SCANNING — Scan for Liquidity Sweep -> Displacement -> MSS
-    if (state === 'SCANNING' && !this.stateMachine.hasOpenPositions()) {
+    if (state === 'SCANNING') {
+      if (this.stateMachine.hasOpenPositions()) {
+        // SAFETY: If we are in SCANNING but have active positions, we MUST NOT scan for new setups.
+        // This ensures 1 Setup = 1 Direction and prevents hedging.
+        if (Math.random() < 0.05) { // Throttle log to prevent spam
+           console.log(`[DaRa M1 EA v1.0] 🛡️ NEW ENTRY BLOCKED — ACTIVE BROKER POSITION DETECTED.`);
+        }
+        return;
+      }
+
       const currentBasketCount = this.stateMachine.getActivePositions().length;
       const initialSafety = this.evaluateSafety(feed.spreadPoints, currentBasketCount);
       if (!initialSafety.isSafeToTrade) {
@@ -351,6 +447,7 @@ export class DaRaM1Engine {
         console.log(`[DaRa M1 EA v1.0] ⏳ Waiting for price pullback... calculating entry levels based on lockedEntryPrice.`);
         
         this.stateMachine.onSetupDetected(detectedSetup, this.userSettings);
+        this.saveState();
       }
       return;
     }
@@ -365,6 +462,7 @@ export class DaRaM1Engine {
       if (!this.stateMachine.hasOpenPositions()) {
         const wasCanceled = this.stateMachine.checkPendingSetupCancellation(currentPrice);
         if (wasCanceled) {
+          this.saveState();
           console.log(`[DaRa M1 EA v1.0] 🚫 Pending Setup was Canceled (Virtual Target hit before Entry). Zero loss. Scanning for new setup.`);
           if (this.telegram) {
             this.telegram.notify('🚫 DaRa M1 EA - SETUP CANCELLED', 'Price hit Virtual SL/TP before reaching Entry Target.\nSetup discarded with Zero Loss. Resume Scanning.').catch(() => {});
@@ -433,8 +531,8 @@ export class DaRaM1Engine {
           if (simSl === undefined || simTp === undefined) {
              const distSL = this.userSettings.slDistance;
              const distTP = this.userSettings.tpDistance;
-             simSl = execDir === 'BUY' ? Number((masterEntry - distSL).toFixed(3)) : Number((masterEntry + distSL).toFixed(3));
-             simTp = execDir === 'BUY' ? Number((masterEntry + distTP).toFixed(3)) : Number((masterEntry - distTP).toFixed(3));
+             simSl = execDir === 'BUY' ? Number(((masterEntry || 0) - (distSL || 0)).toFixed(3)) : Number(((masterEntry || 0) + (distSL || 0)).toFixed(3));
+             simTp = execDir === 'BUY' ? Number(((masterEntry || 0) + (distTP || 0)).toFixed(3)) : Number(((masterEntry || 0) - (distTP || 0)).toFixed(3));
              currentSetup.sharedSL = simSl;
              currentSetup.sharedTP = simTp;
           }
@@ -453,6 +551,7 @@ export class DaRaM1Engine {
             openTime: Date.now()
           };
           this.stateMachine.onPositionOpened(simPosition, nextLevel.levelIndex);
+          this.saveState();
           console.log(`[DaRa M1 EA v1.0] 🚀 Position #${positionNumber} Filled! Ticket #${simTicket} (Monitor Mode).`);
           if (positionNumber >= maxAllowedPositions) {
             console.log(`[DaRa M1 EA v1.0] ${positionNumber}/${maxAllowedPositions} POSITIONS OPENED (Monitor Mode). Max Positions reached.`);
@@ -480,6 +579,7 @@ export class DaRaM1Engine {
 
           if (execResult.success && execResult.position) {
             this.stateMachine.onPositionOpened(execResult.position, nextLevel.levelIndex);
+            this.saveState();
             console.log(`[DaRa M1 EA v1.0] 🚀 Position #${positionNumber} Filled! Ticket #${execResult.position.ticket}.`);
             
             if (positionNumber >= maxAllowedPositions) {
@@ -490,6 +590,7 @@ export class DaRaM1Engine {
             console.error(`[DaRa M1 EA v1.0] Execution rejected: ${rawError}`);
             if (positionNumber === 1) {
                this.stateMachine.cancelSetup('EXPIRED', `Execution error: ${rawError}`);
+               this.saveState();
             }
             if (this.telegram) {
               this.telegram.notify('🔴 DaRa M1 EA - ORDER REJECTED', `Broker execution failed for Level ${positionNumber}:\n${rawError}`).catch(() => {});
@@ -535,10 +636,10 @@ export class DaRaM1Engine {
       const closePrice = pos.type === 'BUY' ? currentBid : currentAsk;
       let finalPnl: number;
       if (pos.unrealizedProfit !== undefined) {
-        finalPnl = Number((pos.unrealizedProfit + (pos.commission || 0) + (pos.swap || 0)).toFixed(2));
+        finalPnl = Number(((pos.unrealizedProfit || 0) + (pos.commission || 0) + (pos.swap || 0)).toFixed(2));
       } else {
-        const pDiff = pos.type === 'BUY' ? (closePrice - pos.openPrice) : (pos.openPrice - closePrice);
-        finalPnl = Number(((pDiff * pos.lot * 100) + (pos.commission || 0) + (pos.swap || 0)).toFixed(2));
+        const pDiff = pos.type === 'BUY' ? (closePrice - (pos.openPrice || 0)) : ((pos.openPrice || 0) - closePrice);
+        finalPnl = Number(((pDiff * (pos.lot || 0) * 100) + (pos.commission || 0) + (pos.swap || 0)).toFixed(2));
       }
 
       const closedTrade: DaRaClosedTrade = {
@@ -568,6 +669,7 @@ export class DaRaM1Engine {
     }
     const baselineTime = this.lastFeedTime || Date.now();
     this.strategy.setScanBaselineTime(baselineTime, true);
+    this.saveState();
     console.log(`[DaRa M1 EA v1.0] 🔄 Entire Basket closed. Setup cleared. Returned to SCANNING.`);
   }
 
@@ -589,8 +691,8 @@ export class DaRaM1Engine {
     const currentPrice = position.type === 'BUY' ? currentBid : currentAsk;
     position.currentPrice = currentPrice;
 
-    const priceDiff = position.type === 'BUY' ? (currentBid - position.openPrice) : (position.openPrice - currentAsk);
-    position.unrealizedProfit = Number((priceDiff * position.lot * 100).toFixed(2));
+    const priceDiff = position.type === 'BUY' ? (currentBid - (position.openPrice || 0)) : ((position.openPrice || 0) - currentAsk);
+    position.unrealizedProfit = Number((priceDiff * (position.lot || 0) * 100).toFixed(2));
 
     // 2. Verify if position is still open on Broker
     let stillOpen = true;
@@ -684,11 +786,11 @@ export class DaRaM1Engine {
 
     // Determine realized P/L
     let finalPnl = 0;
-    if (closedDealInfo?.profit !== undefined) {
+    if (closedDealInfo?.profit !== undefined && closedDealInfo.profit !== null) {
       finalPnl = Number(closedDealInfo.profit.toFixed(2));
     } else {
-      const pDiff = position.type === 'BUY' ? (closePrice - position.openPrice) : (position.openPrice - closePrice);
-      finalPnl = Number(((pDiff * position.lot * 100) + (position.commission || 0) + (position.swap || 0)).toFixed(2));
+      const pDiff = position.type === 'BUY' ? (closePrice - (position.openPrice || 0)) : ((position.openPrice || 0) - closePrice);
+      finalPnl = Number(((pDiff * (position.lot || 0) * 100) + (position.commission || 0) + (position.swap || 0)).toFixed(2));
     }
 
     const closedTrade: DaRaClosedTrade = {
@@ -761,8 +863,8 @@ export class DaRaM1Engine {
     const closePrice = overridePrice || (exitReason === 'TP_HIT' ? targetPos.tp : targetPos.sl);
     let finalPnl = overrideProfit;
     if (finalPnl === undefined) {
-      const pDiff = targetPos.type === 'BUY' ? (closePrice - targetPos.openPrice) : (targetPos.openPrice - closePrice);
-      finalPnl = Number(((pDiff * targetPos.lot * 100) + (targetPos.commission || 0) + (targetPos.swap || 0)).toFixed(2));
+      const pDiff = targetPos.type === 'BUY' ? (closePrice - (targetPos.openPrice || 0)) : ((targetPos.openPrice || 0) - closePrice);
+      finalPnl = Number(((pDiff * (targetPos.lot || 0) * 100) + (targetPos.commission || 0) + (targetPos.swap || 0)).toFixed(2));
     }
 
     const closedTrade: DaRaClosedTrade = {
@@ -805,10 +907,11 @@ export class DaRaM1Engine {
       this.stateMachine.onPositionClosed(closedTrade);
       const baseline = closedTrade.closedAt || this.lastFeedTime || Date.now();
       this.strategy.setScanBaselineTime(baseline, true);
-      console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | All positions closed. Resuming SCANNING.`);
+      console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${(closedTrade.pnl || 0).toFixed(2)} | All positions closed. Resuming SCANNING.`);
     } else {
-      console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${closedTrade.pnl.toFixed(2)} | 1 position still active.`);
+      console.log(`[DaRa M1 EA v1.0] 🏁 Trade #${closedTrade.ticket} finalized: ${closedTrade.exitReason} | P/L: ${closedTrade.pnl >= 0 ? '+' : ''}${(closedTrade.pnl || 0).toFixed(2)} | 1 position still active.`);
     }
+    this.saveState();
   }
 
   /**
@@ -817,50 +920,50 @@ export class DaRaM1Engine {
   private async sendTradeClosedTelegramAlert(trade: DaRaClosedTrade): Promise<void> {
     if (!this.telegram) return;
 
-    const absPnl = Math.abs(trade.pnl).toFixed(2);
+    const absPnl = Math.abs(trade.pnl || 0).toFixed(2);
 
     if (trade.exitReason === 'TP_HIT') {
       const title = `✅ បិទ ${trade.type} — ប៉ះ TP`;
       const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
-        `TP: ${trade.tp.toFixed(3)}`,
+        `ចូល: ${(trade.openPrice || 0).toFixed(3)}`,
+        `ចេញ: ${(trade.closePrice || 0).toFixed(3)}`,
+        `TP: ${(trade.tp || 0).toFixed(3)}`,
         `ចំណេញ: +${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_TP_${trade.ticket}`).catch(() => {});
     } else if (trade.exitReason === 'SL_HIT') {
       const title = `❌ បិទ ${trade.type} — ប៉ះ SL`;
       const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
-        `SL: ${trade.sl.toFixed(3)}`,
+        `ចូល: ${(trade.openPrice || 0).toFixed(3)}`,
+        `ចេញ: ${(trade.closePrice || 0).toFixed(3)}`,
+        `SL: ${(trade.sl || 0).toFixed(3)}`,
         `ខាត: -${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_SL_${trade.ticket}`).catch(() => {});
     } else if (trade.exitReason === 'CLOSE_ALL') {
-      const isProfit = trade.pnl >= 0;
+      const isProfit = (trade.pnl || 0) >= 0;
       const title = `🛑 បិទ ${trade.type} — CLOSE ALL`;
       const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
+        `ចូល: ${(trade.openPrice || 0).toFixed(3)}`,
+        `ចេញ: ${(trade.closePrice || 0).toFixed(3)}`,
         isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_CLOSE_ALL_${trade.ticket}`).catch(() => {});
     } else if (trade.exitReason === 'MANUAL_CLOSE') {
-      const isProfit = trade.pnl >= 0;
+      const isProfit = (trade.pnl || 0) >= 0;
       const title = `🏁 បិទ ${trade.type} — Manual`;
       const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
+        `ចូល: ${(trade.openPrice || 0).toFixed(3)}`,
+        `ចេញ: ${(trade.closePrice || 0).toFixed(3)}`,
         isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_MANUAL_${trade.ticket}`).catch(() => {});
     } else {
-      const isProfit = trade.pnl >= 0;
+      const isProfit = (trade.pnl || 0) >= 0;
       const title = `🏁 បិទ ${trade.type}`;
       const msg = [
-        `ចូល: ${trade.openPrice.toFixed(3)}`,
-        `ចេញ: ${trade.closePrice.toFixed(3)}`,
+        `ចូល: ${(trade.openPrice || 0).toFixed(3)}`,
+        `ចេញ: ${(trade.closePrice || 0).toFixed(3)}`,
         isProfit ? `ចំណេញ: +${absPnl} USC` : `ខាត: -${absPnl} USC`
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_CLOSED_${trade.ticket}`).catch(() => {});
