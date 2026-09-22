@@ -6,9 +6,10 @@
  * Rules:
  * - USER SETTINGS = SINGLE SOURCE OF TRUTH
  * - No Hidden Defaults, No Hardcoded SL/TP, No Martingale, No Auto-Lot Scaling
- * - BUY:  SL = Entry - User SL Distance | TP = Entry + User TP Distance
- * - SELL: SL = Entry + User SL Distance | TP = Entry - User TP Distance
+ * - BUY:  SL = Actual Filled Entry - User SL Distance | TP = Actual Filled Entry + User TP Distance
+ * - SELL: SL = Actual Filled Entry + User SL Distance | TP = Actual Filled Entry - User TP Distance
  * - SL & TP attached to real order immediately and verified.
+ * - Master Entry remains authoritative for structure, setup lock & grid levels.
  * - Duplicate & Broker Rejection Protection.
  * ============================================================================
  */
@@ -51,19 +52,23 @@ export class DaRaOrderExecution {
     currentBid: number,
     settings: DaRaUserSettings,
     levelIndex: number,
-    isBotRunning: boolean
+    isBotRunning: boolean,
+    activePositionsCount: number
   ): Promise<ExecutionResult> {
     const positionNumber = levelIndex + 1;
     // 0. Hard Limit: Positions Per Setup (Authoritative limit from user settings, max 5)
     const rawUserMax = Number(settings.positionsPerSetup ?? settings.maxOpenTrades ?? settings.entriesPerSignal ?? 1);
     const maxAllowedPositions = isNaN(rawUserMax) ? 1 : Math.max(1, Math.min(5, Math.floor(rawUserMax)));
-    if (positionNumber > maxAllowedPositions) {
-      console.error(`[DaRa M1 EA v1.0] 🛡️ HARD BLOCK: Position #${positionNumber} exceeds configured Positions Per Setup (${maxAllowedPositions}). Execution aborted.`);
+    
+    // AUTHORITATIVE FINAL GATE: Combined existing broker positions and level limit
+    if (positionNumber > maxAllowedPositions || activePositionsCount >= maxAllowedPositions) {
+      console.error(`[DaRa M1 EA v1.0] 🛡️ HARD BLOCK (Final Gate): Active Positions (${activePositionsCount}) or Level (#${positionNumber}) exceeds configured limit (${maxAllowedPositions}). Execution aborted.`);
       return { 
         success: false, 
-        error: `Strict Rule Violation: Configured Positions Per Setup is ${maxAllowedPositions}. Position #${positionNumber} is strictly FORBIDDEN.` 
+        error: `Strict Rule Violation: Configured Positions Per Setup is ${maxAllowedPositions}. Active: ${activePositionsCount}.` 
       };
     }
+    
     if (positionNumber > 5) {
       return { success: false, error: `Strict Rule Violation: 1 Confirmed Signal = 5 Positions MAX (Position #${positionNumber} is strictly FORBIDDEN)` };
     }
@@ -100,43 +105,39 @@ export class DaRaOrderExecution {
     const slPriceDistance = slDistance;
     const tpPriceDistance = tpDistance;
 
-    // 4. Calculate SL and TP based strictly on the immutable Master/Locked Entry reference
+    // 4. Calculate SL and TP based strictly on ACTUAL BROKER FILLED ENTRY PRICE (AUTHORITATIVE USER RULE)
+    // BUY:  SL = Actual Filled Entry - User SL Distance | TP = Actual Filled Entry + User TP Distance
+    // SELL: SL = Actual Filled Entry + User SL Distance | TP = Actual Filled Entry - User TP Distance
     const masterEntry = setup.masterEntryPrice ?? setup.lockedEntryPrice;
     const execDir = setup.executionDirection || setup.direction;
-    let sl: number;
-    let tp: number;
-    let openPrice: number = execDir === 'BUY' ? currentAsk : currentBid;
+    const openPrice: number = execDir === 'BUY' ? currentAsk : currentBid;
 
-    if (setup.sharedSL !== undefined && setup.sharedTP !== undefined) {
-      sl = setup.sharedSL;
-      tp = setup.sharedTP;
-    } else {
-      sl = execDir === 'BUY' 
-        ? Number((masterEntry - slPriceDistance).toFixed(3)) 
-        : Number((masterEntry + slPriceDistance).toFixed(3));
-      tp = execDir === 'BUY' 
-        ? Number((masterEntry + tpPriceDistance).toFixed(3)) 
-        : Number((masterEntry - tpPriceDistance).toFixed(3));
-      
-      setup.sharedSL = sl;
-      setup.sharedTP = tp;
-    }
+    const sl: number = execDir === 'BUY' 
+      ? Number((openPrice - slPriceDistance).toFixed(3)) 
+      : Number((openPrice + slPriceDistance).toFixed(3));
+    const tp: number = execDir === 'BUY' 
+      ? Number((openPrice + tpPriceDistance).toFixed(3)) 
+      : Number((openPrice - tpPriceDistance).toFixed(3));
+    
+    // Update setup SL/TP tracking to reflect the active position
+    setup.sharedSL = sl;
+    setup.sharedTP = tp;
 
-    // 5. Pre-flight Verification: Guarantee 100% Single Source of Truth
+    // 5. Pre-flight Verification: Guarantee 100% Single Source of Truth based on Actual Filled Entry
     if (lot !== settings.lotSize) {
       return { success: false, error: `Pre-flight Verification Failed: Lot size ${lot} does not match User Saved Settings ${settings.lotSize}` };
     }
     if (execDir === 'BUY') {
-      if (sl >= masterEntry || tp <= masterEntry) {
-        return { success: false, error: `Pre-flight Verification Failed: BUY SL (${sl}) must be below and TP (${tp}) must be above Master Entry (${masterEntry})` };
+      if (sl >= openPrice || tp <= openPrice) {
+        return { success: false, error: `Pre-flight Verification Failed: BUY SL (${sl}) must be below and TP (${tp}) must be above Actual Entry (${openPrice})` };
       }
     } else {
-      if (sl <= masterEntry || tp >= masterEntry) {
-        return { success: false, error: `Pre-flight Verification Failed: SELL SL (${sl}) must be above and TP (${tp}) must be below Master Entry (${masterEntry})` };
+      if (sl <= openPrice || tp >= openPrice) {
+        return { success: false, error: `Pre-flight Verification Failed: SELL SL (${sl}) must be above and TP (${tp}) must be below Actual Entry (${openPrice})` };
       }
     }
 
-    console.log(`[DaRa EXECUTION AUDIT] 📝 SetupID=${setup.id} | Direction=${execDir} | MasterEntry=${masterEntry} | EntryDist=${settings.entryDistance ?? 1.0} | Level=${levelIndex + 1} | TargetPrice=${setup.entryLevels?.[levelIndex]?.targetPrice} | ConfigPositionsPerSetup=${maxAllowedPositions} | CurrentPositionsOpened=${setup.positionsOpened || 0} | SL=${sl} | TP=${tp}`);
+    console.log(`[DaRa EXECUTION AUDIT] 📝 SetupID=${setup.id} | Direction=${execDir} | MasterEntry=${masterEntry} | ActualFillEntry=${openPrice} | EntryDist=${settings.entryDistance ?? 1.0} | Level=${levelIndex + 1} | TargetPrice=${setup.entryLevels?.[levelIndex]?.targetPrice} | ConfigPositionsPerSetup=${maxAllowedPositions} | CurrentPositionsOpened=${setup.positionsOpened || 0} | SL=${sl} | TP=${tp}`);
 
     this.isExecutionInProgress = true;
 

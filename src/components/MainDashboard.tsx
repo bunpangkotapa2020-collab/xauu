@@ -225,38 +225,53 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                 let statusText = "⚪ TRADING SESSION CLOSED";
                 let pulseClass = "";
                 
-                const isDesiredRunning = (state.desiredBotState === 'RUNNING' || state.status === 'running' || state.isStartRequested) && state.status !== 'stopped';
+                const isDesiredRunning = state.desiredBotState === 'RUNNING' || (state.desiredBotState !== 'STOPPED' && state.status === 'running') || Boolean(state.isStartRequested);
+                const isExplicitlyStopped = state.desiredBotState === 'STOPPED' || (!state.desiredBotState && state.status === 'stopped');
+                const isPriceFresh = Boolean(
+                  state.startConfirmation?.isPriceFresh ?? 
+                  (!state.isDataStale && state.lastTickTime && (Date.now() - state.lastTickTime < 45000))
+                );
+                const isInitialStartup = isDesiredRunning && !state.lastTickTime;
+                const activeSymbol = state.activeGoldSymbol || 'XAUUSDc';
 
                 if (!state?.account?.loginId) {
                   statusColor = "bg-slate-500/10 border-slate-500/20 text-slate-400";
                   dotColor = "bg-slate-500";
                   statusText = "⚪ NO ACCOUNT CONNECTED";
-                } else if (isDesiredRunning && !isConnected) {
-                  statusColor = "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)]";
-                  dotColor = "bg-amber-400";
-                  pulseClass = "subtle-pulse";
-                  statusText = "🟠 BOT STARTED | 🔄 RECONNECTING MT5";
-                } else if (!isConnected) {
-                  statusColor = "bg-red-500/10 border-red-500/20 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.1)]";
-                  dotColor = "bg-red-500";
-                  statusText = "🔴 MT5 CONNECTION ERROR";
-                } else if (isDesiredRunning) {
-                  statusColor = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
-                  dotColor = "bg-emerald-400";
-                  pulseClass = "subtle-pulse";
-                  statusText = "🟢 BOT RUNNING | 🟡 XAUUSD (GOLD)";
-                } else if (state.status === 'paused') {
-                  statusColor = "bg-amber-500/10 border-amber-500/20 text-amber-400";
-                  dotColor = "bg-amber-500";
-                  statusText = "🟡 TRADING PAUSED";
-                } else if (state.status === 'stopped') {
-                  statusColor = "bg-red-500/10 border-red-500/20 text-red-400";
-                  dotColor = "bg-red-500";
-                  statusText = "🔴 BOT STOPPED";
                 } else if (state.status === 'daily_limit_hit') {
                   statusColor = "bg-red-500/10 border-red-500/20 text-red-400";
                   dotColor = "bg-red-500";
                   statusText = "🔴 DAILY LOSS LIMIT";
+                } else if (isExplicitlyStopped) {
+                  statusColor = "bg-red-500/10 border-red-500/20 text-red-400";
+                  dotColor = "bg-red-500";
+                  statusText = "🔴 BOT STOPPED";
+                } else if (state.status === 'paused') {
+                  statusColor = "bg-amber-500/10 border-amber-500/20 text-amber-400";
+                  dotColor = "bg-amber-500";
+                  statusText = "🟡 TRADING PAUSED";
+                } else if (isDesiredRunning) {
+                  if (!isConnected) {
+                    statusColor = "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)]";
+                    dotColor = "bg-amber-400";
+                    pulseClass = "subtle-pulse";
+                    statusText = "🟠 BOT RUNNING / RECONNECTING | 🔄 RECONNECTING MT5";
+                  } else if (isInitialStartup) {
+                    statusColor = "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)]";
+                    dotColor = "bg-amber-400";
+                    pulseClass = "subtle-pulse";
+                    statusText = "🟠 BOT STARTING | ⏳ WAITING FOR BROKER DATA";
+                  } else if (!isPriceFresh || state.isDataStale) {
+                    statusColor = "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)]";
+                    dotColor = "bg-amber-400";
+                    pulseClass = "subtle-pulse";
+                    statusText = `🟢 BOT RUNNING | 🟡 ${activeSymbol} (DATA STALE - ENTRY BLOCKED)`;
+                  } else {
+                    statusColor = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
+                    dotColor = "bg-emerald-400";
+                    pulseClass = "subtle-pulse";
+                    statusText = `🟢 BOT RUNNING | 🟡 ${activeSymbol}`;
+                  }
                 }
 
                 return (
@@ -301,18 +316,21 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
               </div>
               <div className="bg-slate-950/40 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 flex flex-col justify-center col-span-1 md:col-span-2 shadow-inner transition-all hover:bg-slate-900/60 duration-300">
                  <div className="flex justify-between items-center mb-2">
-                   <div className="text-[11px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold">តម្លៃទីផ្សារបច្ចុប្បន្ន (Live Market Feed) {state.isDataStale && " - 🔴 STALE"}</div>
+                   <div className="text-[11px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold">ទិន្នន័យទីផ្សារ (Market Data) {(!state.startConfirmation?.isPriceFresh && state.isDataStale) && " - 🔴 STALE"}</div>
                    <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
                      <span className={
-                       state.marketDataStatus?.includes('SLOW') ? 'text-amber-400 text-glow' :
-                       state.marketDataStatus?.includes('LIVE') ? 'text-emerald-400 text-glow' : 'text-red-400'
+                       (state.startConfirmation?.isPriceFresh || (!state.isDataStale && state.lastTickTime && (Date.now() - state.lastTickTime < 45000)))
+                         ? "text-emerald-400 text-glow"
+                         : "text-red-400"
                      }>
-                        {state.marketDataStatus || '🔴 NO LIVE MARKET DATA'}
+                        {(state.startConfirmation?.isPriceFresh || (!state.isDataStale && state.lastTickTime && (Date.now() - state.lastTickTime < 45000)))
+                          ? "🟢 MARKET DATA: LIVE"
+                          : "🔴 MARKET DATA: STALE"}
                      </span>
-                     {state.lastPriceUpdate && !state.isDataStale ? ` (Update: ${state.lastPriceUpdate})` : ''}
-                     {state.isDataStale && state.lastTickTime && (
+                     {state.lastPriceUpdate && (state.startConfirmation?.isPriceFresh || !state.isDataStale) ? ` (Update: ${state.lastPriceUpdate})` : ""}
+                     {state.lastTickTime && !(state.startConfirmation?.isPriceFresh || (!state.isDataStale && (Date.now() - state.lastTickTime < 45000))) && (
                        <span className="text-rose-400 font-bold ml-1">
-                         [FEED AGE: {Math.floor((Date.now() - state.lastTickTime) / 1000)}s]
+                         [FEED AGE: {Math.max(0, Math.floor((Date.now() - state.lastTickTime) / 1000))}s]
                        </span>
                      )}
                    </div>
@@ -323,9 +341,15 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                         <span className="text-xs md:text-sm font-bold text-amber-400 truncate tracking-tight flex items-center gap-1.5 text-glow">
                           🟡 {state.activeGoldSymbol ? `${state.activeGoldSymbol} (Spot Gold)` : '--'}
                         </span>
-                        <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold uppercase shrink-0 leading-none shadow-[0_0_8px_rgba(245,158,11,0.2)]">
-                          ACTIVE LIVE FEED
-                        </span>
+                        {(state.startConfirmation?.isPriceFresh || (!state.isDataStale && state.lastTickTime && (Date.now() - state.lastTickTime < 45000))) ? (
+                          <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-bold uppercase shrink-0 leading-none shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+                            MARKET DATA: LIVE
+                          </span>
+                        ) : (
+                          <span className="text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30 font-bold uppercase shrink-0 leading-none shadow-[0_0_8px_rgba(244,63,94,0.2)]">
+                            MARKET DATA: STALE {state.lastTickTime ? `(${Math.max(0, Math.floor((Date.now() - state.lastTickTime) / 1000))}s)` : ''}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] text-slate-400 font-medium">AI SIGNAL (M1):</span>
@@ -379,25 +403,15 @@ export function MainDashboard({ botState: state, onLogout, onRefresh, onAction, 
                    const dailyLoss = hasDailyLoss ? (telemetry.dailyLossAccumulated as number) : null;
                    const dailyLossLimit = typeof settings?.dailyLossLimit === 'number' ? settings.dailyLossLimit : null;
 
-                   const hasSlHits = typeof telemetry?.consecutiveLossCount === 'number';
-                   const slHits = hasSlHits ? (telemetry.consecutiveLossCount as number) : null;
-                   const maxSL = typeof settings?.maxConsecutiveSL === 'number' ? settings.maxConsecutiveSL : null;
-
                    const slDist = typeof settings?.slDistance === 'number' ? settings.slDistance : null;
                    const tpDist = typeof settings?.tpDistance === 'number' ? settings.tpDistance : null;
 
                    return (
-                     <div className="mt-3 grid grid-cols-3 gap-2">
+                     <div className="mt-3 grid grid-cols-2 gap-2">
                        <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
                          <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">DAILY LOSS</div>
                          <div className={`text-xs sm:text-sm font-mono font-bold ${dailyLoss !== null && dailyLossLimit !== null && dailyLoss >= dailyLossLimit ? 'text-rose-400' : dailyLoss !== null && dailyLoss > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                            {dailyLoss !== null ? dailyLoss.toFixed(2) : '--'} / {dailyLossLimit !== null ? dailyLossLimit : '--'}
-                         </div>
-                       </div>
-                       <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">
-                         <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">SL HITS</div>
-                         <div className={`text-xs sm:text-sm font-mono font-bold ${slHits !== null && maxSL !== null && slHits >= maxSL ? 'text-rose-400' : slHits !== null && slHits > 0 ? 'text-amber-400' : 'text-slate-200'}`}>
-                           {slHits !== null ? slHits : '--'} / {maxSL !== null ? maxSL : '--'}
                          </div>
                        </div>
                        <div className="bg-slate-950/50 border border-slate-700/50 rounded-lg p-2 text-center transition-all hover:bg-slate-900 duration-300">

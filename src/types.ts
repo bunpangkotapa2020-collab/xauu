@@ -53,8 +53,6 @@ export interface RiskConfig {
   maxOpenTrades: number;
   positionsPerSetup?: number;
   entriesPerSignal: number;
-  maxConsecutiveLosses: number;
-  cooldownMinutes: number;
   maxDailyLossPercent?: number;
   maxDailyLossAmount: number;
   noMartingale: boolean;
@@ -207,6 +205,7 @@ export interface StartConfirmedState {
   lastBackendSyncTime: number; // Unix timestamp ms
   runningDurationSeconds: number;
   connectionState: 'HEALTHY' | 'DISCONNECTED' | 'RECOVERING' | 'BLOCKED_FEED' | 'IDLE';
+  isPriceFresh?: boolean;
   currentAnalysisStage: string;
   currentWaitingReason: string;
   isEntriesBlocked: boolean;
@@ -245,8 +244,6 @@ export interface BotState {
   signals?: { gold: string };
   currentTrade: TradeOrder | null;
   openTrades: TradeOrder[];
-  consecutiveLosses: number;
-  cooldownUntil: number | null;
   signalDetails?: { 
     side: string; 
     symbol?: string; 

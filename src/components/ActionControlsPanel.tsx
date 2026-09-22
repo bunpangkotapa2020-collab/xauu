@@ -77,7 +77,7 @@ export function ActionControlsPanel({
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              បញ្ជាដំណើរការ Scalping Bot និងបិទបញ្ចប់ Trade របស់ Bot ដោយសុវត្ថិភាពខ្ពស់
+              បញ្ជាដំណើរការ Scalping Bot និងបញ្ឈប់ការបើក Trade ថ្មីដោយសុវត្ថិភាពខ្ពស់
             </p>
           </div>
         </div>
@@ -422,7 +422,7 @@ export function ActionControlsPanel({
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full border bg-rose-950/60 text-rose-300 border-rose-500/40 flex items-center gap-1">
                 <ShieldCheck size={12} className="text-emerald-400" />
-                MAGIC 778899 ONLY
+                STOP BOT ONLY
               </span>
             </div>
           </div>
@@ -434,23 +434,23 @@ export function ActionControlsPanel({
             </div>
             <div className="text-xs text-rose-400 font-bold mt-1 flex items-center gap-1">
               <Ban size={14} />
-              <span>(CLOSE BOT POSITIONS & BLOCK NEW ENTRIES)</span>
+              <span>(STOP BOT — BLOCK NEW ENTRIES — EXISTING MT5 TRADES REMAIN OPEN)</span>
             </div>
             <p className="text-xs text-slate-400 mt-2.5 leading-relaxed">
-              បិទ Position របស់ Bot (Magic 778899) ទាំងអស់ភ្លាមៗលើ MT5 និងបញ្ឈប់ការបើក Trade ថ្មី (មិនប៉ះពាល់ Manual Trades របស់ User ឡើយ)
+              បិទ Bot ប៉ុណ្ណោះ — រារាំង Trade ថ្មី — Trade ដែលកំពុងបើកលើ MT5 នៅតែដំណើរការ (Broker-side Hard SL/TP នៅដដែល)
             </p>
           </div>
 
           {/* Key Checklist Badges */}
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap gap-2 text-[10px] font-medium text-slate-300">
             <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
-              <Ban size={11} /> BLOCK NEW ENTRIES
+              <Ban size={11} /> STOP BOT ONLY
+            </span>
+            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+              <ShieldCheck size={11} /> BLOCK NEW ENTRIES
             </span>
             <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-              <ShieldCheck size={11} /> MANUAL TRADES SAFE
-            </span>
-            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
-              <CheckCircle2 size={11} /> MT5 CONFIRMED
+              <CheckCircle2 size={11} /> MT5 TRADES REMAIN OPEN
             </span>
           </div>
 
@@ -458,7 +458,7 @@ export function ActionControlsPanel({
           {executingAction === 'close_all' && (
             <div className="mt-3 pt-2 border-t border-rose-500/30 text-xs font-bold text-amber-400 flex items-center gap-1.5">
               <Loader2 size={14} className="animate-spin" />
-              <span>កំពុងបញ្ជូនបញ្ជា Close ទៅកាន់ MT5...</span>
+              <span>កំពុងបញ្ឈប់ Bot & Block New Entries...</span>
             </div>
           )}
           {actionResult?.action === 'close_all' && (
@@ -466,7 +466,7 @@ export function ActionControlsPanel({
               actionResult.status === 'success' ? 'text-emerald-400 border-emerald-500/30' : 'text-rose-400 border-rose-500/30'
             }`}>
               {actionResult.status === 'success' ? <CheckCircle2 size={14} /> : <XOctagon size={14} />}
-              <span>{actionResult.status === 'success' ? '🔴 ALL TRADES CLOSED' : 'CLOSE ALL FAILED'}</span>
+              <span>{actionResult.status === 'success' ? '🔴 BOT STOPPED (MT5 TRADES SAFE)' : 'STOP FAILED'}</span>
             </div>
           )}
         </button>

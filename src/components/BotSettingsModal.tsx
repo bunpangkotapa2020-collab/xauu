@@ -41,8 +41,6 @@ export function BotSettingsModal({
   const [dailyLoss, setDailyLoss] = useState('2000');
   const [maxTrades, setMaxTrades] = useState('5');
   const [entryDistance, setEntryDistance] = useState('0.5');
-  const [maxConsSL, setMaxConsSL] = useState('6');
-  const [cooldown, setCooldown] = useState('20');
   const [maxSpread, setMaxSpread] = useState('27');
   const [newsFilterEnabled, setNewsFilterEnabled] = useState(true);
   const [newsMinsBefore, setNewsMinsBefore] = useState('30');
@@ -50,14 +48,10 @@ export function BotSettingsModal({
 
 
   const [isResettingDailyLoss, setIsResettingDailyLoss] = useState(false);
-  const [isResettingConsSL, setIsResettingConsSL] = useState(false);
-  const [isResettingCooldown, setIsResettingCooldown] = useState(false);
   const [showDailyLossConfirm, setShowDailyLossConfirm] = useState(false);
 
   const safety = botState?.signalDetails?.daraSafety || (botState as any)?.daraTelemetry?.safety;
   const isDailyLossHit = safety?.isDailyLossHit || false;
-  const isMaxConsecutiveSLHit = safety?.isMaxConsecutiveSLHit || false;
-  const isInCooldown = safety?.isInCooldown || false;
 
   const handleResetDailyLoss = async () => {
     setIsResettingDailyLoss(true);
@@ -70,32 +64,6 @@ export function BotSettingsModal({
       if (onSaveSuccess) onSaveSuccess();
     } else {
       setErrorMsg(res.error || 'Failed to reset Daily Loss Limit');
-    }
-  };
-
-  const handleResetConsSL = async () => {
-    setIsResettingConsSL(true);
-    const res = await (botApi as any).resetConsecutiveSL();
-    setIsResettingConsSL(false);
-    if (res.success) {
-      setSuccessMsg(true);
-      setTimeout(() => setSuccessMsg(false), 3000);
-      if (onSaveSuccess) onSaveSuccess();
-    } else {
-      setErrorMsg(res.error || 'Failed to reset Consecutive SL');
-    }
-  };
-
-  const handleResetCooldown = async () => {
-    setIsResettingCooldown(true);
-    const res = await (botApi as any).resetCooldown();
-    setIsResettingCooldown(false);
-    if (res.success) {
-      setSuccessMsg(true);
-      setTimeout(() => setSuccessMsg(false), 3000);
-      if (onSaveSuccess) onSaveSuccess();
-    } else {
-      setErrorMsg(res.error || 'Failed to reset Cooldown');
     }
   };
 
@@ -114,8 +82,6 @@ export function BotSettingsModal({
         else if (botState.riskConfig.maxDailyLoss !== undefined) setDailyLoss(String(botState.riskConfig.maxDailyLoss));
         if (botState.riskConfig.maxOpenTrades !== undefined) setMaxTrades(String(botState.riskConfig.maxOpenTrades));
         if ((botState.riskConfig as any).entryDistance !== undefined) setEntryDistance(String((botState.riskConfig as any).entryDistance));
-        if (botState.riskConfig.maxConsecutiveLosses !== undefined) setMaxConsSL(String(botState.riskConfig.maxConsecutiveLosses));
-        if (botState.riskConfig.cooldownMinutes !== undefined) setCooldown(String(botState.riskConfig.cooldownMinutes));
         if (botState.riskConfig.maxSpreadPoints !== undefined) setMaxSpread(String(botState.riskConfig.maxSpreadPoints));
         if (botState.riskConfig.newsFilterEnabled !== undefined) setNewsFilterEnabled(Boolean(botState.riskConfig.newsFilterEnabled));
         if (botState.riskConfig.minutesBeforeNewsBlock !== undefined) setNewsMinsBefore(String(botState.riskConfig.minutesBeforeNewsBlock));
@@ -144,8 +110,6 @@ export function BotSettingsModal({
       const parsedTrades = Math.max(1, Math.min(5, Math.floor(Number(maxTrades) || 5)));
       const parsedEntryDist = Number(entryDistance);
       const cleanDist = isNaN(parsedEntryDist) || parsedEntryDist < 0 ? 0.5 : parsedEntryDist;
-      const parsedConsSl = Number(maxConsSL);
-      const parsedCooldown = Number(cooldown);
       const parsedSpread = Number(maxSpread);
       const parsedNewsBefore = Number(newsMinsBefore);
       const parsedNewsAfter = Number(newsMinsAfter);
@@ -164,8 +128,6 @@ export function BotSettingsModal({
         maxDailyLoss: parsedDailyLoss,
         maxOpenTrades: parsedTrades,
         entryDistance: cleanDist,
-        maxConsecutiveLosses: parsedConsSl,
-        cooldownMinutes: parsedCooldown,
         maxSpreadPoints: parsedSpread,
         newsFilterEnabled: Boolean(newsFilterEnabled),
         minutesBeforeNewsBlock: parsedNewsBefore,
@@ -361,30 +323,6 @@ export function BotSettingsModal({
               </div>
             </div>
 
-            {/* MAX CONSECUTIVE SL */}
-            <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
-              <label className="block text-xs text-slate-400 mb-1">Max Consecutive SL / ខាតជាប់គ្នាអតិបរមា</label>
-              <div className="flex gap-2">
-                <input 
-                  type="number" step="1" min="1"
-                  value={maxConsSL} onChange={(e) => setMaxConsSL(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-                />
-                <button
-                  onClick={(e) => { e.preventDefault(); handleResetConsSL(); }}
-                  disabled={!isMaxConsecutiveSLHit || isResettingConsSL}
-                  className={`px-3 rounded-lg text-[11px] font-semibold tracking-wide uppercase transition-colors flex items-center gap-1 ${
-                    isMaxConsecutiveSLHit
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-70'
-                  }`}
-                >
-                  {isResettingConsSL ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-                  Reset
-                </button>
-              </div>
-            </div>
-
             {/* MAX SPREAD */}
             <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4">
               <label className="block text-xs text-slate-400 mb-1">Max Spread (Points) / គម្លាតទីផ្សារអតិបរមា</label>
@@ -393,30 +331,6 @@ export function BotSettingsModal({
                 value={maxSpread} onChange={(e) => setMaxSpread(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
               />
-            </div>
-
-            {/* COOLDOWN */}
-            <div className="bg-slate-800/30 border border-slate-800 rounded-xl p-4 md:col-span-2">
-              <label className="block text-xs text-slate-400 mb-1">Cooldown After SL (Minutes) / ផ្អាកបន្ទាប់ពីខាត (20 នាទី)</label>
-              <div className="flex gap-2">
-                <input 
-                  type="number" step="1" min="0"
-                  value={cooldown} onChange={(e) => setCooldown(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none"
-                />
-                <button
-                  onClick={(e) => { e.preventDefault(); handleResetCooldown(); }}
-                  disabled={!isInCooldown || isResettingCooldown}
-                  className={`px-3 rounded-lg text-[11px] font-semibold tracking-wide uppercase transition-colors flex items-center gap-1 ${
-                    isInCooldown
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-70'
-                  }`}
-                >
-                  {isResettingCooldown ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-                  Reset
-                </button>
-              </div>
             </div>
 
           </div>

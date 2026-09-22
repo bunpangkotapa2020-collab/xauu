@@ -48,8 +48,6 @@ const INITIAL_FALLBACK_STATE: BotState = {
   todayLossCount: 0,
   currentTrade: null,
   openTrades: [],
-  consecutiveLosses: 0,
-  cooldownUntil: null,
   manualTrades: [],
   tradingHours: {
     enabled: true,
@@ -65,8 +63,6 @@ const INITIAL_FALLBACK_STATE: BotState = {
     takeProfitPips: 35,
     maxOpenTrades: 5,
     entriesPerSignal: 5,
-    maxConsecutiveLosses: 3,
-    cooldownMinutes: 15,
     maxDailyLossPercent: 5,
     maxDailyLossAmount: 50,
     noMartingale: true,

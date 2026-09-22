@@ -303,7 +303,7 @@ export class IctXauusdEA {
     public getTelemetry(botState?: any): ICTTelemetry {
         if (botState) {
             const priceAgeMs = Date.now() - (botState.lastTickTime || 0);
-            const isFresh = priceAgeMs < 65000;
+            const isFresh = priceAgeMs < 45000;
             const isMarketLive = Boolean(botState.marketDataStatus?.includes('LIVE'));
             const isMt5Connected = Boolean(botState.account?.isConnected);
             const isEaBridgeConnected = Boolean(botState.account?.eaConnected);

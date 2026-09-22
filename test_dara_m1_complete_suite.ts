@@ -1,6 +1,15 @@
 import { DaRaM1Engine } from './src/engines/dara_m1/DaRaM1Engine';
 import { DaRaM1StateMachine } from './src/engines/dara_m1/DaRaM1StateMachine';
 import { DaRaOrderExecution } from './src/engines/dara_m1/DaRaOrderExecution';
+import * as fs from 'fs';
+import * as path from 'path';
+
+function cleanState() {
+  const filePath = path.join(process.cwd(), 'data', 'dara_m1_state.json');
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+}
 
 interface TestResult {
   name: string;
@@ -41,6 +50,7 @@ async function runTestSuite() {
   // Test 1: 5-level BUY
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -80,6 +90,7 @@ async function runTestSuite() {
   // Test 2: 5-level SELL
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -119,6 +130,7 @@ async function runTestSuite() {
   // Test 3: Sequential Execution Level 1 -> 5
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -182,6 +194,7 @@ async function runTestSuite() {
   // Test 4: No Level 6
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -227,9 +240,10 @@ async function runTestSuite() {
   }
 
   // ----------------------------------------------------
-  // Test 5: Shared SL/TP
+  // Test 5: Authoritative SL/TP (Actual Fill Based)
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -266,20 +280,25 @@ async function runTestSuite() {
     const order1 = executedOrders[0];
     const order2 = executedOrders[1];
 
-    assert(order1.sl === 2475, `Order 1 SL must be 2475, got ${order1.sl}`);
-    assert(order1.tp === 2510, `Order 1 TP must be 2510, got ${order1.tp}`);
-    assert(order2.sl === 2475, `Order 2 SL must be IDENTICAL shared 2475, got ${order2.sl}`);
-    assert(order2.tp === 2510, `Order 2 TP must be IDENTICAL shared 2510, got ${order2.tp}`);
+    // Authoritative Rule: SL/TP based on ACTUAL FILL
+    // L1 Fill = 2498. SL dist 25, TP dist 10. SL = 2473, TP = 2508
+    assert(order1.sl === 2473, `Order 1 SL must be 2473, got ${order1.sl}`);
+    assert(order1.tp === 2508, `Order 1 TP must be 2508, got ${order1.tp}`);
+    
+    // L2 Fill = 2496. SL dist 25, TP dist 10. SL = 2471, TP = 2506
+    assert(order2.sl === 2471, `Order 2 SL must be 2471, got ${order2.sl}`);
+    assert(order2.tp === 2506, `Order 2 TP must be 2506, got ${order2.tp}`);
 
-    results.push({ name: '5. Shared SL/TP across all entries', passed: true, details: `Order 1 & 2 SL: ${order1.sl}, TP: ${order1.tp}` });
+    results.push({ name: '5. Authoritative SL/TP (Actual Fill Based)', passed: true, details: `Order 1 SL: ${order1.sl}, TP: ${order1.tp} | Order 2 SL: ${order2.sl}, TP: ${order2.tp}` });
   } catch (err: any) {
-    results.push({ name: '5. Shared SL/TP across all entries', passed: false, details: err.message });
+    results.push({ name: '5. Authoritative SL/TP (Actual Fill Based)', passed: false, details: err.message });
   }
 
   // ----------------------------------------------------
   // Test 6: Safety Guards
   // ----------------------------------------------------
   try {
+    cleanState();
     const engine = new DaRaM1Engine({} as any, baseSettings);
     engine.start();
 
@@ -308,6 +327,7 @@ async function runTestSuite() {
   // Test 7: LIVE OFF Hard Block
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -347,6 +367,7 @@ async function runTestSuite() {
   // Test 8: LIVE ON functional state synchronization
   // ----------------------------------------------------
   try {
+    cleanState();
     const engine = new DaRaM1Engine({} as any, { ...baseSettings, liveTradingEnabled: false });
     assert(engine.getUserSettings().liveTradingEnabled === false, 'Initial state must be false');
 
@@ -362,6 +383,7 @@ async function runTestSuite() {
   // Test 9: LIVE OFF after ON
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -402,6 +424,7 @@ async function runTestSuite() {
   // Test 10: Engine Stopped Block
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -429,6 +452,7 @@ async function runTestSuite() {
   // Test 11: MT5 Disconnected Block
   // ----------------------------------------------------
   try {
+    cleanState();
     const engine = new DaRaM1Engine({} as any, baseSettings);
     engine.start();
     engine.setMt5ConnectionStatus(false);
@@ -446,6 +470,7 @@ async function runTestSuite() {
   // Test 12: Duplicate Protection
   // ----------------------------------------------------
   try {
+    cleanState();
     const executedOrders: any[] = [];
     const mockBroker = {
       getSymbolInfo: async () => ({ pointSize: 0.01 }),
@@ -490,6 +515,7 @@ async function runTestSuite() {
   // Test 13: Max Open Trades
   // ----------------------------------------------------
   try {
+    cleanState();
     const engine = new DaRaM1Engine({} as any, { ...baseSettings, maxOpenTrades: 3 });
     engine.start();
 
@@ -509,6 +535,7 @@ async function runTestSuite() {
   // Test 14: Pending Setup Cancellation
   // ----------------------------------------------------
   try {
+    cleanState();
     const sm = new DaRaM1StateMachine();
     sm.onUserStart();
     sm.onSetupDetected({
@@ -527,6 +554,152 @@ async function runTestSuite() {
     results.push({ name: '14. Pending Setup Cancellation', passed: true, details: 'Setup properly cancelled and state returned to SCANNING' });
   } catch (err: any) {
     results.push({ name: '14. Pending Setup Cancellation', passed: false, details: err.message });
+  }
+
+  // ----------------------------------------------------
+  // Test 15: Authoritative Rule Examples (User-Provided)
+  // ----------------------------------------------------
+  try {
+    cleanState();
+    const executedOrders: any[] = [];
+    const mockBroker = {
+      getSymbolInfo: async () => ({ pointSize: 0.001 }),
+      sendOrder: async (req: any) => {
+        executedOrders.push(req);
+        return { success: true, ticket: 'T_' + executedOrders.length };
+      }
+    };
+    const engine = new DaRaM1Engine(mockBroker as any, { 
+      ...baseSettings, 
+      liveTradingEnabled: true, 
+      slDistance: 8, 
+      tpDistance: 10,
+      entryDistance: 0
+    });
+    engine.start();
+    (engine as any).evaluateSafety = () => ({ isSafeToTrade: true });
+
+    const sm = (engine as any).stateMachine as DaRaM1StateMachine;
+    
+    // Example BUY: Fill = 4350.000, SL=8, TP=10
+    sm.onSetupDetected({
+      id: 'setup_example_buy', direction: 'BUY', sweepLevel: 4340, sweepTime: Date.now(),
+      displacementConfirmed: true, mssLevel: 4355, mssTime: Date.now(),
+      lockedEntryPrice: 4350, signalPrice: 4350,
+      virtualSLPrice: 4342, virtualTPPrice: 4360,
+      sharedSL: 4342, sharedTP: 4360
+    }, engine.getUserSettings());
+
+    await engine.onMarketUpdate({
+      symbol: 'XAUUSD', bid: 4350, ask: 4350, spreadPoints: 0,
+      m1Candles: [{ open: 4350, high: 4350, low: 4350, close: 4350 }], openTradesCount: 0
+    });
+
+    const buyOrder = executedOrders[0];
+    assert(buyOrder.sl === 4342, `BUY SL must be 4342, got ${buyOrder.sl}`);
+    assert(buyOrder.tp === 4360, `BUY TP must be 4360, got ${buyOrder.tp}`);
+
+    // Example SELL: Fill = 4350.000, SL=8, TP=10
+    // Recreate engine to ensure state is SCANNING
+    cleanState();
+    const executedOrdersSell: any[] = [];
+    const mockBrokerSell = {
+      getSymbolInfo: async () => ({ pointSize: 0.001 }),
+      sendOrder: async (req: any) => {
+        executedOrdersSell.push(req);
+        return { success: true, ticket: 'T_SELL' };
+      }
+    };
+    const engineSell = new DaRaM1Engine(mockBrokerSell as any, { 
+      ...baseSettings, 
+      liveTradingEnabled: true, 
+      slDistance: 8, 
+      tpDistance: 10,
+      entryDistance: 0
+    });
+    engineSell.start();
+    (engineSell as any).evaluateSafety = () => ({ isSafeToTrade: true });
+
+    const smSell = (engineSell as any).stateMachine as DaRaM1StateMachine;
+    smSell.onSetupDetected({
+      id: 'setup_example_sell', direction: 'SELL', sweepLevel: 4360, sweepTime: Date.now(),
+      displacementConfirmed: true, mssLevel: 4345, mssTime: Date.now(),
+      lockedEntryPrice: 4350, signalPrice: 4350,
+      virtualSLPrice: 4358, virtualTPPrice: 4340,
+      sharedSL: 4358, sharedTP: 4340
+    }, engineSell.getUserSettings());
+
+    await engineSell.onMarketUpdate({
+      symbol: 'XAUUSD', bid: 4350, ask: 4350, spreadPoints: 0,
+      m1Candles: [{ open: 4350, high: 4350, low: 4350, close: 4350 }], openTradesCount: 0
+    });
+
+    const sellOrder = executedOrdersSell[0];
+    assert(sellOrder.sl === 4358, `SELL SL must be 4358, got ${sellOrder.sl}`);
+    assert(sellOrder.tp === 4340, `SELL TP must be 4340, got ${sellOrder.tp}`);
+
+    results.push({ name: '15. Authoritative Rule Examples', passed: true, details: 'BUY(4350): SL 4342, TP 4360 | SELL(4350): SL 4358, TP 4340' });
+  } catch (err: any) {
+    results.push({ name: '15. Authoritative Rule Examples', passed: false, details: err.message });
+  }
+
+  // ----------------------------------------------------
+  // Test 16: Pullback Authoritative SL/TP (Trade #2 Bug Case)
+  // ----------------------------------------------------
+  try {
+    cleanState();
+    const executedOrders: any[] = [];
+    const mockBroker = {
+      getSymbolInfo: async () => ({ pointSize: 0.001 }),
+      sendOrder: async (req: any) => {
+        executedOrders.push(req);
+        return { success: true, ticket: 'T_PULLBACK' };
+      }
+    };
+    // User Settings: SL=8, TP=10
+    const engine = new DaRaM1Engine(mockBroker as any, { 
+      ...baseSettings, 
+      liveTradingEnabled: true, 
+      slDistance: 8, 
+      tpDistance: 10,
+      entryDistance: 0
+    });
+    engine.start();
+    (engine as any).evaluateSafety = () => ({ isSafeToTrade: true });
+
+    const sm = (engine as any).stateMachine as DaRaM1StateMachine;
+    
+    // Trade #2 Case: 
+    // Master Entry = 4354.709
+    // Actual Fill = 4348.876
+    const master = 4354.709;
+    sm.onSetupDetected({
+      id: 'setup_pullback_bug', direction: 'BUY', sweepLevel: 4340, sweepTime: Date.now(),
+      displacementConfirmed: true, mssLevel: 4360, mssTime: Date.now(),
+      lockedEntryPrice: master, signalPrice: master,
+      virtualSLPrice: master - 8, virtualTPPrice: master + 10,
+      sharedSL: master - 8, sharedTP: master + 10
+    }, engine.getUserSettings());
+
+    // Trigger L1 (Master - 1.0 = 4353.709)
+    // BUT we simulate a GAP or deep pullback to 4348.876 in one tick
+    await engine.onMarketUpdate({
+      symbol: 'XAUUSD', bid: 4348.876, ask: 4348.876, spreadPoints: 0,
+      m1Candles: [{ open: 4355, high: 4355, low: 4348.876, close: 4348.876 }], openTradesCount: 0
+    });
+
+    const order = executedOrders[0];
+    assert(order.openPrice === 4348.876, `Order should be filled at 4348.876, got ${order.openPrice}`);
+    
+    // Authoritative Rule:
+    // SL = 4348.876 - 8 = 4340.876
+    // TP = 4348.876 + 10 = 4358.876
+    assert(order.sl === 4340.876, `Pullback SL must be 4340.876, got ${order.sl}`);
+    assert(order.tp === 4358.876, `Pullback TP must be 4358.876, got ${order.tp}`);
+
+    results.push({ name: '16. Pullback Authoritative SL/TP', passed: true, details: 'Fill: 4348.876 | SL: 4340.876, TP: 4358.876 (based on fill, NOT master)' });
+  } catch (err: any) {
+    results.push({ name: '16. Pullback Authoritative SL/TP', passed: false, details: err.message });
   }
 
   console.log('\n====================================================');

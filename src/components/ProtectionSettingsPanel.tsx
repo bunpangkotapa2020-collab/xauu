@@ -37,12 +37,6 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
   }, []);
 
   // Form states synced from botState
-  const [maxConsecutiveLosses, setMaxConsecutiveLosses] = useState(
-    String(botState?.riskConfig?.maxConsecutiveLosses ?? '3')
-  );
-  const [cooldownMinutes, setCooldownMinutes] = useState(
-    String(botState?.riskConfig?.cooldownMinutes ?? '15')
-  );
   const [maxDailyLossPercent, setMaxDailyLossPercent] = useState(
     String(botState?.riskConfig?.maxDailyLossPercent ?? '5')
   );
@@ -65,12 +59,6 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
     if (isDirtyRef.current) return;
 
     if (botState?.riskConfig) {
-      if (botState.riskConfig.maxConsecutiveLosses !== undefined) {
-        setMaxConsecutiveLosses(String(botState.riskConfig.maxConsecutiveLosses));
-      }
-      if (botState.riskConfig.cooldownMinutes !== undefined) {
-        setCooldownMinutes(String(botState.riskConfig.cooldownMinutes));
-      }
       if (botState.riskConfig.maxDailyLossPercent !== undefined) {
         setMaxDailyLossPercent(String(botState.riskConfig.maxDailyLossPercent));
       }
@@ -83,8 +71,6 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
       if (botState.tradingHours.stopHour) setStopHour(botState.tradingHours.stopHour);
     }
   }, [
-    botState?.riskConfig?.maxConsecutiveLosses,
-    botState?.riskConfig?.cooldownMinutes,
     botState?.riskConfig?.maxDailyLossPercent,
     botState?.riskConfig?.maxDailyLossAmount,
     botState?.tradingHours?.startHour,
@@ -93,8 +79,6 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
 
   const handleResetToCurrent = () => {
     if (botState?.riskConfig) {
-      setMaxConsecutiveLosses(String(botState.riskConfig.maxConsecutiveLosses ?? '3'));
-      setCooldownMinutes(String(botState.riskConfig.cooldownMinutes ?? '15'));
       setMaxDailyLossPercent(String(botState.riskConfig.maxDailyLossPercent ?? '5'));
       setMaxDailyLossAmount(String(botState.riskConfig.maxDailyLossAmount ?? '50'));
     }
@@ -113,16 +97,12 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
 
     try {
       await botApi.updateRiskConfig({
-        maxConsecutiveLosses: Math.max(1, parseInt(maxConsecutiveLosses) || 3),
-        cooldownMinutes: Math.max(1, parseInt(cooldownMinutes) || 15),
         maxDailyLossPercent: Math.max(0.1, parseFloat(maxDailyLossPercent) || 5),
         maxDailyLossAmount: Math.max(1, parseFloat(maxDailyLossAmount) || 50),
       });
       
       await botApi.saveSettings({
         riskConfig: {
-          maxConsecutiveLosses: Math.max(1, parseInt(maxConsecutiveLosses) || 3),
-          cooldownMinutes: Math.max(1, parseInt(cooldownMinutes) || 15),
           maxDailyLossPercent: Math.max(0.1, parseFloat(maxDailyLossPercent) || 5),
           maxDailyLossAmount: Math.max(1, parseFloat(maxDailyLossAmount) || 50),
         },
@@ -142,20 +122,6 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const adjustConsecutiveLosses = (delta: number) => {
-    setIsDirty(true);
-    const curr = parseInt(maxConsecutiveLosses) || 3;
-    const next = Math.max(1, Math.min(10, curr + delta));
-    setMaxConsecutiveLosses(String(next));
-  };
-
-  const adjustCooldownMinutes = (delta: number) => {
-    setIsDirty(true);
-    const curr = parseInt(cooldownMinutes) || 15;
-    const next = Math.max(1, Math.min(180, curr + delta));
-    setCooldownMinutes(String(next));
   };
 
   const adjustDailyLossPercent = (delta: number) => {
@@ -200,7 +166,7 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
               )}
             </div>
             <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate leading-tight">
-              ការពារ SL ជាប់គ្នា, Cooldown សម្រាក, ដែនកំណត់ខាតប្រចាំថ្ងៃ & ម៉ោងជួញដូរ
+              ដែនកំណត់ខាតប្រចាំថ្ងៃ & ម៉ោងជួញដូរ
             </p>
           </div>
         </div>
@@ -227,135 +193,13 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
               <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
                 <div className="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
                   <AlertOctagon className="w-4 h-4" />
-                  <span>ការការពារពេលប៉ះ SL ជាប់គ្នា (RAPID SL SHIELD)</span>
+                  <span>ការការពារការខាតប្រចាំថ្ងៃ (DAILY LOSS SHIELD)</span>
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">SAFETY GUARD</span>
               </div>
               
               <div className="space-y-3.5">
-                {/* 1. Max Consecutive Losses */}
-                <div className="bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 rounded-xl p-3.5 transition-colors">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-200">Max Consecutive Losses (SL ជាប់គ្នា)</span>
-                      <p className="text-[10px] text-slate-400">ចំនួនដង SL ជាប់គ្នា មុននឹងបញ្ឈប់ Bot ចូល Trade</p>
-                    </div>
-                    <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
-                      <button
-                        type="button"
-                        onClick={() => adjustConsecutiveLosses(-1)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
-                        title="បន្ថយ"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <input 
-                        id="input-consecutive-losses"
-                        type="number" 
-                        min="1"
-                        max="10"
-                        value={maxConsecutiveLosses} 
-                        onChange={e => {
-                          setIsDirty(true);
-                          setMaxConsecutiveLosses(e.target.value);
-                        }} 
-                        className="bg-transparent text-amber-400 text-sm font-bold w-10 text-center font-mono focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => adjustConsecutiveLosses(1)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
-                        title="បន្ថែម"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
-                  </div>
-                  {/* Quick presets */}
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[9px] text-slate-500 uppercase font-semibold">Presets:</span>
-                    {['2', '3', '4', '5'].map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => {
-                          setIsDirty(true);
-                          setMaxConsecutiveLosses(val);
-                        }}
-                        className={`text-[10px] px-2 py-0.5 rounded-md font-mono transition-all cursor-pointer ${
-                          maxConsecutiveLosses === val
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                            : 'bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-slate-700/50'
-                        }`}
-                      >
-                        {val} ដង
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. Cooldown Minutes */}
-                <div className="bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 rounded-xl p-3.5 transition-colors">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-200">Cooldown Minutes (សម្រាកទីផ្សារ)</span>
-                      <p className="text-[10px] text-slate-400">រយៈពេលផ្អាកសម្រាកពេលប៉ះ SL គ្រប់កំណត់</p>
-                    </div>
-                    <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
-                      <button
-                        type="button"
-                        onClick={() => adjustCooldownMinutes(-5)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
-                        title="បន្ថយ 5 នាទី"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <input 
-                        id="input-cooldown-minutes"
-                        type="number" 
-                        min="1"
-                        max="180"
-                        value={cooldownMinutes} 
-                        onChange={e => {
-                          setIsDirty(true);
-                          setCooldownMinutes(e.target.value);
-                        }} 
-                        className="bg-transparent text-indigo-300 text-sm font-bold w-12 text-center font-mono focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => adjustCooldownMinutes(5)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
-                        title="បន្ថែម 5 នាទី"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
-                  </div>
-                  {/* Quick presets */}
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[9px] text-slate-500 uppercase font-semibold">Presets:</span>
-                    {['10', '15', '30', '60'].map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => {
-                          setIsDirty(true);
-                          setCooldownMinutes(val);
-                        }}
-                        className={`text-[10px] px-2 py-0.5 rounded-md font-mono transition-all cursor-pointer ${
-                          cooldownMinutes === val
-                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold'
-                            : 'bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-slate-700/50'
-                        }`}
-                      >
-                        {val}mn
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Max Daily Loss % & Amount $ (Grid 2 cols) */}
+                {/* Max Daily Loss % & Amount $ (Grid 2 cols) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-slate-900/80 border border-slate-800/80 rounded-xl p-3">
                     <span className="text-[11px] font-semibold text-slate-300 block mb-1">Max Daily Loss (%)</span>
@@ -463,7 +307,6 @@ export function ProtectionSettingsPanel({ botState, onRefresh }: ProtectionSetti
                   <Activity size={12} className="text-emerald-400" />
                   <span>Active Session: <strong className="text-slate-200 font-mono">24/7 AUTO</strong></span>
                 </div>
-                <div className="font-mono text-amber-400">Max SL: {maxConsecutiveLosses}x</div>
               </div>
             </div>
           </div>

@@ -1,5 +1,14 @@
 import { DaRaM1Engine } from './src/engines/dara_m1/DaRaM1Engine';
 import { DaRaM1StateMachine } from './src/engines/dara_m1/DaRaM1StateMachine';
+import * as fs from 'fs';
+import * as path from 'path';
+
+function cleanState() {
+  const filePath = path.join(process.cwd(), 'data', 'dara_m1_state.json');
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+}
 
 interface MockOrder {
   symbol: string;
@@ -43,6 +52,7 @@ const baseSettings = {
 };
 
 async function testSetting(maxPositionsSetting: number, expectedExecutions: number) {
+  cleanState();
   const broker = createMockBroker();
   const settings = { ...baseSettings, maxOpenTrades: maxPositionsSetting, liveTradingEnabled: true };
   const engine = new DaRaM1Engine(broker as any, settings);
@@ -134,6 +144,7 @@ async function runAllTests() {
 
   // Test 8: Verify Sequential execution (no skipping or simultaneous multi-opening)
   {
+    cleanState();
     const broker = createMockBroker();
     const settings = { ...baseSettings, maxOpenTrades: 3, liveTradingEnabled: true };
     const engine = new DaRaM1Engine(broker as any, settings);
@@ -154,6 +165,16 @@ async function runAllTests() {
       sharedSL: 1970,
       sharedTP: 2030
     }, engine.getUserSettings());
+    const seqSetup = sm.getSetup();
+    if (seqSetup) {
+      seqSetup.entryLevels = [
+        { targetPrice: 2000, executed: false },
+        { targetPrice: 1998, executed: false },
+        { targetPrice: 1996, executed: false },
+        { targetPrice: 1994, executed: false },
+        { targetPrice: 1992, executed: false }
+      ];
+    }
 
     // Send tick above L1 (2001) -> 0 orders
     await engine.onMarketUpdate({
@@ -213,6 +234,7 @@ async function runAllTests() {
   // Test 8B: STRICT REQUIREMENT B — Global Broker Positions Isolation
   // Unrelated external trades on the account (e.g. openTradesCount = 10) must NEVER block DaRa levels!
   {
+    cleanState();
     const broker = createMockBroker();
     const settings = { ...baseSettings, maxOpenTrades: 3, liveTradingEnabled: true };
     const engine = new DaRaM1Engine(broker as any, settings);
@@ -233,6 +255,16 @@ async function runAllTests() {
       sharedSL: 1970,
       sharedTP: 2030
     }, engine.getUserSettings());
+    const extSetup = sm.getSetup();
+    if (extSetup) {
+      extSetup.entryLevels = [
+        { targetPrice: 2000, executed: false },
+        { targetPrice: 1998, executed: false },
+        { targetPrice: 1996, executed: false },
+        { targetPrice: 1994, executed: false },
+        { targetPrice: 1992, executed: false }
+      ];
+    }
 
     // External account has 10 manual/other trades open: openTradesCount = 10!
     // Trigger L1 (target 2000)
@@ -276,6 +308,7 @@ async function runAllTests() {
 
   // Test 9: One Basket / One Direction Check
   {
+    cleanState();
     const broker = createMockBroker();
     const engine = new DaRaM1Engine(broker as any, { ...baseSettings, liveTradingEnabled: true });
     engine.start();
@@ -295,6 +328,16 @@ async function runAllTests() {
       sharedSL: 1970,
       sharedTP: 2030
     }, engine.getUserSettings());
+    const basketSetup = sm.getSetup();
+    if (basketSetup) {
+      basketSetup.entryLevels = [
+        { targetPrice: 2000, executed: false },
+        { targetPrice: 1998, executed: false },
+        { targetPrice: 1996, executed: false },
+        { targetPrice: 1994, executed: false },
+        { targetPrice: 1992, executed: false }
+      ];
+    }
 
     // Execute L1
     await engine.onMarketUpdate({
@@ -328,8 +371,9 @@ async function runAllTests() {
     console.log("✅ One Basket / One Direction strictly verified: Opposite setup rejected!");
   }
 
-  // Test 10: Shared SL / TP Integrity
+  // Test 10: Authoritative SL / TP Integrity across Multiple Levels
   {
+    cleanState();
     const broker = createMockBroker();
     const engine = new DaRaM1Engine(broker as any, { ...baseSettings, liveTradingEnabled: true });
     engine.start();
@@ -349,6 +393,16 @@ async function runAllTests() {
       sharedSL: 1970,
       sharedTP: 2030
     }, engine.getUserSettings());
+    const sltpSetup = sm.getSetup();
+    if (sltpSetup) {
+      sltpSetup.entryLevels = [
+        { targetPrice: 2000, executed: false },
+        { targetPrice: 1998, executed: false },
+        { targetPrice: 1996, executed: false },
+        { targetPrice: 1994, executed: false },
+        { targetPrice: 1992, executed: false }
+      ];
+    }
 
     // Trigger L1 & L2
     await engine.onMarketUpdate({
@@ -362,15 +416,16 @@ async function runAllTests() {
       openTradesCount: 1
     });
 
-    for (const ord of broker.orders) {
-      if (ord.sl !== 1970) throw new Error(`Shared SL mismatch: expected 1970, got ${ord.sl}`);
-      if (ord.tp !== 2030) throw new Error(`Shared TP mismatch: expected 2030, got ${ord.tp}`);
-    }
-    console.log("✅ Shared SL/TP strictly verified across all executed levels: SL=1970, TP=2030");
+    if (broker.orders[0].sl !== 1970) throw new Error(`L1 SL mismatch: expected 1970 (2000 - 30), got ${broker.orders[0].sl}`);
+    if (broker.orders[0].tp !== 2030) throw new Error(`L1 TP mismatch: expected 2030 (2000 + 30), got ${broker.orders[0].tp}`);
+    if (broker.orders[1].sl !== 1968) throw new Error(`L2 SL mismatch: expected 1968 (1998 - 30), got ${broker.orders[1].sl}`);
+    if (broker.orders[1].tp !== 2028) throw new Error(`L2 TP mismatch: expected 2028 (1998 + 30), got ${broker.orders[1].tp}`);
+    console.log("✅ Authoritative SL/TP strictly verified across all executed levels: L1 (2000) -> SL=1970, TP=2030 | L2 (1998) -> SL=1968, TP=2028");
   }
 
   // Test 12: Confirm LIVE = OFF
   {
+    cleanState();
     const broker = createMockBroker();
     const engine = new DaRaM1Engine(broker as any);
     const settings = engine.getUserSettings();

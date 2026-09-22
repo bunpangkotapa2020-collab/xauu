@@ -25,8 +25,6 @@ export function useLiveTradingToggle(
     state.dailyLossLimitHit || 
     ((state as any).dailyLoss && state.riskConfig?.maxDailyLossAmount && (state as any).dailyLoss >= state.riskConfig.maxDailyLossAmount)
   );
-  const isInCooldown = Boolean(state.cooldownUntil && Date.now() < state.cooldownUntil);
-  const isMaxConsecutiveSL = (state.consecutiveLosses ?? 0) >= (state.riskConfig?.maxConsecutiveLosses || 3);
   const isNewsBlocked = Boolean((state.account as any)?.newsBlockedStatus);
 
   let safetyBlockedReason: string | null = null;
@@ -36,10 +34,6 @@ export function useLiveTradingToggle(
     safetyBlockedReason = `Spread (${currentSpread} pts) លើសពីដែនកំណត់ (${maxSpread} pts)`;
   } else if (isDailyLossHit) {
     safetyBlockedReason = `ដល់ដែនកំណត់ខាតប្រចាំថ្ងៃ (Daily Loss Limit Hit)`;
-  } else if (isInCooldown) {
-    safetyBlockedReason = `កំពុងសម្រាកក្រោយខាត (Cooldown Active)`;
-  } else if (isMaxConsecutiveSL) {
-    safetyBlockedReason = `ដល់ដែនកំណត់ខាតជាប់គ្នា (Max Consecutive SL)`;
   } else if (isNewsBlocked) {
     safetyBlockedReason = `ស្ថិតក្នុងម៉ោងព័ត៌មានសេដ្ឋកិច្ច (News Window Block)`;
   }

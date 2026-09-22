@@ -35,6 +35,7 @@ import {
 import { DaRaM1Strategy } from './DaRaM1Strategy';
 import { DaRaM1StateMachine } from './DaRaM1StateMachine';
 import { DaRaOrderExecution } from './DaRaOrderExecution';
+import { DaRaIndicators } from './DaRaIndicators';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -159,12 +160,11 @@ export class DaRaM1Engine {
   }
 
   public stop(): void {
-    if (!this.isRunning) return;
     this.isRunning = false;
     this.stateMachine.onUserStop();
     this.saveState();
     console.log(`[DaRa M1 EA v1.0] 🔴 STOP initiated by User. New scanning and pending entries halted.`);
-    console.log(`[DaRa M1 EA v1.0] 🛡️ Note: Any active broker trade continues to be protected by Hard SL/TP .`);
+    console.log(`[DaRa M1 EA v1.0] 🛡️ Note: Any active broker trade continues to be protected by Hard SL/TP.`);
     if (this.telegram) {
       this.telegram.notify(
         `🔥 DaRa M1 EA v1.0 — STOPPED`,
@@ -174,16 +174,8 @@ export class DaRaM1Engine {
   }
 
   public forceCloseAllAndStop(): void {
-    this.isRunning = false;
-    this.stateMachine.reset();
-    this.saveState();
-    console.log(`[DaRa M1 EA v1.0] 🛑 CLOSE ALL executed. All setups cancelled, positions cleared, engine STOPPED.`);
-    if (this.telegram) {
-      this.telegram.notify(
-        `🛑 DaRa M1 EA v1.0 — CLOSE ALL TRADES`,
-        `បានបិទរាល់ Position ទាំងអស់របស់ Bot, Cancel Pending Setup និងបញ្ឈប់ Bot ដោយជោគជ័យ។ Bot នឹងមិនដំណើរការឡើងវិញដោយខ្លួនឯងទេរហូតដល់ចុច START BOT។`
-      ).catch(() => {});
-    }
+    // SEMANTICS: CLOSE ALL TRADES = STOP BOT ONLY — PRESERVE EXISTING BROKER POSITIONS
+    this.stop();
   }
 
   public getIsRunning(): boolean {
@@ -235,15 +227,8 @@ export class DaRaM1Engine {
 
   public evaluateSafety(currentSpreadPoints: number, currentBasketPositionsCount?: number): DaRaSafetyStatus {
     const s = this.userSettings;
-    const now = Date.now();
 
     const isDailyLossHit = this.dailyLossAccumulated >= s.dailyLossLimit;
-    const isMaxConsecutiveSLHit = this.consecutiveLossCount >= s.maxConsecutiveSL;
-    
-    // Cooldown check
-    const cooldownMs = s.cooldownMinutes * 60 * 1000;
-    const isInCooldown = this.lastLossTime > 0 && (now - this.lastLossTime) < cooldownMs;
-
     const isSpreadTooHigh = currentSpreadPoints > s.maxSpreadPoints;
     const isNewsBlocked = s.newsFilterEnabled && this.isNewsBlockedNow;
     const rawMax = Number(s.maxOpenTrades);
@@ -260,8 +245,6 @@ export class DaRaM1Engine {
     let blockedReason: string | undefined;
     if (isMt5Disconnected) blockedReason = 'MT5 Server or MetaApi Disconnected';
     else if (isDailyLossHit) blockedReason = `Daily Loss Limit reached (${(this.dailyLossAccumulated || 0).toFixed(2)} >= ${s.dailyLossLimit})`;
-    else if (isMaxConsecutiveSLHit) blockedReason = `Max Consecutive SL hit (${this.consecutiveLossCount || 0} >= ${s.maxConsecutiveSL})`;
-    else if (isInCooldown) blockedReason = `Loss Cooldown Active (${Math.ceil((cooldownMs - (now - this.lastLossTime)) / 60000)}m remaining)`;
     else if (isSpreadTooHigh) blockedReason = `Spread too high (${currentSpreadPoints} > ${s.maxSpreadPoints})`;
     else if (isNewsBlocked) blockedReason = `High Impact News Filter Active`;
     else if (isMaxTradesReached) blockedReason = `Max Positions reached (${basketPositionsCount} >= ${maxPositions})`;
@@ -272,8 +255,6 @@ export class DaRaM1Engine {
       isSafeToTrade,
       blockedReason,
       isDailyLossHit,
-      isMaxConsecutiveSLHit,
-      isInCooldown,
       isSpreadTooHigh,
       isNewsBlocked,
       isMaxTradesReached,
@@ -446,6 +427,7 @@ export class DaRaM1Engine {
         console.log(`[DaRa M1 EA v1.0] 🎯 CONFIRMED SIGNAL: ${detectedSetup.direction} | Sweep=${detectedSetup.sweepLevel} | MSS=${detectedSetup.mssLevel}${candleInfo} | Signal Price=${sigPrice}`);
         console.log(`[DaRa M1 EA v1.0] ⏳ Waiting for price pullback... calculating entry levels based on lockedEntryPrice.`);
         
+        this.logPrecisionGate(detectedSetup);
         this.stateMachine.onSetupDetected(detectedSetup, this.userSettings);
         this.saveState();
       }
@@ -458,7 +440,78 @@ export class DaRaM1Engine {
         return;
       }
 
-      // Step A: Check Pending Setup Cancellation (Virtual TP or SL touched before any entry)
+      // Step A: Precision Gate Monitoring (Shadow Mode)
+      // Continuously monitor for Retest Rejection even if positions are already active or blocked.
+      if (currentSetup.precisionGate) {
+        const pg = currentSetup.precisionGate;
+
+        // 0. Dynamic Session Refresh (Authoritative fix for "Frozen Session")
+        // The session component must dynamically reflect the CURRENT time while the setup is pending.
+        const currentSession = DaRaIndicators.getSessionName(Date.now());
+        const oldSession = pg.details.sessionName;
+        const oldPoints = pg.components.sessionTime;
+        const newPoints = ['LONDON', 'NEW_YORK'].includes(currentSession) ? 1 : 0;
+        
+        if (oldSession !== currentSession || oldPoints !== newPoints) {
+          pg.details.sessionName = currentSession;
+          pg.components.sessionTime = newPoints;
+          
+          // Recalculate total score based on the updated session component
+          pg.total = Object.values(pg.components).reduce((a, b) => Number(a) + Number(b), 0);
+          pg.passed = pg.total >= pg.threshold;
+          
+          console.log(`[DaRa M1 EA v1.0] 🕒 Session Boundary Crossed: ${oldSession} -> ${currentSession}. Session Score: ${oldPoints} -> ${newPoints}. Total Score: ${pg.total}/12.`);
+          this.saveState();
+        }
+
+        if (!pg.details.isRetestConfirmed) {
+          const level = currentSetup.lockedEntryPrice;
+
+        // 1. Detect Touch (Within 2 points buffer or price crossing)
+        const pointSize = this.cachedPointSize || 0.001;
+        const buffer = pointSize * 2;
+        const isTouching = currentSetup.direction === 'BUY' 
+          ? (currentPrice <= level + buffer) 
+          : (currentPrice >= level - buffer);
+
+        if (isTouching && !pg.details.isRetestTouched) {
+          pg.details.isRetestTouched = true;
+          console.log(`[DaRa M1 EA v1.0] 🛡️ Precision Gate: Retest LEVEL TOUCHED. Waiting for closed M1 candle rejection...`);
+          this.saveState();
+        }
+
+        // 2. Check for Directional Rejection from the latest CLOSED M1 candle
+        if (pg.details.isRetestTouched && feed.m1Candles && feed.m1Candles.length > 0) {
+          const lastClosed = feed.m1Candles[feed.m1Candles.length - 1];
+          let isConfirmed = false;
+
+          if (currentSetup.direction === 'BUY') {
+            // Bullish Rejection: Price dipped to or below level, but closed AT or ABOVE it
+            if (lastClosed.low <= level + buffer && lastClosed.close >= level - buffer) {
+              isConfirmed = true;
+            }
+          } else {
+            // Bearish Rejection: Price reached to or above level, but closed AT or BELOW it
+            if (lastClosed.high >= level - buffer && lastClosed.close <= level + buffer) {
+              isConfirmed = true;
+            }
+          }
+
+          if (isConfirmed) {
+            pg.components.retest = 2;
+            pg.details.isRetestConfirmed = true;
+            pg.details.isRetestReached = true; // Compatibility flag
+            pg.total = Object.values(pg.components).reduce((a, b) => Number(a) + Number(b), 0);
+            pg.passed = pg.total >= pg.threshold;
+            console.log(`[DaRa M1 EA v1.0] 🛡️ Precision Gate: Retest CONFIRMED (+2) via Closed M1 Rejection.`);
+            this.logPrecisionGate(currentSetup);
+            this.saveState();
+          }
+        }
+      }
+    }
+
+    // Step B: Check Pending Setup Cancellation (Virtual TP or SL touched before any entry)
       if (!this.stateMachine.hasOpenPositions()) {
         const wasCanceled = this.stateMachine.checkPendingSetupCancellation(currentPrice);
         if (wasCanceled) {
@@ -471,14 +524,21 @@ export class DaRaM1Engine {
         }
       }
 
-      // Step B: Check if Price hit the next Pending Level
+      // Step C: Check if Price hit the next Pending Level
       const rawUserMax = Number(this.userSettings.positionsPerSetup ?? this.userSettings.maxOpenTrades ?? this.userSettings.entriesPerSignal ?? 1);
       const maxAllowedPositions = isNaN(rawUserMax) ? 1 : Math.max(1, Math.min(5, Math.floor(rawUserMax)));
 
       // HARD CEILING: If opened positions or active basket count already reached limit, stop immediately
+      // AUTHORITATIVE FIX: Broker positions + in-flight protection MUST be less than limit.
       const openedCount = currentSetup.positionsOpened || 0;
       const currentBasketCount = this.stateMachine.getActivePositions().length;
-      if (openedCount >= maxAllowedPositions || currentBasketCount >= maxAllowedPositions) {
+      const inFlightCount = this.isOrderInFlight ? 1 : 0;
+      const totalPositions = currentBasketCount + inFlightCount;
+
+      if (totalPositions >= maxAllowedPositions || openedCount >= maxAllowedPositions || currentSetup.isAnomaly === true) {
+        if (Math.random() < 0.01) { // Minimal logging
+           console.log(`[DaRa M1 EA v1.0] 🛡️ Entry Blocked: Position limit reached or Anomaly detected (${totalPositions}/${maxAllowedPositions}, Anomaly=${currentSetup.isAnomaly}).`);
+        }
         return;
       }
 
@@ -500,6 +560,14 @@ export class DaRaM1Engine {
       );
 
       if (isReached) {
+        // --- PRECISION GATE AUTHORITATIVE BLOCK ---
+        const pg = currentSetup.precisionGate;
+        if (pg && !pg.passed) {
+          // If gate is not passed (e.g. 10/12), block execution and skip tick
+          // Do NOT log as error, just waiting for full confirmation
+          return;
+        }
+
         // Safety verification immediately before sending broker order
         // STRICT REQUIREMENT B: Evaluate against current active DaRa basket count only!
         const safety = this.evaluateSafety(feed.spreadPoints, currentBasketCount);
@@ -525,17 +593,16 @@ export class DaRaM1Engine {
           const simOpenPrice = execDir === 'BUY' ? currentAsk : currentBid;
           
           const masterEntry = currentSetup.masterEntryPrice ?? currentSetup.lockedEntryPrice;
-          let simSl = currentSetup.sharedSL;
-          let simTp = currentSetup.sharedTP;
-          
-          if (simSl === undefined || simTp === undefined) {
-             const distSL = this.userSettings.slDistance;
-             const distTP = this.userSettings.tpDistance;
-             simSl = execDir === 'BUY' ? Number(((masterEntry || 0) - (distSL || 0)).toFixed(3)) : Number(((masterEntry || 0) + (distSL || 0)).toFixed(3));
-             simTp = execDir === 'BUY' ? Number(((masterEntry || 0) + (distTP || 0)).toFixed(3)) : Number(((masterEntry || 0) - (distTP || 0)).toFixed(3));
-             currentSetup.sharedSL = simSl;
-             currentSetup.sharedTP = simTp;
-          }
+          const distSL = this.userSettings.slDistance;
+          const distTP = this.userSettings.tpDistance;
+          const simSl = execDir === 'BUY' 
+            ? Number(((simOpenPrice || 0) - (distSL || 0)).toFixed(3)) 
+            : Number(((simOpenPrice || 0) + (distSL || 0)).toFixed(3));
+          const simTp = execDir === 'BUY' 
+            ? Number(((simOpenPrice || 0) + (distTP || 0)).toFixed(3)) 
+            : Number(((simOpenPrice || 0) - (distTP || 0)).toFixed(3));
+          currentSetup.sharedSL = simSl;
+          currentSetup.sharedTP = simTp;
 
           const simPosition: DaRaPosition = {
             ticket: simTicket,
@@ -574,7 +641,8 @@ export class DaRaM1Engine {
             currentBid,
             this.userSettings,
             nextLevel.levelIndex,
-            this.isRunning
+            this.isRunning,
+            currentBasketCount
           );
 
           if (execResult.success && execResult.position) {
@@ -968,5 +1036,39 @@ export class DaRaM1Engine {
       ].join('\n');
       await this.telegram.notify(title, msg, `TRADE_CLOSED_${trade.ticket}`).catch(() => {});
     }
+  }
+
+  /**
+   * Logs Precision Gate details for transparency in Shadow Mode.
+   */
+  private logPrecisionGate(setup: DaRaSetup): void {
+    if (!setup.precisionGate) return;
+    const pg = setup.precisionGate;
+    const passStatus = pg.passed ? 'PASS' : 'FAIL';
+    const retestStatus = pg.details.isRetestReached ? 'REACHED' : 'WAITING';
+    
+    console.log(`
+==================================================
+🛡️ SHADOW MODE: Precision Entry Confirmation Gate
+==================================================
+Setup ID:  ${setup.id}
+Direction: ${setup.direction}
+Score:     ${pg.total}/${pg.max} (${passStatus})
+Threshold: ${pg.threshold}
+--------------------------------------------------
+[+] M1 Liquidity Sweep:   +${pg.components.sweep}
+[+] M1 Displacement:      +${pg.components.displacement}
+[+] M1 MSS Confirmed:     +${pg.components.mss}
+[+] Retest Level Reached: +${pg.components.retest} (${retestStatus})
+[+] EMA Context:          +${pg.components.emaContext} (${pg.details.ema9Trend})
+[+] VWAP Context:         +${pg.components.vwapContext} (${pg.details.vwapTrend})
+[+] Candle Confirmation:  +${pg.components.candleConf}
+[+] Session Time:         +${pg.components.sessionTime} (${pg.details.sessionName})
+--------------------------------------------------
+EMA 9:  ${pg.details.ema9?.toFixed(3) || 'N/A'}
+EMA 21: ${pg.details.ema21?.toFixed(3) || 'N/A'}
+VWAP:   ${pg.details.vwap?.toFixed(3) || 'N/A'}
+==================================================
+`);
   }
 }

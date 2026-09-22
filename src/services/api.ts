@@ -312,32 +312,6 @@ export const botApi = {
 
   
   
-  async resetCooldown(): Promise<{ success: boolean; message?: string; error?: string }> {
-    const token = authStorage.getToken();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    try {
-      const response = await fetch('/api/bot/reset-cooldown', { method: 'POST', headers });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return await response.json();
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  },
-
-  async resetConsecutiveSL(): Promise<{ success: boolean; message?: string; error?: string }> {
-    const token = authStorage.getToken();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    try {
-      const response = await fetch('/api/bot/reset-consecutive-sl', { method: 'POST', headers });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return await response.json();
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  },
-
   async resetDailyLossLimit(): Promise<{ success: boolean; message?: string; error?: string }> {
     const token = authStorage.getToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };

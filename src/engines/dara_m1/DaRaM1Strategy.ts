@@ -11,8 +11,9 @@
  * ============================================================================
  */
 
-import { DaRaCandle, DaRaDirection, DaRaSetup, DaRaUserSettings, DaRaAnalysisDetails } from './types';
+import { DaRaCandle, DaRaDirection, DaRaSetup, DaRaUserSettings, DaRaAnalysisDetails, DaRaPrecisionScore } from './types';
 import { DaRaCandleConfirmationModule, DaRaCandleConfirmationResult } from './DaRaCandleConfirmation';
+import { DaRaIndicators } from './DaRaIndicators';
 
 export interface SwingPoint {
   index: number;
@@ -264,6 +265,16 @@ export class DaRaM1Strategy {
         const slPriceDistance = userSl;
         const tpPriceDistance = userTp;
 
+        const partialSetup: Partial<DaRaSetup> = {
+          direction: 'BUY',
+          lockedEntryPrice: lockedEntry,
+          userSlDistance: userSl,
+          userTpDistance: userTp,
+          candleConfirmation: candleConf
+        };
+
+        const precisionGate = this.calculatePrecisionGate(candles, 'BUY', partialSetup, mssIdx, mssCandle.close);
+
         return {
           id: `DARA_BUY_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
           direction: 'BUY',
@@ -278,6 +289,7 @@ export class DaRaM1Strategy {
           userSlDistance: userSl,
           userTpDistance: userTp,
           candleConfirmation: candleConf,
+          precisionGate: precisionGate,
           createdAt: Date.now(),
           status: 'PENDING_ENTRY'
         };
@@ -395,6 +407,16 @@ export class DaRaM1Strategy {
         const slPriceDistance = userSl;
         const tpPriceDistance = userTp;
 
+        const partialSetup: Partial<DaRaSetup> = {
+          direction: 'SELL',
+          lockedEntryPrice: lockedEntry,
+          userSlDistance: userSl,
+          userTpDistance: userTp,
+          candleConfirmation: candleConf
+        };
+
+        const precisionGate = this.calculatePrecisionGate(candles, 'SELL', partialSetup, mssIdx, mssCandle.close);
+
         return {
           id: `DARA_SELL_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
           direction: 'SELL',
@@ -409,6 +431,7 @@ export class DaRaM1Strategy {
           userSlDistance: userSl,
           userTpDistance: userTp,
           candleConfirmation: candleConf,
+          precisionGate: precisionGate,
           createdAt: Date.now(),
           status: 'PENDING_ENTRY'
         };
@@ -572,5 +595,94 @@ export class DaRaM1Strategy {
     }
 
     return details;
+  }
+
+  /**
+   * Calculates the 12-Point Precision Gate score for a setup.
+   * SHADOW MODE: Only for recording and logging.
+   */
+  public calculatePrecisionGate(
+    candles: DaRaCandle[],
+    direction: DaRaDirection,
+    setup: Partial<DaRaSetup>,
+    mssIdx: number,
+    currentPrice: number
+  ): DaRaPrecisionScore {
+    const ema9 = DaRaIndicators.calculateEMA(candles, 9);
+    const ema21 = DaRaIndicators.calculateEMA(candles, 21);
+    const vwap = DaRaIndicators.calculateSessionVWAP(candles);
+    const session = DaRaIndicators.getSessionName(Date.now());
+    
+    const lastCandle = candles[candles.length - 1];
+    
+    let components = {
+      sweep: 2,        // Sweep is confirmed by strategy before calling this
+      displacement: 2, // Displacement is confirmed by strategy
+      mss: 2,          // MSS is confirmed by strategy
+      retest: 0,       // Retest is 0 until engine detects price touched lockedEntry
+      emaContext: 0,
+      vwapContext: 0,
+      candleConf: 0,
+      sessionTime: 0
+    };
+
+    // 1. Retest Check (+2) - Checked by engine, initially 0
+    const isRetestReached = false; 
+
+    // 2. EMA Context (+1)
+    let ema9Trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+    if (ema9 && ema21) {
+      if (direction === 'BUY' && lastCandle.close > ema9 && ema9 > ema21) {
+        components.emaContext = 1;
+        ema9Trend = 'BULLISH';
+      } else if (direction === 'SELL' && lastCandle.close < ema9 && ema9 < ema21) {
+        components.emaContext = 1;
+        ema9Trend = 'BEARISH';
+      }
+    }
+
+    // 3. VWAP Context (+1)
+    let vwapTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+    if (vwap) {
+      if (direction === 'BUY' && lastCandle.close > vwap) {
+        components.vwapContext = 1;
+        vwapTrend = 'BULLISH';
+      } else if (direction === 'SELL' && lastCandle.close < vwap) {
+        components.vwapContext = 1;
+        vwapTrend = 'BEARISH';
+      }
+    }
+
+    // 4. Candle Confirmation (+1)
+    if (setup.candleConfirmation?.isConfirmed) {
+      components.candleConf = 1;
+    }
+
+    // 5. Session Time (+1)
+    if (['LONDON', 'NEW_YORK'].includes(session)) {
+      components.sessionTime = 1;
+    }
+
+    const total = Object.values(components).reduce((a, b) => a + b, 0);
+    const threshold = 11;
+
+    return {
+      total,
+      max: 12,
+      threshold,
+      passed: total >= threshold,
+      components,
+      details: {
+        ema9,
+        ema21,
+        vwap,
+        ema9Trend,
+        vwapTrend,
+        sessionName: session,
+        isRetestReached,
+        isRetestTouched: false,
+        isRetestConfirmed: false
+      }
+    };
   }
 }

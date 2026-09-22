@@ -72,22 +72,22 @@ export class DaRaM1StateMachine {
     const now = Date.now();
     
     if (positions.length === 0) {
+      // If MT5 is disconnected, broker position query is inactive/offline; preserve local state without logging transient warnings
+      if (!isMt5Connected) {
+        return;
+      }
+
       this.consecutiveEmptyPolls++;
       
       // RULE 2: EMPTY POSITION RESPONSE PROTECTION
       // If we have local positions but receive [] from broker:
       if (this.activePositions.length > 0) {
-        const timeSinceLastValid = now - this.lastValidPositionsTimestamp;
+        // Require 3 consecutive confirmed empty polls while MT5 is connected (~9s) to confirm closure
+        const EMPTY_POLL_THRESHOLD = 3; 
         
-        // If connection is unstable or we haven't reached a "confirmed" closure state, preserve local state.
-        // We only clear if:
-        // 1. We are connected AND have received multiple consecutive empty polls (e.g. 5 polls ~ 15-20s)
-        // 2. OR if we have an explicit confirmation from history (handled in Engine level usually, but here we guard)
-        const EMPTY_POLL_THRESHOLD = 5; 
-        
-        if (!isMt5Connected || this.consecutiveEmptyPolls < EMPTY_POLL_THRESHOLD) {
+        if (this.consecutiveEmptyPolls < EMPTY_POLL_THRESHOLD) {
           if (this.consecutiveEmptyPolls === 1) {
-             console.log(`[DaRa StateMachine] ⚠️ Received [] from Broker but local state has ${this.activePositions.length} positions. Guarding against transient API error...`);
+             console.log(`[DaRa StateMachine] ℹ️ Broker returned 0 positions while local state has ${this.activePositions.length} position(s). Verifying transient state (poll 1/${EMPTY_POLL_THRESHOLD})...`);
           }
           return; // KEEP local state for now
         }
@@ -180,6 +180,18 @@ export class DaRaM1StateMachine {
           }
         }
         this.currentSetup.positionsOpened = positions.length;
+
+        // Detect Position Limit Anomaly
+        const maxLimit = Number(settings.positionsPerSetup ?? settings.maxOpenTrades ?? settings.entriesPerSignal ?? 1);
+        if (positions.length > maxLimit) {
+          this.currentSetup.isAnomaly = true;
+          if (Math.random() < 0.1) { // Throttle logging
+            console.warn(`[DaRa StateMachine] ⚠️ POSITION LIMIT ANOMALY: Broker reports ${positions.length} positions, but limit is ${maxLimit}. New entries BLOCKED.`);
+          }
+        } else {
+          this.currentSetup.isAnomaly = false;
+        }
+
         // Also ensure shared SL/TP are synced if they were modified at broker (though EA usually owns them)
         this.currentSetup.sharedSL = positions[0].sl;
         this.currentSetup.sharedTP = positions[0].tp;
@@ -215,6 +227,12 @@ export class DaRaM1StateMachine {
    * Begins 24/7 scanning for M1 setups.
    */
   public onUserStart(): void {
+    if (this.activePositions.length > 0) {
+      if (this.currentState !== 'TRADE_ACTIVE') {
+        this.transitionTo('TRADE_ACTIVE', 'User initiated START with existing active positions — Monitoring active trades');
+      }
+      return;
+    }
     if (this.currentState === 'IDLE' || this.currentState === 'SETUP_CANCELED') {
       this.transitionTo('SCANNING', 'User initiated START — 24/7 M1 market scanning active');
     }
@@ -469,17 +487,31 @@ export class DaRaM1StateMachine {
    * Broker confirmed position opened with ticket.
    */
   public onPositionOpened(position: DaRaPosition, levelIndex: number): void {
-    this.activePositions.push(position);
+    // Safety check: Prevent duplicate tickets if syncPositions already picked it up
+    const exists = this.activePositions.some(p => String(p.ticket) === String(position.ticket));
+    if (exists) {
+      console.log(`[DaRa StateMachine] ℹ️ Position #${position.ticket} already tracked. Updating details only.`);
+    } else {
+      this.activePositions.push(position);
+    }
+
     if (this.currentSetup && this.currentSetup.entryLevels) {
       this.currentSetup.status = 'EXECUTED';
       this.currentSetup.entryLevels[levelIndex].executed = true;
       this.currentSetup.entryLevels[levelIndex].ticket = position.ticket;
-      this.currentSetup.positionsOpened = (this.currentSetup.positionsOpened || 0) + 1;
+      
+      if (!exists) {
+        this.currentSetup.positionsOpened = (this.currentSetup.positionsOpened || 0) + 1;
+      }
+      
       this.currentSetup.lastExecutedPrice = position.openPrice ?? this.currentSetup.entryLevels[levelIndex].targetPrice;
       this.currentSetup.lastExecutedLevel = levelIndex;
       this.lastEvaluatedPrice = this.currentSetup.lastExecutedPrice;
     }
-    this.transitionTo('TRADE_ACTIVE', `Broker confirmed position Ticket: ${position.ticket} (Level ${levelIndex + 1})`);
+    
+    if (this.currentState !== 'TRADE_ACTIVE') {
+      this.transitionTo('TRADE_ACTIVE', `Broker confirmed position Ticket: ${position.ticket} (Level ${levelIndex + 1})`);
+    }
   }
 
   public clearPosition(ticket: string | number): void {

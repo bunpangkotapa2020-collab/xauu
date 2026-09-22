@@ -180,7 +180,14 @@ class DaRaServerBroker implements DaRaBrokerInterface {
     }
 
     async getOpenPositions(symbol) {
-        return (botState.openTrades || []).filter(t => t.symbol === symbol).map(t => ({
+        return (botState.openTrades || []).filter(t => {
+            if (t.symbol === symbol) return true;
+            if (!t.symbol || !symbol) return false;
+            const s1 = String(t.symbol).toUpperCase();
+            const s2 = String(symbol).toUpperCase();
+            if (s1 === s2) return true;
+            return (s1.startsWith('XAU') || s1.startsWith('GOLD')) && (s2.startsWith('XAU') || s2.startsWith('GOLD'));
+        }).map(t => ({
             ticket: String(t.id),
             symbol: t.symbol,
             type: t.side,
@@ -239,8 +246,6 @@ const initialDaraSettings = {
     tpDistance: 30,
     dailyLossLimit: 50,
     maxOpenTrades: 5,
-    maxConsecutiveSL: 3,
-    cooldownMinutes: 15,
     maxSpreadPoints: 30,
     newsFilterEnabled: false,
     newsMinsBefore: 60,
@@ -930,7 +935,7 @@ function verifyAuthToken(tokenString?: string): AuthTokenPayload | null {
 interface BotServerState {
   desiredBotState?: 'RUNNING' | 'STOPPED';
   status: 'running' | 'paused' | 'stopped' | 'daily_limit_hit';
-  selectedAsset: 'XAUUSD';
+  selectedAsset: 'XAUUSDc';
   goldPrice: number;
   bidPrice?: number;
   askPrice?: number;
@@ -973,9 +978,7 @@ interface BotServerState {
       marketDataFeedLive: boolean;
       tradingPermissionGranted: boolean;
       eaLoadedAndReady: boolean;
-      consecutiveLosses?: number;
-  cooldownUntil?: number | null;
-};
+    };
   };
   isDailyPnLSynced?: boolean;
   dailyLossResetOffset?: number;
@@ -1008,22 +1011,14 @@ interface BotServerState {
     maxSpreadPoints: number;
     stopLossPips: number;
     takeProfitPips: number;
-    trailingStopEnabled: boolean;
-    trailingStopActivationPoints?: number;
-    trailingStopDistancePoints?: number;
-    trailingStopBreakEven?: boolean;
-    trailingStopBreakEvenOffset?: number;
     maxOpenTrades: number;
     positionsPerSetup?: number;
     newsFilterEnabled?: boolean;
     entryDistance?: number;
     candleConfirmationEnabled?: boolean;
     candleMinScoreRequired?: number;
-    trailingDistance?: number;
     liveTradingEnabled?: boolean;
     entriesPerSignal: number;
-    maxConsecutiveLosses: number;
-    cooldownMinutes: number;
     maxDailyLossPercent: number;
     maxDailyLossAmount: number;
     noMartingale: boolean;
@@ -1046,8 +1041,6 @@ interface BotServerState {
   isInsideTradingHours: boolean;
   openTrades: any[];
   signalDetails?: any;
-  consecutiveLosses?: number;
-  cooldownUntil?: number | null;
   isAutoSaved?: boolean;
 
   // Real-time Start Confirmation & EA Heartbeat Telemetry
@@ -1060,7 +1053,7 @@ interface BotServerState {
 const DEFAULT_BOT_CONFIG = {
   desiredBotState: 'STOPPED' as const,
   status: 'stopped' as const,
-  selectedAsset: 'XAUUSD' as const,
+  selectedAsset: 'XAUUSDc' as const,
   currentTradingDate: '',
   dailyLossLimitHit: false,
   account: {
@@ -1108,12 +1101,8 @@ const DEFAULT_BOT_CONFIG = {
     maxSpreadPoints: 30,
     stopLossPips: 25,
     takeProfitPips: 35,
-    trailingStopEnabled: true,
-
     maxOpenTrades: 5,
     entriesPerSignal: 1,
-    maxConsecutiveLosses: 3,
-    cooldownMinutes: 15,
     maxDailyLossPercent: 5,
     maxDailyLossAmount: 50,
     noMartingale: true,
@@ -1163,7 +1152,7 @@ const initialSavedConfig = loadOrCreateBotConfig();
 const botState: BotServerState = {
   desiredBotState: initialSavedConfig.desiredBotState || (initialSavedConfig.status === 'running' ? 'RUNNING' : 'STOPPED'),
   status: initialSavedConfig.status === 'running' ? 'running' : 'stopped',
-  selectedAsset: 'XAUUSD',
+  selectedAsset: 'XAUUSDc',
   goldPrice: 0,
   bidPrice: 0,
   askPrice: 0,
@@ -1201,8 +1190,6 @@ const botState: BotServerState = {
   todayLossCount: 0,
   currentTrade: null,
   openTrades: [],
-  consecutiveLosses: 0,
-  cooldownUntil: null,
   signals: { gold: 'WAIT' },
   signalDetails: undefined,
   manualTrades: [],
@@ -1239,8 +1226,6 @@ if (global.daraEngine) {
         maxOpenTrades: posPerSetup,
         positionsPerSetup: posPerSetup,
         entriesPerSignal: posPerSetup,
-        maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses || 3,
-        cooldownMinutes: botState.riskConfig.cooldownMinutes || 15,
         maxSpreadPoints: botState.riskConfig.maxSpreadPoints || 30,
         newsFilterEnabled: botState.riskConfig.newsFilterEnabled || false,
         entryDistance: botState.riskConfig.entryDistance !== undefined ? botState.riskConfig.entryDistance : 0.5,
@@ -2008,10 +1993,12 @@ setInterval(async () => {
                             
                             if (oldTrade.floatingProfit < 0) {
                                 if (global.daraEngine) {
-                                    global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
-                                    botState.consecutiveLosses = global.daraEngine.getTelemetry().consecutiveLossCount;
-                                } else {
-                                    botState.consecutiveLosses = (botState.consecutiveLosses || 0) + 1;
+                                    global.daraEngine.handlePositionClosed(
+                                        oldTrade.id,
+                                        'SL_HIT',
+                                        Number(oldTrade.floatingProfit || 0),
+                                        oldTrade.currentPrice || botState.goldPrice || 0
+                                    ).catch(err => console.error('[DaRa M1 EA] handlePositionClosed Error:', err));
                                 }
                                 sendStopLossAlert({
                                     type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
@@ -2025,10 +2012,12 @@ setInterval(async () => {
                                 }).catch(console.error);
                             } else {
                                 if (global.daraEngine) {
-                                    global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
-                                    botState.consecutiveLosses = 0;
-                                } else {
-                                    botState.consecutiveLosses = 0;
+                                    global.daraEngine.handlePositionClosed(
+                                        oldTrade.id,
+                                        'TP_HIT',
+                                        Number(oldTrade.floatingProfit || 0),
+                                        oldTrade.currentPrice || botState.goldPrice || 0
+                                    ).catch(err => console.error('[DaRa M1 EA] handlePositionClosed Error:', err));
                                 }
                                 sendTakeProfitAlert({
                                     type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
@@ -2073,7 +2062,13 @@ setInterval(async () => {
                 // SYNC DARA ENGINE STATE (CRITICAL FIX FOR DESYNC BUG)
                 if (global.daraEngine) {
                     const botOnlyPositions = botState.openTrades
-                        .filter((t: any) => t.isBotTrade && t.symbol === primarySymbol)
+                        .filter((t: any) => {
+                            if (global.daraEngine?.getActivePositions()?.some((p: any) => String(p.ticket) === String(t.id))) {
+                                return true;
+                            }
+                            const isGold = (t.symbol && (String(t.symbol).toUpperCase().startsWith('XAU') || String(t.symbol).toUpperCase().startsWith('GOLD')));
+                            return isGold && (t.isBotTrade || Number(t.magicNumber || 0) === botState.magicNumber);
+                        })
                         .map((t: any) => ({
                             ticket: t.id,
                             symbol: t.symbol,
@@ -2510,7 +2505,7 @@ const app = express();
     const isRunning = isDesiredRunning && botState.status !== 'stopped';
     const isEaLoopAlive = (nowMs - (botState.eaHeartbeatTime || 0)) < 120000;
     const isMt5Connected = Boolean(botState.account?.isConnected && botState.account?.serverConnected);
-    const isPriceFresh = Boolean(botState.lastTickTime && (nowMs - botState.lastTickTime) < 65000);
+    const isPriceFresh = Boolean(botState.lastTickTime && (nowMs - botState.lastTickTime) < 45000);
     const isEaRunningConfirmed = isDesiredRunning && isEaLoopAlive;
 
     let connectionState: 'HEALTHY' | 'DISCONNECTED' | 'RECOVERING' | 'BLOCKED_FEED' | 'IDLE' = 'IDLE';
@@ -2525,7 +2520,7 @@ const app = express();
       } else if (!isPriceFresh) {
         connectionState = 'BLOCKED_FEED';
         isEntriesBlocked = true;
-        blockedReason = 'Live Market Feed Offline or Stale (>60s)';
+        blockedReason = 'Live Market Feed Offline or Stale (>45s)';
       } else if (!isEaLoopAlive) {
         connectionState = 'RECOVERING';
         isEntriesBlocked = true;
@@ -2556,6 +2551,7 @@ const app = express();
       lastBackendSyncTime: nowMs,
       runningDurationSeconds,
       connectionState,
+      isPriceFresh,
       currentAnalysisStage: isDesiredRunning ? 'ANALYZING' : 'IDLE',currentWaitingReason: '⏳ WAITING FOR M15 LIQUIDITY SWEEP',isEntriesBlocked,
       blockedReason: blockedReason || undefined,
     };
@@ -3263,18 +3259,18 @@ app.post('/api/bot/action', async (req, res) => {
     const { action, payload } = req.body || {};
 
     if (action === 'select_asset') {
-      botState.selectedAsset = 'XAUUSD';
+      botState.selectedAsset = 'XAUUSDc';
       botState.tickHistory = [];
       botState.signals = { gold: 'WAIT' };
       botState.signalDetails = undefined;
-      botState.statusMessageKhmer = `បានជ្រើសរើស Asset: 🟡 GOLD — XAUUSD (ត្រៀមវិភាគ)`;
+      botState.statusMessageKhmer = `បានជ្រើសរើស Asset: 🟡 GOLD — XAUUSDc (ត្រៀមវិភាគ)`;
       saveBotConfig();
       return res.json({
       serverId: SERVER_INSTANCE_ID,
-      serverBootTime: SERVER_BOOT_TIME, success: true, state: botState, message: `បានកំណត់ Asset ទៅ 🟡 GOLD — XAUUSD` });
+      serverBootTime: SERVER_BOOT_TIME, success: true, state: botState, message: `បានកំណត់ Asset ទៅ 🟡 GOLD — XAUUSDc` });
     } else if (action === 'start') {
-      botState.selectedAsset = 'XAUUSD';
-      const curAssetLabel = '🟡 XAUUSD';
+      botState.selectedAsset = 'XAUUSDc';
+      const curAssetLabel = '🟡 XAUUSDc';
 
       // 1. Mandatory verification: Must be properly connected to a verified Real Account
       if (!botState.account.isConnected || !botState.account.loginId) {
@@ -3331,6 +3327,22 @@ app.post('/api/bot/action', async (req, res) => {
       botState.startRequestedTime = new Date().toISOString();
       if (typeof daraEngine !== 'undefined') {
         daraEngine.start();
+        // Sync any existing broker positions immediately so setup is recovered and duplicate orders are blocked
+        const botPositions = (botState.openTrades || []).filter(t => t.magicNumber === botState.magicNumber || t.isBotTrade);
+        if (botPositions.length > 0) {
+          daraEngine.syncBrokerPositions(botPositions.map(t => ({
+            ticket: String(t.id),
+            symbol: t.symbol || 'XAUUSDc',
+            type: (t.side || 'BUY').toUpperCase() as 'BUY' | 'SELL',
+            lot: t.volume || 0.01,
+            openPrice: t.entryPrice || 0,
+            openTime: new Date(t.openTime || Date.now()).getTime(),
+            sl: t.sl || 0,
+            tp: t.tp || 0,
+            currentPrice: t.currentPrice || t.entryPrice || 0,
+            unrealizedProfit: t.floatingProfit || 0
+          }))).catch(err => console.error('[DaRa M1 EA] Sync Error on Start:', err));
+        }
       }
       botState.currentCycle = botState.currentCycle || 1;
       sendTelegramAlert('BOT STATUS', 'Bot ត្រូវបាន Start', 'ប្រព័ន្ធ Trading កំពុងដំណើរការ (Engine Active)', 0);
@@ -3457,124 +3469,59 @@ app.post('/api/bot/action', async (req, res) => {
          return res.status(400).json({ error: '🔴 Auto-Reconnect បរាជ័យ: ' + (err.message || 'Unknown error') });
       }
     } else if (action === 'close_all') {
-      const botTradesToClose = (botState.openTrades || []).filter(t => t.magicNumber === botState.magicNumber || t.isBotTrade);
-      let totalClosedProfit = 0;
-      let closedCount = 0;
-      const failedTrades: { id: string; error: string }[] = [];
+      // SEMANTICS: STOP DARA BOT ONLY — BLOCK NEW ENTRIES — PRESERVE EXISTING BROKER POSITIONS
+      // STRICTLY FORBIDDEN:
+      // ❌ closeRealTrade()
+      // ❌ closePosition() / closeBasket()
+      // ❌ modifyPosition() to remove SL/TP
+      // ❌ clearing botState.openTrades
+      // ❌ pendingCloseAllBot = true
+      // Broker-side Hard SL/TP remains 100% authoritative at Exness MT5
 
-      if (botTradesToClose.length > 0 || (botState.currentTrade && botState.currentTrade.magicNumber === botState.magicNumber)) {
-        const allBotTrades = [...botTradesToClose];
-        if (botState.currentTrade && botState.currentTrade.magicNumber === botState.magicNumber && !allBotTrades.some(t => t.id === botState.currentTrade?.id)) {
-          allBotTrades.push(botState.currentTrade);
-        }
-
-        pendingCloseAllBot = true;
-
-        for (const trade of allBotTrades) {
-          if (trade.id && trade.id !== 'PENDING') {
-            pendingCloseTickets.push(String(trade.id));
-            const closeResult = await closeRealTrade(trade.id);
-            if (!closeResult.success && botState.account.metaApiAccountId) {
-              failedTrades.push({ id: String(trade.id), error: closeResult.error || 'Server rejected order' });
-              continue;
-            }
-          }
-          totalClosedProfit += (trade.floatingProfit || 0);
-          closedCount++;
-        }
-
-        if (failedTrades.length > 0 && closedCount === 0) {
-          return res.status(400).json({
-            error: `🔴 CLOSE ALL FAILED លើ Real MT5: ${failedTrades.map(f => `Ticket ${f.id}: ${f.error}`).join(', ')}`
-          });
-        }
-
-        botState.todayProfitLoss = Number((botState.todayProfitLoss + totalClosedProfit).toFixed(2));
-        botState.account.balance = Number((botState.account.balance + totalClosedProfit).toFixed(2));
-        botState.account.equity = botState.account.balance;
-        botState.todayTradeCount += closedCount;
-        if (totalClosedProfit >= 0) botState.todayWinCount += closedCount;
-        else botState.todayLossCount += closedCount;
-      }
-
-      // Always block new entries and transition state to stopped after Close All
+      // Always block new entries and transition state to stopped
       botState.desiredBotState = 'STOPPED';
       botState.status = 'stopped';
       botState.isStartRequested = false;
       botState.startConfirmedTime = null;
-      botState.currentTrade = null;
       botState.signals = { gold: 'WAIT' };
       botState.signalDetails = undefined;
-      
-      
-      
 
-      // Keep ONLY manual trades (Magic Number != 778899)
-      botState.openTrades = (botState.openTrades || []).filter(t => t.magicNumber !== botState.magicNumber && !t.isBotTrade);
-
-      if (closedCount > 0) {
-        botState.statusMessageKhmer = `🔴 ALL TRADES CLOSED — បានបិទ ${closedCount} Positions របស់ Bot លើ MT5 រួចរាល់ — ផ្អាកបើក Trade ថ្មីរហូតដល់ចុច START ឡើងវិញ`;
-      } else {
-        botState.statusMessageKhmer = `🔴 ALL TRADES CLOSED — គ្មាន Position របស់ Bot នៅសល់ទេ — ផ្អាកបើក Trade ថ្មីរហូតដល់ចុច START ឡើងវិញ`;
-      }
-
+      // Stop DaRa M1 Engine (cancels pending unexecuted setups, preserves active trades)
       if (typeof daraEngine !== 'undefined') {
-        daraEngine.forceCloseAllAndStop();
+        daraEngine.stop();
       }
-      sendTelegramAlert('BOT STATUS', 'ALL BOT TRADES CLOSED', `បានបិទរាល់ Position របស់ Bot (${closedCount} Trades) — 🚫 Block New Entries រួចរាល់`, 0);
-      saveBotConfig();
-      return res.json({
-      serverId: SERVER_INSTANCE_ID,
-      serverBootTime: SERVER_BOOT_TIME, success: true, message: botState.statusMessageKhmer, state: botState, closedCount });
-    } else if (action === 'close_single') {
-      const targetTradeId = payload?.tradeId;
-      let targetTrade = null;
 
-      if (targetTradeId) {
-        targetTrade = (botState.openTrades || []).find(t => String(t.id) === String(targetTradeId)) ||
-                      (botState.currentTrade && String(botState.currentTrade.id) === String(targetTradeId) ? botState.currentTrade : null);
+      // Preserve existing positions!
+      const activeBotTrades = (botState.openTrades || []).filter(t => t.magicNumber === botState.magicNumber || t.isBotTrade);
+      const activeCount = activeBotTrades.length;
+
+      if (activeCount > 0) {
+        botState.statusMessageKhmer = `🔴 STOP = បញ្ឈប់ Bot ប៉ុណ្ណោះ — រារាំង Trade ថ្មី — មាន ${activeCount} Position កំពុងបន្តដំណើរការលើ MT5 (Broker SL/TP នៅដដែល)`;
       } else {
-        targetTrade = botState.currentTrade || (botState.openTrades && botState.openTrades[0]) || null;
+        botState.statusMessageKhmer = `🔴 STOP = បញ្ឈប់ Bot ប៉ុណ្ណោះ — រារាំង Trade ថ្មី (គ្មាន Active Position លើ MT5 ទេ)`;
       }
 
-      if (!targetTrade) {
-        return res.status(400).json({ error: '⚠️ មិនមាន Trade ណាមួយសម្រាប់បិទឡើយ (No Active Position Found)' });
-      }
+      sendTelegramAlert(
+        'BOT STATUS',
+        'CLOSE ALL TRADES = STOP BOT ONLY',
+        `🛑 DaRa Bot ត្រូវបាន STOP — 🚫 Block New Entries រួចរាល់។ ${activeCount > 0 ? `🛡️ Position ចំនួន ${activeCount} លើ Exness MT5 នៅតែបើកដំណើរការធម្មតា និងការពារដោយ Broker Hard SL/TP។` : 'គ្មាន Position បើកលើ MT5 ឡើយ។'}`,
+        0
+      );
 
-      // Check if target is a manual trade (Magic Number != 778899 and isBotTrade is false)
-      if (targetTrade.magicNumber && targetTrade.magicNumber !== botState.magicNumber && !targetTrade.isBotTrade) {
-        return res.status(400).json({ error: `🛡️ Manual Trade (Ticket: ${targetTrade.id}) ត្រូវបានការពារ — Bot មិនអនុញ្ញាតឱ្យបិទ Manual Trade ឡើយ` });
-      }
-
-      const closedProfit = targetTrade.floatingProfit || 0;
-      const tradeId = targetTrade.id;
-      
-      if (tradeId && tradeId !== 'PENDING') {
-         pendingCloseTickets.push(String(tradeId));
-         const closeResult = await closeRealTrade(tradeId);
-         if (!closeResult.success && botState.account.metaApiAccountId) {
-           return res.status(400).json({
-             error: `🔴 CLOSE SINGLE FAILED លើ Real MT5 (Ticket: ${tradeId}): ${closeResult.error || 'Server rejected order'}`
-           });
-         }
-      }
-
-      botState.todayProfitLoss = Number((botState.todayProfitLoss + closedProfit).toFixed(2));
-      botState.account.balance = Number((botState.account.balance + closedProfit).toFixed(2));
-      botState.account.equity = botState.account.balance;
-      botState.todayTradeCount += 1;
-      if (closedProfit >= 0) botState.todayWinCount += 1;
-      else botState.todayLossCount += 1;
-
-      // Remove only this specific trade from openTrades
-      botState.openTrades = (botState.openTrades || []).filter(t => String(t.id) !== String(tradeId));
-      botState.currentTrade = botState.openTrades[0] || null;
-
-      botState.statusMessageKhmer = `✅ បានបិទ Position #${tradeId} ដោយជោគជ័យ (P/L: ${closedProfit >= 0 ? '+' : ''}${closedProfit.toFixed(2)} ${botState.account.currency})`;
       saveBotConfig();
       return res.json({
-      serverId: SERVER_INSTANCE_ID,
-      serverBootTime: SERVER_BOOT_TIME, success: true, message: botState.statusMessageKhmer, state: botState });
+        serverId: SERVER_INSTANCE_ID,
+        serverBootTime: SERVER_BOOT_TIME,
+        success: true,
+        message: botState.statusMessageKhmer,
+        state: botState,
+        closedCount: 0
+      });
+    } else if (action === 'close_single') {
+      // Manual individual trade close is disabled — Broker-side Hard SL/TP is authoritative
+      return res.status(400).json({
+        error: '🛡️ ការបិទ Trade ដោយផ្ទាល់ត្រូវបានបិទ — Exness Broker Hard SL/TP ជាអ្នកគ្រប់គ្រង Authoritative។'
+      });
     } else if (action === 'toggle_connection') {
       botState.account.isConnected = !botState.account.isConnected;
       botState.account.serverConnected = botState.account.isConnected;
@@ -3627,32 +3574,6 @@ app.post('/api/bot/action', async (req, res) => {
   });
 
   
-  app.post('/api/bot/reset-cooldown', requireAdminAuth, (req, res) => {
-    if (global.daraEngine && typeof global.daraEngine.clearCooldown === 'function') {
-      global.daraEngine.clearCooldown();
-    }
-    // Resume scanning if paused by this
-    if (botState.status === 'paused' || botState.statusMessageKhmer?.includes('Cooldown')) {
-        botState.status = 'running';
-        botState.statusMessageKhmer = 'បានដកការការពារ Cooldown រួចរាល់។ (Bot Resumed)';
-    }
-    console.log('[LIVE_BACKEND] [AUDIT] Cooldown explicitly reset by authorized user/admin.');
-    res.json({ success: true, message: 'Cooldown cleared. Bot is resuming scanning.' });
-  });
-
-  app.post('/api/bot/reset-consecutive-sl', requireAdminAuth, (req, res) => {
-    if (global.daraEngine && typeof global.daraEngine.clearConsecutiveSL === 'function') {
-      global.daraEngine.clearConsecutiveSL();
-    }
-    botState.consecutiveLosses = 0;
-    if (botState.status === 'paused' || botState.statusMessageKhmer?.includes('Max Consecutive')) {
-        botState.status = 'running';
-        botState.statusMessageKhmer = 'បានដកការការពារ Max Consecutive SL រួចរាល់។ (Bot Resumed)';
-    }
-    console.log('[LIVE_BACKEND] [AUDIT] Consecutive SL explicitly reset by authorized user/admin.');
-    res.json({ success: true, message: 'Consecutive SL counter reset to 0. Bot is resuming scanning.' });
-  });
-
   app.post('/api/bot/reset-daily-loss', requireAdminAuth, (req, res) => {
     if (global.daraEngine && typeof global.daraEngine.clearDailyLossLimit === 'function') {
       global.daraEngine.clearDailyLossLimit();
@@ -3757,7 +3678,6 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.maxSpreadPoints !== undefined) botState.riskConfig.maxSpreadPoints = Number(riskConfig.maxSpreadPoints);
       if (riskConfig.stopLossPips !== undefined) botState.riskConfig.stopLossPips = Number(riskConfig.stopLossPips);
       if (riskConfig.takeProfitPips !== undefined) botState.riskConfig.takeProfitPips = Number(riskConfig.takeProfitPips);
-      if (riskConfig.trailingStopEnabled !== undefined) botState.riskConfig.trailingStopEnabled = Boolean(riskConfig.trailingStopEnabled);
       if (riskConfig.entryDistance !== undefined) {
         const parsedDist = Number(riskConfig.entryDistance);
         botState.riskConfig.entryDistance = isNaN(parsedDist) || parsedDist < 0 ? 0.5 : parsedDist;
@@ -3768,7 +3688,6 @@ app.post('/api/bot/action', async (req, res) => {
       if (riskConfig.candleMinScoreRequired !== undefined) {
         botState.riskConfig.candleMinScoreRequired = Number(riskConfig.candleMinScoreRequired);
       }
-      if (riskConfig.trailingDistance !== undefined) botState.riskConfig.trailingDistance = Number(riskConfig.trailingDistance);
       if (riskConfig.maxOpenTrades !== undefined || riskConfig.positionsPerSetup !== undefined || riskConfig.entriesPerSignal !== undefined) {
         const rawPos = Number(riskConfig.positionsPerSetup ?? riskConfig.maxOpenTrades ?? riskConfig.entriesPerSignal ?? botState.riskConfig.maxOpenTrades ?? 1);
         const posLimit = isNaN(rawPos) ? 1 : Math.max(1, Math.min(5, Math.floor(rawPos)));
@@ -3776,8 +3695,6 @@ app.post('/api/bot/action', async (req, res) => {
         botState.riskConfig.entriesPerSignal = posLimit;
         botState.riskConfig.positionsPerSetup = posLimit;
       }
-      if (riskConfig.maxConsecutiveLosses !== undefined) botState.riskConfig.maxConsecutiveLosses = Number(riskConfig.maxConsecutiveLosses);
-      if (riskConfig.cooldownMinutes !== undefined) botState.riskConfig.cooldownMinutes = Number(riskConfig.cooldownMinutes);
       if (riskConfig.maxDailyLossPercent !== undefined) botState.riskConfig.maxDailyLossPercent = Number(riskConfig.maxDailyLossPercent);
       if (riskConfig.maxDailyLossAmount !== undefined) botState.riskConfig.maxDailyLossAmount = Number(riskConfig.maxDailyLossAmount);
       
@@ -3794,8 +3711,6 @@ app.post('/api/bot/action', async (req, res) => {
               maxOpenTrades: botState.riskConfig.maxOpenTrades,
               positionsPerSetup: botState.riskConfig.positionsPerSetup,
               entriesPerSignal: botState.riskConfig.entriesPerSignal,
-              maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses,
-              cooldownMinutes: botState.riskConfig.cooldownMinutes,
               maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
               newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
               entryDistance: botState.riskConfig.entryDistance,
@@ -3851,8 +3766,6 @@ app.post('/api/bot/action', async (req, res) => {
               maxOpenTrades: botState.riskConfig.maxOpenTrades,
               positionsPerSetup: botState.riskConfig.positionsPerSetup,
               entriesPerSignal: botState.riskConfig.entriesPerSignal,
-              maxConsecutiveSL: botState.riskConfig.maxConsecutiveLosses,
-              cooldownMinutes: botState.riskConfig.cooldownMinutes,
               maxSpreadPoints: botState.riskConfig.maxSpreadPoints,
               newsFilterEnabled: botState.riskConfig.newsFilterEnabled,
               entryDistance: botState.riskConfig.entryDistance,
@@ -4109,10 +4022,12 @@ app.post('/api/bot/action', async (req, res) => {
                   tradeClosed2 = true;
                   if (oldTrade.floatingProfit < 0) {
                       if (global.daraEngine) {
-                          global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
-                          botState.consecutiveLosses = global.daraEngine.getTelemetry().consecutiveLossCount;
-                      } else {
-                          botState.consecutiveLosses = (botState.consecutiveLosses || 0) + 1;
+                          global.daraEngine.handlePositionClosed(
+                              oldTrade.id,
+                              'SL_HIT',
+                              Number(oldTrade.floatingProfit || 0),
+                              oldTrade.currentPrice || botState.goldPrice || 0
+                          ).catch(err => console.error('[DaRa M1 EA] handlePositionClosed Error:', err));
                       }
                       sendStopLossAlert({
                           type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
@@ -4126,10 +4041,12 @@ app.post('/api/bot/action', async (req, res) => {
                       }).catch(console.error);
                   } else {
                       if (global.daraEngine) {
-                          global.daraEngine.recordRealTradeResult(Number(oldTrade.floatingProfit || 0));
-                          botState.consecutiveLosses = 0;
-                      } else {
-                          botState.consecutiveLosses = 0;
+                          global.daraEngine.handlePositionClosed(
+                              oldTrade.id,
+                              'TP_HIT',
+                              Number(oldTrade.floatingProfit || 0),
+                              oldTrade.currentPrice || botState.goldPrice || 0
+                          ).catch(err => console.error('[DaRa M1 EA] handlePositionClosed Error:', err));
                       }
                       sendTakeProfitAlert({
                           type: (oldTrade.side === 'BUY' || oldTrade.side === 'SELL') ? oldTrade.side : 'BUY',
@@ -4173,6 +4090,33 @@ app.post('/api/bot/action', async (req, res) => {
         };
       });
       botState.currentTrade = botState.openTrades[0] || null;
+
+      // Sync DaRa Engine with latest MT5 positions
+      if (global.daraEngine) {
+        const botOnlyPositions = botState.openTrades
+          .filter((t: any) => {
+            if (global.daraEngine?.getActivePositions()?.some((p: any) => String(p.ticket) === String(t.id))) {
+              return true;
+            }
+            const isGold = (t.symbol && (String(t.symbol).toUpperCase().startsWith('XAU') || String(t.symbol).toUpperCase().startsWith('GOLD')));
+            return isGold && (t.isBotTrade || Number(t.magicNumber || 0) === botState.magicNumber);
+          })
+          .map((t: any) => ({
+            ticket: t.id,
+            symbol: t.symbol,
+            type: t.side,
+            lot: t.lot,
+            openPrice: t.entryPrice,
+            currentPrice: t.currentPrice,
+            sl: t.sl,
+            tp: t.tp,
+            unrealizedProfit: t.floatingProfit,
+            commission: t.commission,
+            swap: t.swap,
+            openTime: t.openedAt ? new Date().getTime() : Date.now()
+          }));
+        global.daraEngine.syncBrokerPositions(botOnlyPositions).catch(err => console.error('[DaRa M1 EA] Sync Error in MT5 sync:', err));
+      }
 
       // Auto New Cycle if all trades close
       if (prevBotCount > 0 && botState.openTrades.length === 0 && botState.status === 'running' && botState.isInsideTradingHours) {

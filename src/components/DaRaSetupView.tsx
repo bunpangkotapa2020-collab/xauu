@@ -16,7 +16,11 @@ import {
   Eye,
   Wifi,
   Layers,
-  Sparkles
+  Sparkles,
+  Target,
+  Circle,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 interface DaRaSetupViewProps {
@@ -52,22 +56,27 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
   const dailyLossCurrent = telemetry?.dailyLossAccumulated ?? ((state as any).dailyLoss || 0);
   const maxTrades = Math.max(1, Math.min(5, Math.floor(userSettings.maxOpenTrades || 5)));
   const openTradesCount = state.openTrades?.length || 0;
-  const maxConsecutiveSL = userSettings.maxConsecutiveSL || 3;
-  const consecutiveLosses = telemetry?.consecutiveLossCount ?? state.consecutiveLosses ?? 0;
-  const isCooldown = safety?.isInCooldown ?? Boolean(state.cooldownUntil && Date.now() < state.cooldownUntil);
   const isNewsBlocked = safety?.isNewsBlocked ?? Boolean((state?.account as any)?.newsBlockedStatus);
   const isMt5Connected = Boolean(state?.account?.serverConnected || state?.account?.isConnected);
-  const isRunning = state.status === 'running' || state.desiredBotState === 'RUNNING';
+  
+  // 1.1 Intent-Based Status Calculation
+  const desiredRunning = state.desiredBotState === 'RUNNING';
+  const isPriceFresh = Boolean(state.startConfirmation?.isPriceFresh);
+  const isEaRunning = Boolean(state.startConfirmation?.eaRunning);
+  
+  const isRunning = desiredRunning; // Intent is running
+  const isInitialStartup = desiredRunning && !state.lastTickTime;
+  const isBotReconnecting = desiredRunning && !isMt5Connected;
 
-  // 2. Exact 9 Safety Guard Evaluation (Bilingual Khmer & English)
+  // 2. Exact Safety Guard Evaluation (Bilingual Khmer & English)
   const safetyGuards = [
     {
       id: 'bot_status',
       nameKh: 'ស្ថានភាព Bot',
       nameEn: 'Bot Status',
-      passed: isRunning,
-      detailKh: isRunning ? 'ដំណើរការ ២៤/៧' : 'បានបញ្ឈប់ដោយអ្នកប្រើ',
-      detailEn: isRunning ? 'Running 24/7' : 'Stopped by User',
+      passed: desiredRunning,
+      detailKh: !desiredRunning ? 'បានបញ្ឈប់ដោយអ្នកប្រើ (Stopped)' : isInitialStartup ? 'កំពុងចាប់ផ្តើម (Starting...)' : isBotReconnecting ? 'កំពុងភ្ជាប់ឡើងវិញ (Reconnecting...)' : 'ដំណើរការ ២៤/៧ (Running 24/7)',
+      detailEn: !desiredRunning ? 'Stopped by User' : isInitialStartup ? 'Starting...' : isBotReconnecting ? 'Reconnecting...' : 'Running 24/7',
       critical: true
     },
     {
@@ -75,8 +84,17 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       nameKh: 'ការភ្ជាប់ MT5',
       nameEn: 'MT5 Connection',
       passed: isMt5Connected,
-      detailKh: isMt5Connected ? 'បានភ្ជាប់ Server & Terminal' : 'ដាច់ការភ្ជាប់ MT5',
-      detailEn: isMt5Connected ? 'Connected' : 'Disconnected',
+      detailKh: isMt5Connected ? 'បានភ្ជាប់ (CONNECTED)' : 'ដាច់ការភ្ជាប់ (DISCONNECTED)',
+      detailEn: isMt5Connected ? 'CONNECTED' : 'DISCONNECTED',
+      critical: true
+    },
+    {
+      id: 'market_data',
+      nameKh: 'ទិន្នន័យទីផ្សារ',
+      nameEn: 'Market Data',
+      passed: isPriceFresh,
+      detailKh: isPriceFresh ? 'ផ្សាយផ្ទាល់ (LIVE)' : 'រអាក់រអួល (STALE)',
+      detailEn: isPriceFresh ? 'LIVE' : 'STALE',
       critical: true
     },
     {
@@ -85,11 +103,11 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       nameEn: 'Spread Guard',
       passed: currentSpread <= maxSpread,
       detailKh: currentSpread <= maxSpread 
-        ? `Spread {currentSpread} ≤ កំណត់ {maxSpread} pts` 
-        : `Spread {currentSpread} > កំណត់ {maxSpread} pts (លើស)`,
+        ? `Spread ${currentSpread} ≤ កំណត់ ${maxSpread} pts` 
+        : `Spread ${currentSpread} > កំណត់ ${maxSpread} pts (លើស)`,
       detailEn: currentSpread <= maxSpread 
-        ? `Spread {currentSpread} ≤ Max {maxSpread} pts` 
-        : `Spread {currentSpread} > Max {maxSpread} pts`,
+        ? `Spread ${currentSpread} ≤ Max ${maxSpread} pts` 
+        : `Spread ${currentSpread} > Max ${maxSpread} pts`,
       critical: true
     },
     {
@@ -97,8 +115,8 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       nameKh: 'កំណត់ខាតប្រចាំថ្ងៃ',
       nameEn: 'Daily Loss Limit',
       passed: !safety?.isDailyLossHit && dailyLossCurrent < dailyLossLimit,
-      detailKh: `ខាត {dailyLossCurrent.toFixed(2)} / កំណត់ {dailyLossLimit.toFixed(2)}`,
-      detailEn: `Loss {dailyLossCurrent.toFixed(2)} / Limit {dailyLossLimit.toFixed(2)}`,
+      detailKh: `ខាត ${dailyLossCurrent.toFixed(2)} / កំណត់ ${dailyLossLimit.toFixed(2)}`,
+      detailEn: `Loss ${dailyLossCurrent.toFixed(2)} / Limit ${dailyLossLimit.toFixed(2)}`,
       critical: true
     },
     {
@@ -106,26 +124,8 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       nameKh: 'ចំនួន Trade អតិបរមា',
       nameEn: 'Max Open Trades',
       passed: openTradesCount < maxTrades,
-      detailKh: `សកម្ម: {openTradesCount} / កំណត់: {maxTrades}`,
-      detailEn: `Active: {openTradesCount} / Max: {maxTrades}`,
-      critical: false
-    },
-    {
-      id: 'consecutive_sl',
-      nameKh: 'កំណត់ SL ជាប់គ្នា',
-      nameEn: 'Max Consecutive SL',
-      passed: consecutiveLosses < maxConsecutiveSL,
-      detailKh: `SL ជាប់គ្នា: {consecutiveLosses} / កំណត់: {maxConsecutiveSL}`,
-      detailEn: `Streak: {consecutiveLosses} / Max: {maxConsecutiveSL}`,
-      critical: false
-    },
-    {
-      id: 'cooldown',
-      nameKh: 'សម្រាកក្រោយខាត',
-      nameEn: 'Loss Cooldown',
-      passed: !isCooldown,
-      detailKh: !isCooldown ? 'គ្មាន Cooldown (ប្រក្រតី)' : 'កំពុងសម្រាកក្រោយ SL',
-      detailEn: !isCooldown ? 'No Cooldown' : 'Cooldown Active',
+      detailKh: `សកម្ម: ${openTradesCount} / កំណត់: ${maxTrades}`,
+      detailEn: `Active: ${openTradesCount} / Max: ${maxTrades}`,
       critical: false
     },
     {
@@ -149,16 +149,14 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
   ];
 
   // Derive overall blocked status & reason (Bilingual Khmer & English)
-  const isEntryBlocked = !isRunning || !isMt5Connected || currentSpread > maxSpread || dailyLossCurrent >= dailyLossLimit || openTradesCount >= maxTrades || consecutiveLosses >= maxConsecutiveSL || isCooldown || isNewsBlocked;
+  const isEntryBlocked = !isRunning || !isMt5Connected || currentSpread > maxSpread || dailyLossCurrent >= dailyLossLimit || openTradesCount >= maxTrades || isNewsBlocked;
   let blockedReason = safety?.blockedReason;
   if (!blockedReason) {
     if (!isRunning) blockedReason = 'Bot ត្រូវបានបញ្ឈប់ដោយអ្នកប្រើប្រាស់ • EA Engine Stopped by User';
     else if (!isMt5Connected) blockedReason = 'ដាច់ការភ្ជាប់ MT5 Server • MT5 Server Disconnected';
-    else if (currentSpread > maxSpread) blockedReason = `Spread លើសកំណត់ ({currentSpread} > {maxSpread} pts) • Spread Exceeds Limit`;
-    else if (dailyLossCurrent >= dailyLossLimit) blockedReason = `ដល់កំណត់ខាតប្រចាំថ្ងៃ ({dailyLossCurrent.toFixed(2)} >= {dailyLossLimit.toFixed(2)}) • Daily Loss Hit`;
-    else if (openTradesCount >= maxTrades) blockedReason = `ដល់កំណត់ចំនួន Position ក្នុងមួយ Setup ({openTradesCount}/{maxTrades}) • Max Positions Per Setup Reached`;
-    else if (consecutiveLosses >= maxConsecutiveSL) blockedReason = `ដល់កំណត់ SL ជាប់គ្នា ({consecutiveLosses}/{maxConsecutiveSL}) • Max Consecutive SL Reached`;
-    else if (isCooldown) blockedReason = 'កំពុងសម្រាកក្រោយ SL (Loss Cooldown Active) • Loss Cooldown in Effect';
+    else if (currentSpread > maxSpread) blockedReason = `Spread លើសកំណត់ (${currentSpread} > ${maxSpread} pts) • Spread Exceeds Limit`;
+    else if (dailyLossCurrent >= dailyLossLimit) blockedReason = `ដល់កំណត់ខាតប្រចាំថ្ងៃ (${dailyLossCurrent.toFixed(2)} >= ${dailyLossLimit.toFixed(2)}) • Daily Loss Hit`;
+    else if (openTradesCount >= maxTrades) blockedReason = `ដល់កំណត់ចំនួន Position ក្នុងមួយ Setup (${openTradesCount}/${maxTrades}) • Max Positions Per Setup Reached`;
     else if (isNewsBlocked) blockedReason = 'ស្ថិតក្នុងម៉ោងព័ត៌មានសេដ្ឋកិច្ចធំ (High Impact News Window Active)';
   }
 
@@ -212,7 +210,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
     },
     {
       time: new Date().toLocaleTimeString('en-GB'),
-      msg: `[DaRa M1 EA v1.0] តាមដានទីផ្សារ M1 លើ Exness XAUUSD USC (M1 Market Scanning Active)`,
+      msg: `[DaRa M1 EA v1.0] តាមដានទីផ្សារ M1 លើ Exness XAUUSDc USC (M1 Market Scanning Active)`,
       type: 'Setup',
       level: 'info'
     }
@@ -226,6 +224,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
   const prevSetupIdRef = useRef(setup?.id);
   const prevBlockedRef = useRef(isEntryBlocked);
   const prevActiveTradeRef = useRef(Boolean(activeTrade));
+  const prevAnomalyRef = useRef(false);
 
   useEffect(() => {
     const time = new Date().toLocaleTimeString('en-GB');
@@ -233,6 +232,14 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
     const addLog = (msg: string, type: LogEntry['type'], level: LogEntry['level'] = 'info') => {
       setLogs(prev => [{ time, msg, type, level }, ...prev].slice(0, 150));
     };
+
+    // Anomaly detection
+    if (setup?.isAnomaly && !prevAnomalyRef.current) {
+      addLog(`[DaRa M1 EA v1.0] 🚨 POSITION LIMIT ANOMALY DETECTED: Broker reports positions exceeding user limit. NEW ENTRIES BLOCKED.`, 'System', 'error');
+      prevAnomalyRef.current = true;
+    } else if (!setup?.isAnomaly) {
+      prevAnomalyRef.current = false;
+    }
 
     // Step change logs
     if (currentStep !== prevStepRef.current) {
@@ -254,7 +261,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       if (isEntryBlocked) {
         addLog(`[DaRa M1 EA v1.0] 🔴 ប្រព័ន្ធសុវត្ថិភាពរារាំង (Safety Guard Active): ${blockedReason}`, 'Safety', 'warn');
       } else {
-        addLog(`[DaRa M1 EA v1.0] 🟢 សុវត្ថិភាពទាំង ៩ ចំណុចឆ្លងកាត់ទាំងអស់ — អនុញ្ញាតឱ្យចូល Order (All 9 Guards Passed)`, 'Safety', 'success');
+        addLog(`[DaRa M1 EA v1.0] 🟢 សុវត្ថិភាពឆ្លងកាត់ទាំងអស់ — អនុញ្ញាតឱ្យចូល Order (All Safety Guards Passed)`, 'Safety', 'success');
       }
       prevBlockedRef.current = isEntryBlocked;
     }
@@ -328,7 +335,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
 
               </div>
               <p className="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed">
-                ប្រព័ន្ធជួញដូរមាស M1 DaRa ស្វ័យប្រវត្ត • Autonomous DaRa Execution Cycle for Gold (XAUUSD) • Exness MT5
+                ប្រព័ន្ធជួញដូរមាស M1 DaRa ស្វ័យប្រវត្ត • Autonomous DaRa Execution Cycle for Gold (XAUUSDc) • Exness MT5
               </p>
             </div>
           </div>
@@ -336,25 +343,33 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
           {/* Right: Engine Status Badge */}
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full xl:w-auto justify-start xl:justify-end">
             <div className={`px-4 py-2 rounded-xl border font-mono text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm whitespace-nowrap transition-colors ${
-              !isRunning 
+              !desiredRunning 
                 ? 'bg-rose-950/40 border-rose-600/40 text-rose-400' 
-                : isEntryBlocked 
-                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-300' 
-                  : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                : (isInitialStartup || isBotReconnecting)
+                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                  : isEntryBlocked 
+                    ? 'bg-amber-950/40 border-amber-500/40 text-amber-300' 
+                    : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
             }`}>
               <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                !isRunning 
+                !desiredRunning 
                   ? 'bg-rose-500' 
-                  : isEntryBlocked 
-                    ? 'bg-amber-400 animate-ping' 
-                    : 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]'
+                  : (isInitialStartup || isBotReconnecting)
+                    ? 'bg-amber-500 animate-pulse'
+                    : isEntryBlocked 
+                      ? 'bg-amber-400 animate-ping' 
+                      : 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]'
               }`}></span>
               <span>
-                {!isRunning 
-                  ? 'ម៉ាស៊ីន: បានបញ្ឈប់ (STOPPED)' 
-                  : isEntryBlocked 
-                    ? 'ម៉ាស៊ីន: ផ្អាកបណ្តោះអាសន្ន (PAUSED)' 
-                    : 'ម៉ាស៊ីន: កំពុងដំណើរការ (RUNNING 24/7)'}
+                {!desiredRunning 
+                  ? 'ម៉ាស៊ីន: បានបញ្ឈប់ (BOT STOPPED)' 
+                  : isInitialStartup
+                    ? 'ម៉ាស៊ីន: កំពុងចាប់ផ្តើម (BOT STARTING...)'
+                    : isBotReconnecting
+                      ? 'ម៉ាស៊ីន: កំពុងភ្ជាប់ឡើងវិញ (BOT RUNNING / RECONNECTING)'
+                      : isEntryBlocked 
+                        ? 'ម៉ាស៊ីន: ដំណើរការ (BOT RUNNING - ENTRY BLOCKED)' 
+                        : 'ម៉ាស៊ីន: កំពុងដំណើរការ (BOT RUNNING)'}
               </span>
             </div>
 
@@ -378,19 +393,19 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
             </div>
             <div className={`text-xs sm:text-sm font-bold font-mono flex items-center gap-2 ${isMt5Connected ? 'text-emerald-400' : 'text-rose-400'}`}>
               <span className={`w-2 h-2 rounded-full shrink-0 ${isMt5Connected ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-rose-500'}`}></span>
-              <span>{isMt5Connected ? 'ភ្ជាប់ជោគជ័យ (CONNECTED)' : 'ដាច់ការភ្ជាប់ (OFFLINE)'}</span>
+              <span>{isMt5Connected ? 'ភ្ជាប់ (CONNECTED)' : 'ដាច់ការភ្ជាប់ (DISCONNECTED)'}</span>
             </div>
           </div>
 
-          {/* Card 2: Tick Stream */}
+          {/* Card 2: Market Data */}
           <div className="bg-slate-900/70 border border-slate-800/80 p-3.5 rounded-xl flex flex-col justify-between hover:border-slate-700/80 transition-all min-h-[78px]">
             <div className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-1.5 font-medium mb-1.5">
-              <Zap className={`w-4 h-4 shrink-0 ${state.account?.marketDataReceiving ? 'text-amber-400' : 'text-slate-500'}`} />
-              <span>ចរន្តតម្លៃ (Tick Stream)</span>
+              <Zap className={`w-4 h-4 shrink-0 ${isPriceFresh ? 'text-amber-400' : 'text-slate-500'}`} />
+              <span>ទិន្នន័យទីផ្សារ (Market Data)</span>
             </div>
-            <div className={`text-xs sm:text-sm font-bold font-mono flex items-center gap-2 ${state.account?.marketDataReceiving ? 'text-amber-300' : 'text-rose-400'}`}>
-              <span className={`w-2 h-2 rounded-full shrink-0 ${state.account?.marketDataReceiving ? 'bg-amber-400 animate-ping' : 'bg-rose-500'}`}></span>
-              <span>{state.account?.marketDataReceiving ? 'កំពុងទទួល (RECEIVING)' : 'រអាក់រអួល (STALE)'}</span>
+            <div className={`text-xs sm:text-sm font-bold font-mono flex items-center gap-2 ${isPriceFresh ? 'text-amber-300' : 'text-rose-400'}`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isPriceFresh ? 'bg-amber-400 animate-ping' : 'bg-rose-500'}`}></span>
+              <span>{isPriceFresh ? 'ផ្សាយផ្ទាល់ (LIVE)' : 'រអាក់រអួល (STALE)'}</span>
             </div>
           </div>
 
@@ -439,12 +454,12 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
 
         {/* Live M1 Candle Breakdown */}
         {analysis?.currentCandle && (
-          <div className={`mt-3 p-3 bg-slate-950/80 border ${state.account?.marketDataReceiving ? 'border-slate-800/70' : 'border-rose-900/50'} rounded-xl text-xs font-mono flex flex-wrap items-center justify-between gap-2.5 ${state.account?.marketDataReceiving ? 'text-slate-300' : 'text-slate-500'}`}>
-            <span className={`uppercase text-[11px] tracking-wider font-sans font-bold flex items-center gap-1.5 ${state.account?.marketDataReceiving ? 'text-slate-400' : 'text-rose-400'}`}>
-              <Eye className={`w-3.5 h-3.5 shrink-0 ${state.account?.marketDataReceiving ? 'text-cyan-400' : 'text-rose-500'}`} />
-              {state.account?.marketDataReceiving ? 'ទៀន M1 កំពុងរត់ (Active M1 Candle):' : 'ទៀន M1 បង្កក (STALE M1 CANDLE):'}
+          <div className={`mt-3 p-3 bg-slate-950/80 border ${isPriceFresh ? 'border-slate-800/70' : 'border-rose-900/50'} rounded-xl text-xs font-mono flex flex-wrap items-center justify-between gap-2.5 ${isPriceFresh ? 'text-slate-300' : 'text-slate-500'}`}>
+            <span className={`uppercase text-[11px] tracking-wider font-sans font-bold flex items-center gap-1.5 ${isPriceFresh ? 'text-slate-400' : 'text-rose-400'}`}>
+              <Eye className={`w-3.5 h-3.5 shrink-0 ${isPriceFresh ? 'text-cyan-400' : 'text-rose-500'}`} />
+              {isPriceFresh ? 'ទៀន M1 កំពុងរត់ (Active M1 Candle):' : 'ទៀន M1 បង្កក (STALE M1 CANDLE):'}
             </span>
-            <div className={`flex flex-wrap items-center gap-3 sm:gap-4 text-xs ${state.account?.marketDataReceiving ? '' : 'opacity-50 grayscale'}`}>
+            <div className={`flex flex-wrap items-center gap-3 sm:gap-4 text-xs ${isPriceFresh ? '' : 'opacity-50 grayscale'}`}>
               <span>O: <span className={state.account?.marketDataReceiving ? "text-white font-bold" : ""}>{analysis.currentCandle.open.toString()}</span></span>
               <span>H: <span className={state.account?.marketDataReceiving ? "text-emerald-400 font-bold" : ""}>{analysis.currentCandle.high.toString()}</span></span>
               <span>L: <span className={state.account?.marketDataReceiving ? "text-rose-400 font-bold" : ""}>{analysis.currentCandle.low.toString()}</span></span>
@@ -460,17 +475,17 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 2: 🔥 DARA LIVE SETUP FLOW (9 DISCIPLINED STEPS - BILINGUAL)       */}
+      {/* SECTION 2: 🔥 DARA LIVE SETUP FLOW (10 DISCIPLINED STEPS - BILINGUAL)      */}
       {/* ========================================================================= */}
       <div id="dara-setup-flow" className="bg-[#0B101A] border border-slate-800/90 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-slate-800/80">
           <div>
             <h2 className="text-sm sm:text-base font-bold text-white uppercase tracking-wide flex items-center gap-2">
               <Layers className="w-4 h-4 text-cyan-400 shrink-0" />
-              🔥 លំហូរប្រតិបត្តិការ DaRa ៩ ជំហាន (9 Steps Fast Market Execution Flow)
+              🔥 លំហូរប្រតិបត្តិការ DaRa ១០ ជំហាន (10 Steps Fast Market Execution Flow)
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              វដ្តប្រតិបត្តិការ M1 យ៉ាងម៉ត់ចត់៖ ស្កេន ២៤/៧ → MSS CONFIRMED + SAFETY PASS → ចូល Market Order ភ្លាមៗ (Fast Market Entry) → Scan ថ្មី
+              វដ្តប្រតិបត្តិការ M1 យ៉ាងម៉ត់ចត់ (Authoritative Flow): M1 MARKET SCAN → LIQUIDITY SWEEP → DISPLACEMENT → MSS CONFIRMED → LOCK ENTRY → WAIT FOR ENTRY → ENTRY REACHED → SAFETY CHECK → TRADE ACTIVE → TRADE CLOSED
             </p>
           </div>
           <div className="text-xs font-mono font-bold px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-cyan-400 whitespace-nowrap self-start sm:self-auto">
@@ -478,8 +493,8 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
           </div>
         </div>
 
-        {/* 9 Steps Grid / Stepper */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11 gap-2 min-w-0">
+        {/* 10 Steps Grid / Stepper */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-10 gap-2 min-w-0">
           {stepDefinitions.map(step => {
             const isActive = currentStep === step.num;
             const isCompleted = currentStep > step.num;
@@ -542,6 +557,199 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
           })}
         </div>
 
+        {/* ========================================================================= */}
+        {/* 🚨 ANOMALY ALERT PANEL                                                    */}
+        {/* ========================================================================= */}
+        {setup?.isAnomaly && (
+          <div className="mt-4 bg-red-950/20 border border-red-500/40 rounded-2xl p-4 flex items-center gap-4 animate-pulse">
+            <div className="bg-red-500/20 p-2 rounded-xl text-red-400">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-black text-red-400 uppercase tracking-wider">POSITION LIMIT ANOMALY</h3>
+              <p className="text-[11px] text-red-300 font-medium">Broker reports positions exceeding user limit. NEW ENTRIES BLOCKED. Existing positions are protected by broker SL/TP.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* 🔥 AUTHORITATIVE PRECISION ENTRY GATE PANEL                               */}
+        {/* ========================================================================= */}
+        {setup?.precisionGate && (
+          <div className="mt-4 bg-slate-900/60 border border-cyan-500/30 rounded-2xl overflow-hidden shadow-[0_0_25px_rgba(6,182,212,0.15)] transition-all">
+            {/* Panel Header */}
+            <div className="bg-cyan-500/10 border-b border-cyan-500/20 px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">PRECISION ENTRY GATE</h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-900/60 text-cyan-200 border border-cyan-500/30">V1.0</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]"></span>
+                    <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest text-[8px] sm:text-[10px]">PRECISION MODE: AUTHORITATIVE</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className="flex flex-col items-end flex-1 sm:flex-none">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">Precision Score</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`text-2xl font-black font-mono leading-none ${setup.precisionGate.passed ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {setup.precisionGate.total}
+                    </span>
+                    <span className="text-slate-500 font-mono text-sm">/ {setup.precisionGate.max}</span>
+                  </div>
+                </div>
+
+                <div className={`px-4 py-2 rounded-xl border font-black text-[10px] sm:text-xs tracking-widest flex items-center gap-2.5 shadow-inner transition-all ${
+                  setup.precisionGate.passed 
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-emerald-500/10' 
+                    : 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-amber-500/5'
+                }`}>
+                  {(() => {
+                    const pg = setup.precisionGate;
+                    if (pg.passed) return <><CheckCircle2 className="w-4 h-4" /> PASS</>;
+                    if (pg.details.isRetestConfirmed) return <><Target className="w-4 h-4" /> RETEST CONFIRMED</>;
+                    if (pg.details.isRetestTouched) return <><Clock className="w-4 h-4 animate-spin-slow" /> WAITING M1 CONFIRMATION</>;
+                    if (pg.total >= pg.threshold) return <><Search className="w-4 h-4" /> WAITING RETEST</>;
+                    return <><Activity className="w-4 h-4" /> WAITING</>;
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Panel Body: Component Breakdown & Context */}
+            <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Left Column: 8 Scoring Components */}
+              <div className="lg:col-span-8 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Component Analysis</span>
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">REQUIRED: 11/12</span>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Liquidity Sweep', points: setup.precisionGate.components.sweep, max: 2 },
+                    { label: 'Displacement', points: setup.precisionGate.components.displacement, max: 2 },
+                    { label: 'MSS Confirmed', points: setup.precisionGate.components.mss, max: 2 },
+                    { 
+                      label: 'Retest + Rejection', 
+                      points: setup.precisionGate.components.retest, 
+                      max: 2,
+                      isRetest: true
+                    },
+                    { label: 'EMA 9/21 Context', points: setup.precisionGate.components.emaContext, max: 1 },
+                    { label: 'VWAP Context', points: setup.precisionGate.components.vwapContext, max: 1 },
+                    { label: 'Candle Confirm', points: setup.precisionGate.components.candleConf, max: 1 },
+                    { label: 'Session Quality', points: setup.precisionGate.components.sessionTime, max: 1 },
+                  ].map((comp, idx) => (
+                    <div key={idx} className={`p-3 rounded-xl border flex flex-col justify-between min-h-[70px] transition-all ${
+                      comp.points > 0 
+                        ? 'bg-slate-800/40 border-cyan-500/30 ring-1 ring-cyan-500/10' 
+                        : 'bg-slate-900/40 border-slate-800 opacity-60'
+                    }`}>
+                      <div className="flex items-start justify-between gap-1.5">
+                        <span className={`text-[10px] font-bold leading-tight uppercase tracking-tight ${comp.points > 0 ? 'text-white' : 'text-slate-500'}`}>
+                          {comp.label}
+                        </span>
+                        {comp.points > 0 ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Circle className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[10px] font-mono text-slate-500">Weight: +{comp.max}</span>
+                        <span className={`text-xs font-black font-mono ${comp.points > 0 ? 'text-cyan-300' : 'text-slate-600'}`}>
+                          +{comp.points}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column: Retest Status & Live Context */}
+              <div className="lg:col-span-4 flex flex-col gap-4">
+                
+                {/* Retest Status Deep-Dive */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex-1">
+                  <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Retest Status</div>
+                  
+                  <div className={`flex flex-col items-center justify-center py-4 px-2 rounded-lg border text-center transition-all ${
+                    setup.precisionGate.details.isRetestConfirmed
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : setup.precisionGate.details.isRetestTouched
+                        ? 'bg-amber-500/10 border-amber-500/30 animate-pulse'
+                        : 'bg-slate-900/40 border-slate-800'
+                  }`}>
+                    <div className="mb-2">
+                      {setup.precisionGate.details.isRetestConfirmed ? (
+                        <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                      ) : setup.precisionGate.details.isRetestTouched ? (
+                        <Clock className="w-8 h-8 text-amber-400 mx-auto animate-spin-slow" />
+                      ) : (
+                        <Target className="w-8 h-8 text-slate-700 mx-auto" />
+                      )}
+                    </div>
+                    
+                    <h4 className={`text-xs font-black uppercase tracking-widest ${
+                      setup.precisionGate.details.isRetestConfirmed ? 'text-emerald-400' :
+                      setup.precisionGate.details.isRetestTouched ? 'text-amber-400' : 'text-slate-500'
+                    }`}>
+                      {setup.precisionGate.details.isRetestConfirmed ? 'RETEST: CONFIRMED +2' :
+                       setup.precisionGate.details.isRetestTouched ? 'RETEST: TOUCHED — WAITING M1' :
+                       'RETEST: NOT TOUCHED'}
+                    </h4>
+                    
+                    <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                      {setup.precisionGate.details.isRetestConfirmed 
+                        ? 'ទៀន M1 បញ្ជាក់ការបដិសេធ (M1 Rejection Confirmed)' 
+                        : setup.precisionGate.details.isRetestTouched 
+                          ? 'រង់ចាំទៀន M1 បិទបញ្ជាក់ការបដិសេធ (Waiting for M1 Rejection Close)' 
+                          : 'រង់ចាំតម្លៃត្រឡប់មកដល់ Locked Entry (Waiting for price to touch Locked Entry)'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Context Data */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+                  <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Live Context</div>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-slate-500">EMA 9 / 21:</span>
+                      <span className="text-white">
+                        {setup.precisionGate.details.ema9?.toFixed(3) || '---'} / {setup.precisionGate.details.ema21?.toFixed(3) || '---'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-slate-500">VWAP:</span>
+                      <span className="text-white">{setup.precisionGate.details.vwap?.toFixed(3) || '---'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-slate-500">Session:</span>
+                      <span className="text-cyan-400 font-black">{setup.precisionGate.details.sessionName || '---'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-slate-500">Live Spread:</span>
+                      <span className={`font-black ${currentSpread <= maxSpread ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {currentSpread} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Current State Explanation Box (Bilingual) */}
         <div className="mt-4 p-4 bg-slate-950/90 border border-slate-800/90 rounded-xl flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-cyan-400 animate-ping shrink-0"></div>
@@ -552,98 +760,41 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
             {currentStep === 1 && '« DaRa កំពុងស្កេនទៀន M1 ២៤/៧ ស្វែងរក Liquidity Sweep លើ Swing High/Low • DaRa is actively scanning closed M1 candles 24/7 for Liquidity Sweep on Swing High/Low. »'}
             {currentStep === 2 && '« បានប្រទះឃើញ Liquidity Sweep លើ M1! កំពុងរង់ចាំទៀន Displacement • Liquidity Sweep detected on M1. Waiting for impulsive displacement candle. »'}
             {currentStep === 3 && '« ចលនា Displacement ត្រូវបានបញ្ជាក់! កំពុងរង់ចាំការបិទទៀន MSS • Displacement confirmed. Waiting for Market Structure Shift (MSS) candle closure. »'}
-            {currentStep === 4 && '« MSS ត្រូវបានបញ្ជាក់ (MSS CONFIRMED)! បញ្ជូនទៅកាន់ការត្រួតពិនិត្យប្រព័ន្ធសុវត្ថិភាព • Market Structure Shift confirmed. Passing setup to Safety Check. »'}
-            {currentStep === 5 && (isEntryBlocked 
-              ? `« ការត្រួតពិនិត្យសុវត្ថិភាព៖ រារាំងមិនទាន់ឱ្យចូល (${blockedReason}) • Safety Guard Active: Entry blocked. »` 
-              : '« ប្រព័ន្ធសុវត្ថិភាពទាំង ៩ ចំណុចឆ្លងកាត់ទាំងអស់ (SAFETY PASS)! រួចរាល់ដើម្បីចូល Market Order ភ្លាមៗ • All 9 safety guards passed! Ready for instant market order execution. »')}
-            {currentStep === 6 && '« កំពុងបញ្ជូន Market Order ភ្លាមៗ (Fast Market Execution) ទៅកាន់ Exness MT5 (Ask សម្រាប់ BUY / Bid សម្រាប់ SELL)... • Dispatching instant market order to broker at live market price... »'}
+            {currentStep === 4 && '« MSS ត្រូវបានបញ្ជាក់ (MSS CONFIRMED) — Precision Gate → LOCK ENTRY • Market Structure Shift confirmed — Precision Gate → LOCK ENTRY »'}
+            {currentStep === 5 && '« បានចាក់សោទីតាំង Entry (LOCK ENTRY)! គណនាគោលដៅ Grid ទាំង ៥ កម្រិតរួចរាល់ • Entry price locked. 5-level grid targets calculated. »'}
+            {currentStep === 6 && '« កំពុងរង់ចាំតម្លៃទាញថយក្រោយ (WAIT FOR ENTRY)... • Waiting for price pullback to locked entry level... »'}
+            {currentStep === 7 && '« តម្លៃបានមកដល់ទីតាំង Entry (ENTRY REACHED)! ត្រៀមត្រួតពិនិត្យសុវត្ថិភាព • Price reached locked entry level. Proceeding to Safety Check. »'}
+            {currentStep === 8 && (isEntryBlocked 
+              ? `« ការត្រួតពិនិត្យសុវត្ថិភាព (SAFETY CHECK)៖ រារាំងមិនទាន់ឱ្យចូល (${blockedReason}) • Safety Guard Active: Entry blocked. »` 
+              : '« ការត្រួតពិនិត្យសុវត្ថិភាព (SAFETY CHECK)៖ ឆ្លងកាត់គ្រប់លក្ខខណ្ឌទាំងអស់ (SAFETY PASS)! • All safety guards passed! Ready for execution. »')}
             {currentStep === 9 && '« Trade កំពុងដំណើរការជាមួយសំបុត្រ #' + ((activeTrade as any)?.ticket || 'LIVE') + ' (Hard SL & TP ការពាររួចរាល់) • Trade active. Initial SL & TP established. »'}
             {currentStep === 10 && (lastClosedTrade 
-              ? `« Trade #${lastClosedTrade.ticket} ត្រូវបានបិទបញ្ចប់ដោយ ${lastClosedTrade.exitReason} (${lastClosedTrade.pnl >= 0 ? '+' : ''}${lastClosedTrade.pnl.toFixed(2)})! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed via ${lastClosedTrade.exitReason}. Resetting engine for next setup. »`
+              ? `« Trade #${lastClosedTrade.ticket} ត្រូវបានបិទបញ្ចប់ដោយ ${lastClosedTrade.exitReason} (${lastClosedTrade.pnl >= 0 ? '+' : ''}${lastClosedTrade.pnl.toFixed(2)})! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed via ${lastClosedTrade.exitReason}. Resetting engine for next setup. »` 
               : '« Trade ត្រូវបានបិទបញ្ចប់! កំណត់ប្រព័ន្ធឡើងវិញ → ត្រឡប់មកស្កេន M1 ថ្មី • Trade closed. Resetting engine for next setup. »')}
           </div>
         </div>
 
         {/* Closed Trade Summary Card (when trade is closed or last closed trade is recorded) */}
-        {lastClosedTrade && !activeTrade && (
-          <div className="mt-3 p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <span className={`px-2.5 py-1 rounded-md font-bold font-mono text-[11px] uppercase tracking-wider ${
-                lastClosedTrade.exitReason === 'TP_HIT' 
-                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
-                  : lastClosedTrade.exitReason === 'SL_HIT'
-                    ? 'bg-blue-950 text-cyan-300 border border-blue-500/40'
-                    : 'bg-rose-950 text-rose-400 border border-rose-500/40'
-              }`}>
-                {lastClosedTrade.exitReason === 'TP_HIT' ? '✅ TP HIT' :
-                 lastClosedTrade.exitReason === 'SL_HIT' ? '🔴 SL HIT' :
-                 '❌ SL HIT'}
-              </span>
-              <span className="font-mono text-slate-300">
-                Ticket: <strong className="text-white">#{lastClosedTrade.ticket}</strong> ({lastClosedTrade.type} {lastClosedTrade.lot} lots)
-              </span>
-            </div>
-            <div className="flex items-center gap-4 font-mono text-slate-300">
-              <span>Entry: <strong className="text-white">{lastClosedTrade.openPrice.toFixed(3)}</strong></span>
-              <span>Exit: <strong className="text-white">{lastClosedTrade.closePrice.toFixed(3)}</strong></span>
-              <span>P/L: <strong className={lastClosedTrade.pnl >= 0 ? 'text-emerald-400 font-black' : 'text-rose-400 font-black'}>
-                {lastClosedTrade.pnl >= 0 ? `+${lastClosedTrade.pnl.toFixed(2)}` : `${lastClosedTrade.pnl.toFixed(2)}`} USC
-              </strong></span>
-              <span className="text-[11px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
-                🔄 ស្កេន M1 ថ្មី (Scanning M1)
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Candlestick Confirmation Filter Badge (when setup has confirmed candle pattern) */}
-        {setup?.candleConfirmation && (
-          <div className="mt-3 p-3.5 bg-indigo-950/40 border border-indigo-500/40 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-400/40">
-                <Sparkles className="w-4 h-4 text-indigo-300" />
-              </span>
-              <div>
-                <span className="text-indigo-200 font-bold uppercase tracking-wide text-xs">
-                  🕯️ CANDLESTICK CONFIRMATION:
-                </span>
-                <span className="ml-2 font-mono font-bold text-white">
-                  {setup.candleConfirmation.patternName}
-                </span>
-                <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-900/60 text-indigo-200 border border-indigo-500/30">
-                  {setup.candleConfirmation.direction}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 font-mono text-slate-300">
-              <span>Score: <strong className="text-emerald-400">{setup.candleConfirmation.score} pts</strong></span>
-              <span>Quality: <strong className="text-cyan-300">{setup.candleConfirmation.quality}</strong></span>
-              <span className="text-[11px] text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded border border-emerald-500/30 font-bold">
-                ✓ CONFIRMED (ឆ្លងកាត់)
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 3: 🛡 SAFETY STATUS (BILINGUAL 9 GUARDS MATRIX)                    */}
+      {/* SECTION 3: 🛡 SAFETY STATUS (BILINGUAL SAFETY GUARDS MATRIX)               */}
       {/* ========================================================================= */}
       <div className="w-full">
-        {/* SECTION 3B: 🛡 SAFETY MATRIX (9 GUARDS WITH PASS / BLOCKED - BILINGUAL) */}
+        {/* SECTION 3B: 🛡 SAFETY MATRIX (GUARDS WITH PASS / BLOCKED - BILINGUAL) */}
         <div id="dara-safety-matrix" className="bg-[#0B101A] border border-slate-800/90 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800/80">
               <h3 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                🛡 ស្ថានភាពប្រព័ន្ធសុវត្ថិភាព (Safety Status - 9 Guards Matrix)
+                🛡 ស្ថានភាពប្រព័ន្ធសុវត្ថិភាព (Safety Status - Guards Matrix)
               </h3>
               <span className={`text-[10px] font-mono px-2.5 py-1 rounded-md font-bold uppercase tracking-wider ${
                 !isEntryBlocked 
                   ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' 
                   : 'bg-rose-950 text-rose-400 border border-rose-500/30'
               }`}>
-                {!isEntryBlocked ? '🟢 ៩/៩ ឆ្លងកាត់ (9/9 PASS)' : '🔴 ជាប់ការរារាំង (GUARD ACTIVE)'}
+                {!isEntryBlocked ? '🟢 ឆ្លងកាត់ទាំងអស់ (ALL PASS)' : '🔴 ជាប់ការរារាំង (GUARD ACTIVE)'}
               </span>
             </div>
 
@@ -684,7 +835,7 @@ export const DaRaSetupView: React.FC<DaRaSetupViewProps> = ({ state }) => {
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-emerald-300 uppercase tracking-wider font-mono">
-                    🟢 អនុញ្ញាតឱ្យចូល ORDER — ប្រព័ន្ធសុវត្ថិភាពទាំង ៩ ឆ្លងកាត់ទាំងអស់ (FAST ENTRY ALLOWED)
+                    🟢 អនុញ្ញាតឱ្យចូល ORDER — ប្រព័ន្ធសុវត្ថិភាពឆ្លងកាត់ទាំងអស់ (FAST ENTRY ALLOWED)
                   </div>
                   <div className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
                     DaRa EA ទទួលបានការអនុញ្ញាតពេញលេញក្នុងការចូល Market Order ភ្លាមៗនៅពេល MSS Confirmed (Fast Market Entry) • Fully authorized to execute instant Market Order upon MSS Confirmed.

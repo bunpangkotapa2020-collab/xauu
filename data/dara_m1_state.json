@@ -3,26 +3,13 @@
     "currentState": "SCANNING",
     "currentSetup": null,
     "activePositions": [],
-    "lastClosedTrade": {
-      "ticket": "TICK_5",
-      "symbol": "XAUUSD",
-      "type": "BUY",
-      "lot": 0.01,
-      "openPrice": 95.2,
-      "closePrice": 110,
-      "sl": 70,
-      "tp": 110,
-      "originalTp": 110,
-      "pnl": 50,
-      "exitReason": "TP_HIT",
-      "closedAt": 3000
-    }
+    "lastClosedTrade": null
   },
   "meta": {
     "dailyLossAccumulated": 0,
     "consecutiveLossCount": 0,
     "lastLossTime": 0,
     "isRunning": true,
-    "timestamp": 1789991474932
+    "timestamp": 1789977600000
   }
 }

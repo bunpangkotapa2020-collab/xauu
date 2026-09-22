@@ -64,6 +64,7 @@ export interface DaRaSetup {
   masterEntryPrice?: number;
   signalPrice?: number;
   isRecovered?: boolean;
+  isAnomaly?: boolean;
   
   // 5-Level Entry System
   entryLevels?: { targetPrice: number; executed: boolean; ticket?: string | number }[];
@@ -89,6 +90,35 @@ export interface DaRaSetup {
     quality: string;
     isConfirmed: boolean;
   };
+  precisionGate?: DaRaPrecisionScore;
+}
+
+export interface DaRaPrecisionScore {
+  total: number;
+  max: number;
+  threshold: number;
+  passed: boolean;
+  components: {
+    sweep: number;        // +2
+    displacement: number; // +2
+    mss: number;          // +2
+    retest: number;       // +2
+    emaContext: number;   // +1
+    vwapContext: number;  // +1
+    candleConf: number;   // +1
+    sessionTime: number;  // +1
+  };
+  details: {
+    ema9?: number;
+    ema21?: number;
+    vwap?: number;
+    ema9Trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    vwapTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    sessionName: string;
+    isRetestReached: boolean;
+    isRetestTouched: boolean;
+    isRetestConfirmed: boolean;
+  };
 }
 
 export interface DaRaUserSettings {
@@ -100,8 +130,6 @@ export interface DaRaUserSettings {
   maxOpenTrades: number;       // Usually 1 for single position or user-defined
   positionsPerSetup?: number;  // Authoritative Positions Per Setup (1-5)
   entriesPerSignal?: number;   // Alias for positionsPerSetup
-  maxConsecutiveSL: number;    // Stop EA after N consecutive SL hits
-  cooldownMinutes: number;     // Cooldown duration after a real loss (in minutes)
   maxSpreadPoints: number;     // Max allowable spread in points
   newsFilterEnabled: boolean;  // Whether news filter is active
   newsMinsBefore: number;      // Mins before high impact news
@@ -144,8 +172,6 @@ export interface DaRaSafetyStatus {
   isSafeToTrade: boolean;
   blockedReason?: string;
   isDailyLossHit: boolean;
-  isMaxConsecutiveSLHit: boolean;
-  isInCooldown: boolean;
   isSpreadTooHigh: boolean;
   isNewsBlocked: boolean;
   isMaxTradesReached: boolean;

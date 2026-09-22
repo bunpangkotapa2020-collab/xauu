@@ -1,14 +1,15 @@
 =========================================
-VPS DEPLOYMENT INSTRUCTIONS (CHECKPOINT 3)
+VPS DEPLOYMENT INSTRUCTIONS
 =========================================
 Modified Files:
 1. server.ts
+2. src/components/MainDashboard.tsx
+3. src/components/DaRaSetupView.tsx
 
-Code Checkpoint ID: DARA_M1_EA_PNL_MANUAL_FIX_v1.2
+Code Checkpoint ID: DARA_M1_EA_FINAL_CORRECTIONS_v1.0
 
 Deployment Commands for VPS:
 cd /path/to/dara_m1_ea
-# Replace server.ts with the updated version
 npm run build
-pm2 restart server
+pm2 restart dara-m1-ea
 =========================================
