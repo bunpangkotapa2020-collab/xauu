@@ -1,8 +1,9 @@
 {
-  "name": "XAUUSD AI Scalping Bot",
-  "description": "ប្រព័ន្ធ Bot ជួញដូរមាស XAUUSD ដោយស្វ័យប្រវត្តិ 100% ភាសាខ្មែរ — 2 ប៊ូតុងបញ្ជាសាមញ្ញ (START BOT & CLOSE ALL TRADES) ជាមួយប្រព័ន្ធការពារទុន និង NEW ICT EA Strategy។",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
+  "name": "DaRa M1 — Fresh Build v1.0",
+  "description": "TradingView Webhook Signal Execution System for XAUUSD with strict risk protection and position management.",
+  "permissions": [],
+  "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  ],
+  "version": "1.0.0"
 }

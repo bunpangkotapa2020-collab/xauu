@@ -1,9 +1,0 @@
-{
-  "username": "admin",
-  "passwordHash": "6999dd4a3c5c06ecf7e6c90759a012ae5ff5d92ead7a543c94533b7c9006184af9ec4b273b7cfef605a9b163601b0b6e38986e9c735e203a54d9814cbff4c43b",
-  "salt": "c6eebc2285bbf6d7760870efd536881a",
-  "recoveryPin": "948210",
-  "isCustomized": false,
-  "createdAt": "2026-09-14T05:35:08.831Z",
-  "updatedAt": "2026-09-14T05:35:08.831Z"
-}

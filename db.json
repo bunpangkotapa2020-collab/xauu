@@ -1,0 +1,68 @@
+{
+  "settings": {
+    "lotSize": 0.05,
+    "slPips": 80,
+    "tpPips": 100,
+    "maxOpenPositions": 1,
+    "dailyLossLimit": 50,
+    "dailyTradeLimit": 10,
+    "tradingEnabled": false,
+    "emergencyStop": false,
+    "tradingMode": "PAPER",
+    "symbolMapping": {
+      "XAUUSD": "XAUUSDc",
+      "GOLD": "XAUUSDc"
+    },
+    "webhookSecret": "DARA_SECRET_2026",
+    "metaApi": {
+      "accountId": "",
+      "token": "",
+      "region": "new-york",
+      "connected": false,
+      "status": "DISCONNECTED"
+    },
+    "tradingHours": {
+      "enabled": false,
+      "startHour": "08:00",
+      "stopHour": "21:00"
+    }
+  },
+  "openPositions": [],
+  "dailyPnL": 0,
+  "dailyTradeCount": 0,
+  "isInsideTradingWindow": true,
+  "signalHistory": [
+    {
+      "timestamp": "2026-10-05T15:41:58.567Z",
+      "signal_id": "test_fresh_sell_01",
+      "action": "SELL",
+      "symbol": "XAUUSDc",
+      "tv_price": 2680,
+      "auth_result": "PASS",
+      "duplicate_result": "PASS",
+      "risk_result": "PASS",
+      "execution_status": "EXECUTED",
+      "broker_ticket": "PAPER_143069",
+      "actual_fill_price": 2650,
+      "sl": 2650.8,
+      "tp": 2649,
+      "protection_status": "PROTECTED"
+    },
+    {
+      "timestamp": "2026-10-05T15:41:54.864Z",
+      "signal_id": "test_fresh_buy_01",
+      "action": "BUY",
+      "symbol": "XAUUSDc",
+      "tv_price": 2610,
+      "auth_result": "PASS",
+      "duplicate_result": "PASS",
+      "risk_result": "PASS",
+      "execution_status": "EXECUTED",
+      "broker_ticket": "PAPER_69552",
+      "actual_fill_price": 2650,
+      "sl": 2649.2,
+      "tp": 2651,
+      "protection_status": "PROTECTED"
+    }
+  ]
+}
