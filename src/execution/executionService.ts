@@ -30,8 +30,29 @@ export class ExecutionService {
     console.log(`[EXECUTION] Hydrated ${this.processedSignalIds.size} processed signal IDs`);
   }
 
+  private checkProductionSafety(state: BotState): { allowed: boolean; reason?: string } {
+    if (process.env.NODE_ENV === 'production') {
+      const secret = process.env.DARA_WEBHOOK_SECRET;
+      if (!secret || secret === 'CHANGE_ME_SECURELY' || secret === 'CHANGE_ME' || secret.trim() === '') {
+        return { allowed: false, reason: 'PRODUCTION_SECRET_NOT_CONFIGURED' };
+      }
+    }
+    return { allowed: true };
+  }
+
   async processSignal(state: BotState, signal: TradingViewSignal): Promise<{ success: boolean; status: ExecutionStatus; signal_id?: string; reason?: string }> {
     const { action, symbol, price, signal_id, secret } = signal;
+
+    // 0. Production Safety Check (Fail-Closed)
+    const safety = this.checkProductionSafety(state);
+    if (!safety.allowed) {
+      console.error('[SAFETY] Webhook execution blocked: DARA_WEBHOOK_SECRET not configured for production');
+      auditLogger.log({
+        signal_id, action, symbol, tv_price: price,
+        execution_status: 'BLOCKED', block_reason: safety.reason
+      });
+      return { success: false, status: 'BLOCKED', reason: safety.reason };
+    }
 
     // 1. Authentication
     if (secret !== state.settings.webhookSecret) {

@@ -161,6 +161,19 @@ if (!isProduction) {
   });
 }
 
+// --- CONFIGURATION VALIDATION ---
+if (isProduction) {
+  const secret = process.env.DARA_WEBHOOK_SECRET;
+  if (!secret || secret === 'CHANGE_ME_SECURELY' || secret === 'CHANGE_ME' || secret.trim() === '') {
+    console.error('**************************************************');
+    console.error('FATAL CONFIGURATION ERROR: Webhook Secret Missing');
+    console.error('DARA_WEBHOOK_SECRET environment variable must be set in production.');
+    console.error('APPLICATION ABORTING STARTUP TO ENSURE FAIL-CLOSED SECURITY.');
+    console.error('**************************************************');
+    process.exit(1);
+  }
+}
+
 app.listen(Number(port), '0.0.0.0', () => {
   console.log(`[SERVER] DaRa M1 Fresh Build v1.0 listening at http://0.0.0.0:${port}`);
 });

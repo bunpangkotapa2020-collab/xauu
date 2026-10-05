@@ -27,17 +27,12 @@ The AI Agent is **AUTHORIZED** to immediately fix the following issues without w
 
 ## 2. STRICTLY FORBIDDEN (Requires Explicit User Approval)
 The Agent MUST NOT alter any of the following silently or speculatively. If changes are needed here, the Agent must notify the user and ask for approval first:
-- SMC Model (H4 → M15 → M1)
-- Sequence 4 Entries logic
-- Risk % and Auto Lot calculations
-- Stop Loss (SL) / Take Profit (TP) structures
-- Trailing SL / Profit Protection logic
-- Daily Loss Protection thresholds
-- Market Awareness logic
-- MT5 Connection Logic
-- Telegram Alert Logic
+- TradingView Webhook Signal Authority
+- Signal Authentication / Fail-Closed Logic
+- Risk / Position Protection Architecture
+- MetaAPI / MT5 Execution Flow
 - Dashboard / UI Layouts
-- Approved Trading Parameters
+- Approved Risk Parameters (Max Positions, Daily Limits)
 
 ## 3. Post-Fix Reporting Protocol
 Whenever a bug or error is fixed, the Agent MUST provide a detailed report to the user in this exact format:
@@ -51,123 +46,65 @@ Whenever a bug or error is fixed, the Agent MUST provide a detailed report to th
 
 ---
 
-# 🛑 STABLE CHECKPOINT & ICT STRATEGY PREPARATION
+# 🛑 STABLE CHECKPOINT — DaRa M1 Fresh Build v1.0
 
-**Status:** The current system is LOCKED as a **STABLE CHECKPOINT**. No further modifications to the current system are allowed.
+**Status:** The current system is LOCKED as a **STABLE CHECKPOINT**. 
+
+## Core Architecture:
+TradingView Signal → Webhook → Auth → Risk Guardian → Execution Orchestrator → Broker (Paper/Live).
 
 ## Strict "Do Not Touch" Constraints:
-Under NO circumstances should the following components be modified for the new ICT EA build:
-- ❌ Do NOT modify the Dashboard
-- ❌ Do NOT modify Templates
-- ❌ Do NOT modify the UI
-- ❌ Do NOT modify the Server
-- ❌ Do NOT modify MT5 Connection Logic
-- ❌ Do NOT modify APIs or API Keys
-- ❌ Do NOT modify the VPS setup
-- ❌ Do NOT modify existing Settings
-- ❌ Do NOT modify any currently running Functions
-
-## EA Development Rules (ICT Strategy):
-1. **Wait for Specification:** The Agent MUST NOT code any new trading logic until the user provides the **"MASTER ICT EA SPECIFICATION"**.
-2. **Independent Build:** The new ICT EA will be created entirely separate from the old EA.
-3. **Backup Old EA:** The old SMC EA must be retained as a backup.
-4. **Swap Only When Ready:** The new ICT EA will only be connected to replace the old EA once the strategy is fully completed and approved by the user.
+Under NO circumstances should the following components be modified without explicit owner request:
+- ❌ Do NOT modify the Signal Authority (TradingView ONLY)
+- ❌ Do NOT modify the Webhook Auth / Secret Validation
+- ❌ Do NOT modify the SL/TP Realignment Logic (Actual Fill Price)
+- ❌ Do NOT modify the Fail-Closed Security (Production Secret Check)
+- ❌ Do NOT modify the Duplicate Signal Protection
+- ❌ Do NOT modify the Risk Guardian (Daily Limits, Max Positions)
+- ❌ Do NOT modify the Broker Interface
+- ❌ Do NOT modify the Persistent Audit Log
 
 ---
 
-# 📈 MASTER ICT EA SPECIFICATION (INITIAL DRAFT)
+# 🔒 FINAL STABLE CHECKPOINT — LOCK & RUN (DaRa M1 Fresh)
 
-**Symbol:** XAUUSD ONLY
-**Account:** REAL USC (Cent Account) ONLY
-
-## 1. Account & Balance
-- EA MUST use a Real MT5 USC (Cent Account).
-- EA MUST retrieve and use the real Balance/Equity directly from MT5.
-- NEVER use fake, hardcoded, or demo balances on the Dashboard.
-
-## 2. Lot Size Management
-- Lot Size is strictly **USER-DEFINED**.
-- If the user sets `0.01`, every entry MUST use exactly `0.01`.
-- EA MUST NOT auto-scale the Lot Size based on Balance or Risk %.
-- EA MUST verify Requested Lot vs. Executed Lot from MT5.
-
-## 3. Daily Loss Limit
-- Daily Loss Limit is strictly **USER-DEFINED**.
-- EA MUST respect this limit. If the limit is reached, the EA MUST STOP opening new trades for the day.
-
-## 4. Stop Loss (SL)
-- SL is **DYNAMIC**, determined by ICT Structure/Invalidation Levels. DO NOT use a fixed 30-pip SL.
-- **BUY:** SL below the Invalidating Swing Low + appropriate buffer.
-- **SELL:** SL above the Invalidating Swing High + appropriate buffer.
-- SL must be reasonably sized to avoid being stopped out by standard XAUUSD market noise.
-- EA MUST have a **Maximum SL Protection** limit to prevent catastrophic risk exposure.
-
-## 5. Take Profit (TP)
-- TP is **DYNAMIC**, automatically determined by the EA targeting ICT Liquidity.
-- **BUY:** Target upside liquidity.
-- **SELL:** Target downside liquidity.
-- EA MUST verify a Minimum Risk:Reward (R:R) ratio before entering any trade.
-
-## 6. Responsibilities Breakdown
-**User Defines:**
-- Lot Size
-- Daily Loss Limit
-- Trading Time
-- Max Open Trades
-
-**EA Automates:**
-- Entry (based on strict ICT analysis)
-- Stop Loss (dynamic, structure-based)
-- Take Profit (dynamic, liquidity-based)
-
-*Note: The EA MUST perform full ICT analysis before entering a trade. It MUST NOT execute trades immediately upon clicking "START".*
-
----
-
-# 🔒 FINAL STABLE CHECKPOINT — LOCK & RUN (ICT EA)
-
-**Status:** The current system (ICT EA) is officially LOCKED as a **FINAL STABLE CHECKPOINT**. 
+**Status:** The current system (DaRa M1) is officially LOCKED as a **FINAL STABLE CHECKPOINT**. 
 **Goal:** RUN, OBSERVE, and RECORD.
 
-## MAINTENANCE RULE: STABLE VERSION = LOCK STRATEGY, NOT LOCK BUG FIX
-The AI Agent is **AUTHORIZED** to fix technical and operational bugs (e.g., Connection Error, MT5/EA Disconnect, MetaApi Error, Market Feed Error, Runtime Crash, Execution Bug, Dashboard Sync Bug, Security/Safety Bug) under the following strict protocol:
+## MAINTENANCE RULE: STABLE VERSION = LOCK ARCHITECTURE, NOT LOCK BUG FIX
+The AI Agent is **AUTHORIZED** to fix technical and operational bugs (e.g., Webhook Connection, MetaApi Error, Runtime Crash, Execution Bug, Dashboard Sync Bug, Security/Safety Bug) under the following strict protocol:
 1. **Root Cause First:** Identify the exact cause before writing any code.
 2. **Safety First (Block Entries):** If a bug affects Real Trading, immediately BLOCK NEW ENTRIES until the system is stable.
 3. **Backup First:** Preserve the stable version before making modifications.
-4. **Fix ONLY the Bug:** Do not add unrequested features or change existing logic just to make it "different".
+4. **Fix ONLY the Bug:** Do not add unrequested features or change approved architecture.
 5. **Verify:** Verify the fix after deployment.
 6. **New Checkpoint:** Document the new Checkpoint once the fix is successful.
 
-## DO NOT TOUCH (LOCKED STRATEGY PARAMETERS):
+## DO NOT TOUCH (LOCKED TRADING PARAMETERS):
 Under NO circumstances is the Agent allowed to modify any of the following:
-- ❌ ICT Strategy Logic (H4, M15, M1 sequence)
-- ❌ Entry Logic (OB / FVG / Retracement validation)
-- ❌ SL/TP logic and calculation
-- ❌ Lot Size
-- ❌ Risk Settings
-- ❌ Reset Account or open Test Trades on a Real Account
+- ❌ TradingView Signal Authority
+- ❌ Auth / Fail-Closed Logic
+- ❌ SL/TP Realignment Logic
+- ❌ Lot Size & Risk Settings
+- ❌ Order Execution Flow
+- ❌ Persistent Audit Trail
 
-# 🛡️ STRICT RULES: POST-DEPLOYMENT OBSERVATION PHASE (ACTIVE NOW)
+# 🛡️ STRICT RULES: PRODUCTION OBSERVATION PHASE (ACTIVE NOW)
 **Core Rule:** Preserve What Works. Fix Only What Breaks.
 
 1. **NO OPTIMIZATION:** Do NOT Refactor, Rewrite, Optimize, or change any Logic unnecessarily.
 2. **BUG FIXES ONLY:** IF there is an Error/Bug -> Diagnose and Fix ONLY that specific Error/Bug. IF there is NO Error -> DO NOT TOUCH ANYTHING.
 3. **DO NOT TOUCH (STRICTLY FORBIDDEN):**
-   - ICT H4 → M15 → M1
-   - Liquidity / Sweep / Displacement
-   - OB / FVG
-   - 3-0 + 5-FVG
-   - Entry Logic
-   - Retracement
-   - User Settings
-   - Latest Settings JIT Sync
-   - Lot / SL / TP
-   - Safety Check
-   - Live MT5 Feed
-   - Symbol Logic
-   - MetaApi Execution
-   - UI Flow
-4. **LOGGING PRIORITY:** When a Real Order happens, keep full logs intact so the user can verify: ICT Setup → Entry → Latest Settings → Safety Check → MetaApi Request → MT5 Result → Ticket → Position → SL/TP.
+   - TradingView Signal Webhook
+   - Auth & Secret Validation
+   - Duplicate Protection
+   - Risk Guardian (Limits)
+   - Order Execution (Paper/Live)
+   - Actual Fill SL/TP Realignment
+   - MetaApi Connection
+   - UI / Dashboard Logic
+   - Persistent db.json state
+4. **LOGGING PRIORITY:** When a Real Order happens, keep full logs intact so the user can verify: Signal Received → Auth PASS → Risk PASS → Broker Request → Actual Fill → SL/TP Realignment → Ticket Protection SUCCESS.
 
 ---
 
