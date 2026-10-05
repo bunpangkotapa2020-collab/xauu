@@ -20,6 +20,16 @@ export class ExecutionService {
     }
   }
 
+  hydrateProcessedSignals(history: any[]) {
+    this.processedSignalIds.clear();
+    history.forEach(log => {
+      if (log.signal_id && log.signal_id !== 'N/A') {
+        this.processedSignalIds.add(log.signal_id);
+      }
+    });
+    console.log(`[EXECUTION] Hydrated ${this.processedSignalIds.size} processed signal IDs`);
+  }
+
   async processSignal(state: BotState, signal: TradingViewSignal): Promise<{ success: boolean; status: ExecutionStatus; signal_id?: string; reason?: string }> {
     const { action, symbol, price, signal_id, secret } = signal;
 

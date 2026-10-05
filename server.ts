@@ -49,6 +49,12 @@ const saveState = () => {
 const paperBroker = new PaperBroker();
 const executionService = new ExecutionService(paperBroker);
 
+// Hydrate services if state was restored
+if (botState && botState.signalHistory) {
+  auditLogger.hydrate(botState.signalHistory);
+  executionService.hydrateProcessedSignals(botState.signalHistory);
+}
+
 // Re-initialize MetaAPI if config exists
 if (botState.settings.metaApi.accountId && botState.settings.metaApi.token) {
   executionService.updateMetaApiBroker(botState.settings.metaApi);

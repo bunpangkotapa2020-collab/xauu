@@ -28,6 +28,10 @@ export class AuditLogger {
   getLogs(): AuditLog[] {
     return this.logs;
   }
+
+  hydrate(logs: AuditLog[]) {
+    this.logs = [...logs];
+  }
 }
 
 export const auditLogger = new AuditLogger();

@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     'XAUUSD': 'XAUUSDc',
     'GOLD': 'XAUUSDc'
   },
-  webhookSecret: 'DARA_SECRET_2026',
+  webhookSecret: process.env.DARA_WEBHOOK_SECRET || 'CHANGE_ME_SECURELY',
   metaApi: {
     accountId: '',
     token: '',
